@@ -1,0 +1,26 @@
+.env
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist/
+build/
+.DS_Store
+*.egg-info/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Signing keys and local machine files - never commit these
+*.jks
+*.keystore
+*.pem
+*.p12
+local.properties
+*.log
+*.dump
+keystore.properties

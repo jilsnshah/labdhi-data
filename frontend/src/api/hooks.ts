@@ -1,0 +1,347 @@
+/** React Query hooks. Lists are server-paginated, filtered and sorted. */
+
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { notifications } from '@mantine/notifications';
+
+import { ApiError, api } from './client';
+import type { QueryValue } from './client';
+import type {
+  PartyApplication,
+  Activity,
+  ActivityWithChain,
+  ConflictCheckResult,
+  DuplicateCheckResult,
+  Application,
+  AuditLog,
+  Dashboard,
+  Grade,
+  InquiryDetail,
+  InquiryListItem,
+  Location,
+  Manufacturer,
+  Material,
+  MetaEnums,
+  Note,
+  Page,
+  Party360,
+  PartyDetail,
+  PartyListItem,
+  PartyLocation,
+  PartyProduct,
+  PartyMergeResult,
+  Product,
+  ProductPartyLink,
+  SalespersonWorkload,
+  SearchResults,
+  User,
+} from './types';
+
+export type Params = Record<string, QueryValue>;
+
+const stale = { staleTime: 30_000 };
+
+function listQuery<T>(key: string, path: string, params: Params) {
+  return {
+    queryKey: [key, params],
+    queryFn: () => api.get<Page<T>>(path, params),
+    placeholderData: keepPreviousData,
+  };
+}
+
+/* ----------------------------- master data ----------------------------- */
+export const useMaterials = (params: Params = {}) =>
+  useQuery(listQuery<Material>('materials', '/materials', params));
+export const useGrades = (params: Params = {}) =>
+  useQuery(listQuery<Grade>('grades', '/grades', params));
+export const useManufacturers = (params: Params = {}) =>
+  useQuery(listQuery<Manufacturer>('manufacturers', '/manufacturers', params));
+export const useApplications = (params: Params = {}) =>
+  useQuery(listQuery<Application>('applications', '/applications', params));
+export const useProducts = (params: Params = {}) =>
+  useQuery(listQuery<Product>('products', '/products', params));
+export const useLocations = (params: Params = {}) =>
+  useQuery(listQuery<Location>('locations', '/locations', params));
+
+export const useProduct = (id?: number) =>
+  useQuery({
+    queryKey: ['product', id],
+    queryFn: () => api.get<Product>(`/products/${id}`),
+    enabled: Boolean(id),
+  });
+
+export const useProductSuppliers = (id?: number) =>
+  useQuery({
+    queryKey: ['product-suppliers', id],
+    queryFn: () => api.get<ProductPartyLink[]>(`/products/${id}/suppliers`),
+    enabled: Boolean(id),
+  });
+
+export const useProductCustomers = (id?: number) =>
+  useQuery({
+    queryKey: ['product-customers', id],
+    queryFn: () => api.get<ProductPartyLink[]>(`/products/${id}/customers`),
+    enabled: Boolean(id),
+  });
+
+/* -------------------------------- parties ------------------------------- */
+export const useParties = (params: Params = {}) =>
+  useQuery(listQuery<PartyListItem>('parties', '/parties', params));
+
+export const useParty = (id?: number) =>
+  useQuery({
+    queryKey: ['party', id],
+    queryFn: () => api.get<PartyDetail>(`/parties/${id}`),
+    enabled: Boolean(id),
+  });
+
+export const useParty360 = (id?: number) =>
+  useQuery({
+    queryKey: ['party-overview', id],
+    queryFn: () => api.get<Party360>(`/parties/${id}/overview`),
+    enabled: Boolean(id),
+  });
+
+/**
+ * "Did you mean this party?" - called as the user types a new name or phone.
+ * A warning, never a block.
+ */
+export const useDuplicateCheck = (params: {
+  party_type?: string;
+  name?: string;
+  phone?: string;
+  gst_number?: string;
+  exclude_id?: number;
+  enabled?: boolean;
+}) => {
+  const { enabled = true, ...query } = params;
+  const hasInput =
+    (query.name ?? '').trim().length >= 3 ||
+    (query.phone ?? '').replace(/\D/g, '').length >= 6 ||
+    (query.gst_number ?? '').trim().length >= 10;
+  return useQuery({
+    queryKey: ['party-duplicates', query],
+    queryFn: () => api.get<DuplicateCheckResult>('/parties/duplicates', query),
+    enabled: enabled && hasInput,
+    staleTime: 10_000,
+  });
+};
+
+/* ------------------------------- inquiries ------------------------------ */
+export const useInquiries = (params: Params = {}) =>
+  useQuery(listQuery<InquiryListItem>('inquiries', '/inquiries', params));
+
+export const useInquiry = (id?: number) =>
+  useQuery({
+    queryKey: ['inquiry', id],
+    queryFn: () => api.get<InquiryDetail>(`/inquiries/${id}`),
+    enabled: Boolean(id),
+  });
+
+/* ------------------------------- activities ----------------------------- */
+export const useActivities = (params: Params = {}) =>
+  useQuery(listQuery<Activity>('activities', '/activities', params));
+
+export const useActivity = (id?: number) =>
+  useQuery({
+    queryKey: ['activity', id],
+    queryFn: () => api.get<ActivityWithChain>(`/activities/${id}`),
+    enabled: Boolean(id),
+  });
+
+export const useSalespeopleWorkload = (includeInactive = false) =>
+  useQuery({
+    queryKey: ['salespeople-workload', includeInactive],
+    queryFn: () =>
+      api.get<SalespersonWorkload[]>('/activities/salespeople/workload', {
+        include_inactive: includeInactive,
+      }),
+  });
+
+export const useActivityCalendar = (
+  dateFrom: string,
+  dateTo: string,
+  salespersonId?: number | null,
+) =>
+  useQuery({
+    queryKey: ['activity-calendar', dateFrom, dateTo, salespersonId ?? null],
+    queryFn: () =>
+      api.get<Activity[]>('/activities/calendar', {
+        date_from: dateFrom,
+        date_to: dateTo,
+        salesperson_id: salespersonId ?? undefined,
+      }),
+    enabled: Boolean(dateFrom && dateTo),
+  });
+
+/** Scheduling conflict warning for a salesperson at a given time. */
+export const useConflictCheck = (
+  salespersonId: number | null | undefined,
+  scheduledAt: string | null | undefined,
+  excludeActivityId?: number,
+) =>
+  useQuery({
+    queryKey: ['conflicts', salespersonId ?? null, scheduledAt ?? null, excludeActivityId ?? null],
+    queryFn: () =>
+      api.get<ConflictCheckResult>('/activities/conflicts/check', {
+        salesperson_id: salespersonId ?? undefined,
+        scheduled_at: scheduledAt ?? undefined,
+        exclude_activity_id: excludeActivityId,
+      }),
+    enabled: Boolean(salespersonId && scheduledAt),
+    staleTime: 5_000,
+  });
+
+/* --------------------------------- notes -------------------------------- */
+export const useNotes = (params: Params = {}) =>
+  useQuery(listQuery<Note>('notes', '/notes', params));
+
+/* -------------------------------- system -------------------------------- */
+export const useDashboard = () =>
+  useQuery({ queryKey: ['dashboard'], queryFn: () => api.get<Dashboard>('/dashboard') });
+
+export const useMeta = () =>
+  useQuery({
+    queryKey: ['meta'],
+    queryFn: () => api.get<MetaEnums>('/meta/enums'),
+    staleTime: Infinity,
+  });
+
+export const useSearch = (q: string, enabled = true) =>
+  useQuery({
+    queryKey: ['search', q],
+    queryFn: () => api.get<SearchResults>('/search', { q }),
+    enabled: enabled && q.trim().length > 0,
+    ...stale,
+  });
+
+export const useUsers = (params: Params = {}) =>
+  useQuery(listQuery<User>('users', '/users', params));
+
+export const useAuditLogs = (params: Params = {}) =>
+  useQuery(listQuery<AuditLog>('audit-logs', '/audit-logs', params));
+
+/* ------------------------------- mutations ------------------------------ */
+/** Keys invalidated after a successful write, so lists and 360 views refresh. */
+const INVALIDATE_ALL = [
+  'materials',
+  'grades',
+  'manufacturers',
+  'applications',
+  'products',
+  'product',
+  'product-suppliers',
+  'product-customers',
+  'locations',
+  'parties',
+  'party',
+  'party-overview',
+  'inquiries',
+  'inquiry',
+  'activities',
+  'activity',
+  'notes',
+  'dashboard',
+  'users',
+  'audit-logs',
+  'search',
+  'party-duplicates',
+  'select',
+  'salespeople-workload',
+  'activity-calendar',
+  'conflicts',
+];
+
+export function useApiMutation<TInput, TResult>(
+  mutate: (input: TInput) => Promise<TResult>,
+  options: { successMessage?: string; invalidate?: string[] } = {},
+) {
+  const queryClient = useQueryClient();
+  return useMutation<TResult, ApiError, TInput>({
+    mutationFn: mutate,
+    onSuccess: () => {
+      (options.invalidate ?? INVALIDATE_ALL).forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] }),
+      );
+      if (options.successMessage) {
+        notifications.show({ color: 'teal', message: options.successMessage });
+      }
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: error.status === 409 ? 'Conflict' : 'Could not save',
+        message: error.message,
+        autoClose: 6000,
+      });
+    },
+  });
+}
+
+/* Convenience writers used across the app. */
+export const createEntity = <T,>(path: string, body: unknown) => api.post<T>(path, body);
+export const patchEntity = <T,>(path: string, body: unknown) => api.patch<T>(path, body);
+
+export const inquiryApi = {
+  create: (body: unknown) => api.post<InquiryDetail>('/inquiries', body),
+  /** Edit any field, including `status` (ACTIVE <-> CLOSED). */
+  patch: (id: number, body: unknown) => api.patch<InquiryDetail>(`/inquiries/${id}`, body),
+};
+
+export const locationApi = {
+  /** Saved to Master Data, so the next inquiry can pick it too. */
+  create: (body: unknown) => api.post<Location>('/locations', body),
+};
+
+export const activityApi = {
+  create: (body: unknown) => api.post<Activity>('/activities', body),
+  patch: (id: number, body: unknown) => api.patch<Activity>(`/activities/${id}`, body),
+  assign: (id: number, salespersonId: number | null) =>
+    api.post<Activity>(`/activities/${id}/assign`, {
+      assigned_salesperson_id: salespersonId,
+    }),
+  complete: (id: number, body: unknown) =>
+    api.post<{ activity: Activity; follow_up: Activity | null }>(
+      `/activities/${id}/complete`,
+      body,
+    ),
+};
+
+export const partyApi = {
+  create: (body: unknown) => api.post<PartyDetail>('/parties', body),
+  /** Name + phone only; lands in Master Data as a PROSPECT of the given type. */
+  createProspect: (body: { party_type: string; name: string; phone: string }) =>
+    api.post<PartyDetail>('/parties/prospects', body),
+  patch: (id: number, body: unknown) => api.patch<PartyDetail>(`/parties/${id}`, body),
+  promote: (id: number) => api.post<PartyDetail>(`/parties/${id}/promote`),
+  merge: (survivorId: number, loserId: number, note?: string | null) =>
+    api.post<PartyMergeResult>(`/parties/${survivorId}/merge`, {
+      loser_id: loserId,
+      note: note ?? null,
+    }),
+  addLocation: (id: number, body: unknown) =>
+    api.post<PartyLocation>(`/parties/${id}/locations`, body),
+  updateLocation: (id: number, linkId: number, body: unknown) =>
+    api.patch<PartyLocation>(`/parties/${id}/locations/${linkId}`, body),
+  removeLocation: (id: number, linkId: number) =>
+    api.delete<{ message: string }>(`/parties/${id}/locations/${linkId}`),
+  addProduct: (id: number, body: unknown) =>
+    api.post<PartyProduct>(`/parties/${id}/products`, body),
+  updateProduct: (id: number, linkId: number, body: unknown) =>
+    api.patch<PartyProduct>(`/parties/${id}/products/${linkId}`, body),
+  removeProduct: (id: number, linkId: number) =>
+    api.delete<{ message: string }>(`/parties/${id}/products/${linkId}`),
+  addApplication: (id: number, body: unknown) =>
+    api.post<PartyApplication>(`/parties/${id}/applications`, body),
+  removeApplication: (id: number, linkId: number) =>
+    api.delete<{ message: string }>(`/parties/${id}/applications/${linkId}`),
+};
+
+export const noteApi = {
+  create: (body: unknown) => api.post<Note>('/notes', body),
+  patch: (id: number, body: unknown) => api.patch<Note>(`/notes/${id}`, body),
+};
