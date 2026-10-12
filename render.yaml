@@ -1,4 +1,5 @@
-# Render Blueprint: API + Postgres + the two web apps.
+# Render Blueprint: API + the two web apps. Postgres is on Neon (free tier);
+# its connection string is set as the DATABASE_URL secret, never committed.
 #
 # Public URLs follow the service names:
 #   API      https://labdhi-crm-api.onrender.com   (docs at /docs)
@@ -6,13 +7,6 @@
 #   Field    https://labdhi-field.onrender.com     (same bundle as the APK)
 # If Render adds a suffix to a taken name, update VITE_API_BASE_URL and
 # CORS_ORIGINS below to match.
-
-databases:
-  - name: labdhi-db
-    plan: free
-    region: singapore
-    databaseName: trader_crm
-    user: trader
 
 services:
   - type: web
@@ -35,9 +29,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: labdhi-db
-          property: connectionString
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: SEED_ADMIN_EMAIL

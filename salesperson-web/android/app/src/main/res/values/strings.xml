@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Field Sales</string>
-    <string name="title_activity_main">Field Sales</string>
+    <string name="app_name">Labdhi Field</string>
+    <string name="title_activity_main">Labdhi Field</string>
     <string name="package_name">in.tradercrm.fieldsales</string>
     <string name="custom_url_scheme">in.tradercrm.fieldsales</string>
 </resources>
