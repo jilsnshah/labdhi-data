@@ -24,3 +24,8 @@ local.properties
 *.log
 *.dump
 keystore.properties
+
+# Customer data exports - never commit the books
+*.xlsx
+*.xls
+*.csv
