@@ -210,6 +210,12 @@ export interface PartyMergeResult {
   message: string;
 }
 
+export interface PartyMoveResult {
+  party: Party;
+  /** Product links carried over, renamed to suit the new book. */
+  products_repointed: number;
+}
+
 export interface PartyBookSummary {
   total: number;
   verified: number;

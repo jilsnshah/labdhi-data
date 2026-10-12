@@ -30,6 +30,7 @@ import type {
   PartyLocation,
   PartyProduct,
   PartyMergeResult,
+  PartyMoveResult,
   Product,
   ProductPartyLink,
   SalespersonWorkload,
@@ -329,6 +330,9 @@ export const partyApi = {
     api.post<PartyDetail>('/parties/prospects', body),
   patch: (id: number, body: unknown) => api.patch<PartyDetail>(`/parties/${id}`, body),
   promote: (id: number) => api.post<PartyDetail>(`/parties/${id}/promote`),
+  /** Move a party into another book: a customer you also buy from, say. */
+  move: (id: number, partyType: string) =>
+    api.post<PartyMoveResult>(`/parties/${id}/move`, { party_type: partyType }),
   merge: (survivorId: number, loserId: number, note?: string | null) =>
     api.post<PartyMergeResult>(`/parties/${survivorId}/merge`, {
       loser_id: loserId,

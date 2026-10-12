@@ -16,25 +16,28 @@ import {
   Group,
   Loader,
   Menu,
+  Modal,
   Stack,
   Tabs,
   Text,
 } from '@mantine/core';
 import {
   IconCalendarPlus,
+  IconArrowsExchange,
   IconDotsVertical,
   IconGitMerge,
   IconMapPin,
   IconNotes,
   IconPackage,
   IconPencil,
+  IconInfoCircle,
   IconPlus,
   IconTrash,
   IconUserCheck,
   IconX,
 } from '@tabler/icons-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { partyApi, useApiMutation, useParty360 } from '@/api/hooks';
 import type { PartyLocation, PartyProduct } from '@/api/types';
@@ -64,13 +67,18 @@ export function PartyDetailPage() {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const navigate = useNavigate();
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [locationModal, setLocationModal] = useState<PartyLocation | null | 'new'>(null);
   const [productModal, setProductModal] = useState<PartyProduct | null | 'new'>(null);
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
 
   const promote = useApiMutation(() => partyApi.promote(id), {
     successMessage: 'Promoted to a known party',
+  });
+  const move = useApiMutation((partyType: string) => partyApi.move(id, partyType), {
+    successMessage: 'Moved to the other book',
   });
   const removeLocation = useApiMutation((linkId: number) => partyApi.removeLocation(id, linkId), {
     successMessage: 'Location unlinked',
@@ -95,6 +103,12 @@ export function PartyDetailPage() {
   const isCustomer = party.party_type === 'CUSTOMER';
   const isSupplier = party.party_type === 'SUPPLIER';
   const isTransporter = party.party_type === 'TRANSPORTER';
+  /** The other side of the trade: a customer can be moved to the supplier book, and back. */
+  const moveTarget = isCustomer
+    ? { type: 'SUPPLIER', label: 'suppliers', noun: 'supplier' }
+    : isSupplier
+      ? { type: 'CUSTOMER', label: 'customers', noun: 'customer' }
+      : null;
 
   const rail = (
     <>
@@ -337,6 +351,17 @@ export function PartyDetailPage() {
                 >
                   Merge a duplicate
                 </Menu.Item>
+                {moveTarget && (
+                  <>
+                    <Menu.Divider />
+                    <Menu.Item
+                      leftSection={<IconArrowsExchange size={15} />}
+                      onClick={() => setMoveOpen(true)}
+                    >
+                      Move to {moveTarget.label}
+                    </Menu.Item>
+                  </>
+                )}
               </Menu.Dropdown>
             </Menu>
           </Group>
@@ -555,6 +580,55 @@ export function PartyDetailPage() {
         />
       )}
       {mergeOpen && <MergePartyModal party={party} onClose={() => setMergeOpen(false)} />}
+      {moveTarget && (
+        <Modal
+          opened={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          title={`Move to ${moveTarget.label}`}
+          centered
+        >
+          <Stack gap="md">
+            <Text fz="sm">
+              <b>{party.name}</b> becomes a {moveTarget.noun}. Contacts, addresses, notes,
+              activities and closed inquiries stay exactly as they are.
+            </Text>
+            {party.products.length > 0 && (
+              <Text fz="sm" c="ink.6">
+                {party.products.length} linked product
+                {party.products.length > 1 ? 's' : ''} come along as{' '}
+                <b>{moveTarget.type === 'SUPPLIER' ? 'supplies' : 'purchases'}</b>.
+              </Text>
+            )}
+            {stats.open_inquiries > 0 && (
+              <Alert color="amber" icon={<IconInfoCircle size={16} />} p="xs">
+                <Text fz="xs">
+                  {stats.open_inquiries} active {stats.open_inquiries > 1 ? 'inquiries' : 'inquiry'}{' '}
+                  must be closed first - a live quote belongs to the book it was raised in.
+                </Text>
+              </Alert>
+            )}
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={() => setMoveOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                loading={move.isPending}
+                leftSection={<IconArrowsExchange size={16} />}
+                onClick={() =>
+                  move.mutate(moveTarget.type, {
+                    onSuccess: () => {
+                      setMoveOpen(false);
+                      navigate(`/parties/${moveTarget.label}`);
+                    },
+                  })
+                }
+              >
+                Move to {moveTarget.label}
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      )}
     </>
   );
 }

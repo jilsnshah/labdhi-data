@@ -1,18 +1,21 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Group,
+  Modal,
   SegmentedControl,
   Stack,
   Switch,
   Text,
   TextInput,
+  Tooltip,
 } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { IconArrowsExchange, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { usePartyBookSummary, useParties } from '@/api/hooks';
+import { partyApi, useApiMutation, usePartyBookSummary, useParties } from '@/api/hooks';
 import type { PartyListItem, PartyType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -52,6 +55,17 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
   const { data, isFetching } = useParties({ ...list.params, party_type: partyType });
   // Book-level figures for this party type, independent of the table's filters.
   const { data: book } = usePartyBookSummary(partyType);
+  /** The other side of the trade; transporters have no opposite book. */
+  const moveTarget =
+    partyType === 'CUSTOMER'
+      ? { type: 'SUPPLIER', label: 'suppliers', noun: 'supplier' }
+      : partyType === 'SUPPLIER'
+        ? { type: 'CUSTOMER', label: 'customers', noun: 'customer' }
+        : null;
+  const [moving, setMoving] = useState<PartyListItem | null>(null);
+  const move = useApiMutation((partyId: number) => partyApi.move(partyId, moveTarget!.type), {
+    successMessage: `Moved to ${moveTarget?.label ?? 'the other book'}`,
+  });
   const accent =
     partyType === 'SUPPLIER'
       ? 'var(--supply)'
@@ -132,6 +146,31 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         ),
     },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge value={row.status} /> },
+    ...(moveTarget
+      ? [
+          {
+            key: 'move',
+            label: '',
+            width: 52,
+            render: (row: PartyListItem) => (
+              <Tooltip label={`Move to ${moveTarget.label}`} withinPortal>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  aria-label={`Move ${row.name} to ${moveTarget.label}`}
+                  loading={move.isPending && move.variables === row.id}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setMoving(row);
+                  }}
+                >
+                  <IconArrowsExchange size={16} />
+                </ActionIcon>
+              </Tooltip>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -238,6 +277,38 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         emptyHint="Try clearing the filters, or add the first one."
       />
       {createOpen && <PartyFormModal partyType={partyType} onClose={() => setCreateOpen(false)} />}
+      {moveTarget && (
+        <Modal
+          opened={moving !== null}
+          onClose={() => setMoving(null)}
+          title={`Move to ${moveTarget.label}`}
+          centered
+        >
+          <Stack gap="md">
+            <Text fz="sm">
+              <b>{moving?.name}</b> becomes a {moveTarget.noun}. Everything else - contacts,
+              addresses, notes, activities and closed inquiries - stays as it is.
+            </Text>
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={() => setMoving(null)}>
+                Cancel
+              </Button>
+              <Button
+                loading={move.isPending}
+                leftSection={<IconArrowsExchange size={16} />}
+                onClick={() =>
+                  moving &&
+                  move.mutate(moving.id, {
+                    onSuccess: () => setMoving(null),
+                  })
+                }
+              >
+                Move
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      )}
     </div>
   );
 }

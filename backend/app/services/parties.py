@@ -933,6 +933,100 @@ def promote_party(session: Session, party_id: int, user_id: int) -> Party:
     return party
 
 
+#: What a party's product links mean once it sits in the other book: a customer
+#: buys what a supplier sells, so the link survives the move.
+RELATIONSHIP_ON_MOVE: dict[PartyType, PartyProductRelationship] = {
+    PartyType.CUSTOMER: PartyProductRelationship.PURCHASES,
+    PartyType.SUPPLIER: PartyProductRelationship.SUPPLIES,
+}
+
+#: Which inquiry table belongs to which book.
+INQUIRY_OF_TYPE = {
+    PartyType.CUSTOMER: (CustomerInquiry, CustomerInquiry.customer_id, "customer"),
+    PartyType.SUPPLIER: (SupplierInquiry, SupplierInquiry.supplier_id, "supplier"),
+    PartyType.TRANSPORTER: (TransportInquiry, TransportInquiry.transporter_id, "transport"),
+}
+
+
+def move_party(
+    session: Session, party_id: int, target_type: PartyType, user_id: int
+) -> tuple[Party, dict[str, int]]:
+    """Move a party into another book - a customer you also buy from, say.
+
+    Open inquiries belong to the book they were raised in, so the move waits
+    until they are closed. Closed ones are history and stay where they are.
+    Product links follow the party: what they bought, they now supply.
+    """
+    party = get_or_404(session, Party, party_id, "Party")
+    was = party.party_type
+
+    if was == target_type:
+        raise ValidationError(
+            f"'{party.name}' is already a {target_type.value.lower()}.", field="party_type"
+        )
+    if party.stage == PartyStage.MERGED:
+        raise ConflictError(f"Party #{party.id} was merged into #{party.merged_into_id}.")
+
+    if party.stage == PartyStage.ACTIVE:
+        _ensure_name_free(session, party.name, target_type, exclude_id=party.id)
+
+    detail, column, label = INQUIRY_OF_TYPE[was]
+    open_inquiries = (
+        session.scalar(
+            select(func.count())
+            .select_from(detail)
+            .join(Inquiry, Inquiry.id == detail.inquiry_id)
+            .where(column == party.id, Inquiry.status == InquiryStatus.ACTIVE)
+        )
+        or 0
+    )
+    if open_inquiries:
+        raise ValidationError(
+            f"'{party.name}' still has {open_inquiries} active {label} "
+            f"{'inquiry' if open_inquiries == 1 else 'inquiries'}. Close them first, or they "
+            f"would sit in the wrong book.",
+            field="party_type",
+        )
+
+    links = list(party.products)
+    if links and not ALLOWED_RELATIONSHIPS[target_type]:
+        raise ValidationError(
+            f"A {target_type.value.lower()} cannot be linked to products, and "
+            f"'{party.name}' has {len(links)} linked. Remove them first.",
+            field="party_type",
+        )
+
+    moved = {"products": 0}
+    relationship = RELATIONSHIP_ON_MOVE.get(target_type)
+    if relationship is not None:
+        kept: set[int] = set()
+        for link in links:
+            # The same product can be linked once per relationship; moving both
+            # "purchases" and "interested in" onto "supplies" would collide.
+            # Removing it from the collection is what deletes it (delete-orphan).
+            if link.product_id in kept:
+                party.products.remove(link)
+                continue
+            link.relationship_type = relationship
+            kept.add(link.product_id)
+            moved["products"] += 1
+
+    party.party_type = target_type
+    session.flush()
+
+    audit.record(
+        session,
+        user_id=user_id,
+        entity_type="party",
+        entity_id=party.id,
+        action=AuditAction.UPDATE,
+        old_value={"party_type": was.value},
+        new_value={"party_type": target_type.value, "products_repointed": moved["products"]},
+    )
+    session.flush()
+    return get_party(session, party.id), moved
+
+
 def merge_parties(
     session: Session, survivor_id: int, loser_id: int, user_id: int, note: str | None = None
 ) -> dict:

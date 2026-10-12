@@ -321,6 +321,18 @@ class PartyBookSummary(BaseModel):
     cities: int = 0
 
 
+class PartyMoveRequest(BaseModel):
+    """Move a party into another book: a customer you also buy from, say."""
+
+    party_type: PartyType
+
+
+class PartyMoveResponse(BaseModel):
+    party: PartyOut
+    #: How many product links came across, renamed to suit the new book.
+    products_repointed: int = 0
+
+
 class PartyListItem(PartyOut):
     primary_city: str | None = None
     product_count: int = 0

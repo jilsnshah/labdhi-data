@@ -23,6 +23,8 @@ from app.schemas.party import (
     PartyLocationUpdate,
     PartyMergeRequest,
     PartyMergeResult,
+    PartyMoveRequest,
+    PartyMoveResponse,
     PartyProductCreate,
     PartyProductOut,
     PartyProductUpdate,
@@ -33,6 +35,18 @@ from app.services import dashboard as dashboard_service
 from app.services import parties as service
 
 router = APIRouter(prefix="/parties", tags=["parties"])
+
+
+@router.post("/{party_id}/move", response_model=PartyMoveResponse)
+def move_party(
+    party_id: int,
+    payload: PartyMoveRequest,
+    session: SessionDep,
+    user: StaffUser,
+) -> PartyMoveResponse:
+    """Move a party into another book, keeping its history, notes and products."""
+    party, moved = service.move_party(session, party_id, payload.party_type, user.id)
+    return PartyMoveResponse(party=party, products_repointed=moved["products"])
 
 
 @router.get("/summary", response_model=PartyBookSummary)
