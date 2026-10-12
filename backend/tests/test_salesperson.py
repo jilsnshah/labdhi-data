@@ -11,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from app.services.activities import business_today, day_bounds
+
 CRM_ENDPOINTS = [
     "/api/v1/parties",
     "/api/v1/parties?party_type=CUSTOMER",
@@ -32,7 +34,21 @@ CRM_ENDPOINTS = [
 
 
 def _soon(hours: float = 3) -> str:
+    """Some time away from now - used where only "future" or "past" matters."""
     return (datetime.now(UTC) + timedelta(hours=hours)).isoformat()
+
+
+def _later_today() -> str:
+    """A time still inside today's business day, so "today" endpoints see it.
+
+    A plain ``now + 3h`` slips into tomorrow when the suite runs in the evening,
+    which made the scoping tests fail for reasons that had nothing to do with
+    scoping.
+    """
+    now = datetime.now(UTC)
+    _, end_of_day = day_bounds(business_today())
+    latest = end_of_day - timedelta(minutes=1)
+    return min(now + timedelta(hours=3), max(latest, now + timedelta(seconds=30))).isoformat()
 
 
 @pytest.fixture
@@ -60,7 +76,7 @@ def assigned_visit(client, auth, parties, salesperson, visit_location):
         json={
             "customer_id": parties["customer"],
             "activity_type": "VISIT",
-            "scheduled_at": _soon(),
+            "scheduled_at": _later_today(),
             "subject": "Visit ABC Pipes factory",
             "note": "Discuss the monthly PVC requirement.",
             "assigned_salesperson_id": salesperson.id,
@@ -80,7 +96,7 @@ def other_visit(client, auth, parties, other_salesperson, visit_location):
         json={
             "customer_id": parties["other_customer"],
             "activity_type": "CALL",
-            "scheduled_at": _soon(4),
+            "scheduled_at": _later_today(),
             "assigned_salesperson_id": other_salesperson.id,
         },
         headers=auth,
