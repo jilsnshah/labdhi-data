@@ -4,13 +4,13 @@ import {
   Avatar,
   Box,
   Burger,
+  Button,
   Group,
   Kbd,
   Menu,
   ScrollArea,
   Stack,
   Text,
-  ThemeIcon,
   Tooltip,
   UnstyledButton,
 } from '@mantine/core';
@@ -22,7 +22,6 @@ import {
   IconCalendarMonth,
   IconCalendarTime,
   IconChartBar,
-  IconChevronDown,
   IconClipboardList,
   IconFlask,
   IconHistory,
@@ -30,16 +29,19 @@ import {
   IconLogout,
   IconMapPin,
   IconNote,
+  IconPlus,
   IconSearch,
+  IconSelector,
   IconSettings,
   IconSparkles,
   IconTruck,
   IconUserCheck,
   IconUsers,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 
+import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -113,60 +115,98 @@ function initials(name?: string): string {
     .join('');
 }
 
+/** Section title for the top bar, from the current route. */
+function sectionFor(pathname: string): string {
+  for (const section of NAV) {
+    for (const item of section.items) {
+      if (item.to !== '/' && pathname.startsWith(item.to)) return section.label;
+    }
+  }
+  if (pathname.startsWith('/inquiries/')) return 'Inquiries';
+  if (pathname.startsWith('/parties/')) return 'Relationships';
+  if (pathname.startsWith('/settings')) return 'Settings';
+  return 'Overview';
+}
+
+/** IST clock - the desk runs on Indian market hours. */
+function DeskClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const time = now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Kolkata',
+  });
+  const date = now.toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'Asia/Kolkata',
+  });
+  return (
+    <Group gap={8} wrap="nowrap" visibleFrom="md">
+      <Box
+        w={7}
+        h={7}
+        style={{
+          borderRadius: 99,
+          background: 'var(--mantine-color-moss-6)',
+          boxShadow: '0 0 0 3px rgba(63,161,116,0.18)',
+        }}
+      />
+      <Text className="ticker-time">
+        {date.toUpperCase()} · {time} IST
+      </Text>
+    </Group>
+  );
+}
+
 export function AppLayout() {
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure();
   const [searchOpened, setSearchOpened] = useState(false);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
   useHotkeys([['mod+K', () => setSearchOpened(true)]]);
 
+  const isActive = (to: string) =>
+    to === '/' ? location.pathname === '/' : location.pathname === to;
+
   return (
     <AppShell
-      header={{ height: 58 }}
-      navbar={{ width: 244, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }}
-      padding="lg"
+      layout="alt"
+      header={{ height: 64 }}
+      navbar={{ width: 256, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }}
+      padding="xl"
     >
-      <AppShell.Header
-        style={{ borderBottom: '1px solid var(--hairline)', background: 'var(--surface)' }}
-      >
-        <Group h="100%" px="lg" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
+      <AppShell.Header className="shell-top">
+        <Group h="100%" px="xl" justify="space-between" wrap="nowrap">
+          <Group gap="md" wrap="nowrap">
             <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
-            <Link to="/" style={{ textDecoration: 'none' }} onClick={closeMobile}>
-              <Group gap={10} wrap="nowrap">
-                <ThemeIcon variant="filled" radius="sm" size={28} color="ink.9">
-                  <IconBuildingWarehouse size={16} />
-                </ThemeIcon>
-                <Text fw={600} fz="md" c="ink.9" visibleFrom="xs" style={{ letterSpacing: '-0.01em' }}>
-                  Trader CRM
-                </Text>
-              </Group>
-            </Link>
+            <Text fz="sm" fw={600} c="ink.8">
+              {sectionFor(location.pathname)}
+            </Text>
+            <DeskClock />
           </Group>
 
           <Group gap="sm" wrap="nowrap">
             <UnstyledButton
               onClick={() => setSearchOpened(true)}
-              px="sm"
-              py={7}
-              style={{
-                border: '1px solid var(--hairline)',
-                borderRadius: 6,
-                background: 'var(--surface)',
-                minWidth: 230,
-              }}
+              className="search-pill"
               visibleFrom="sm"
             >
-              <Group gap="xs" wrap="nowrap" justify="space-between">
-                <Group gap={6} wrap="nowrap">
-                  <IconSearch size={14} color="var(--mantine-color-ink-5)" />
-                  <Text fz="sm" c="ink.5">
-                    Search
-                  </Text>
-                </Group>
-                <Kbd size="xs">⌘K</Kbd>
+              <Group gap={8} wrap="nowrap">
+                <IconSearch size={15} color="var(--mantine-color-ink-5)" />
+                <Text fz="sm" c="ink.5">
+                  Search parties, products…
+                </Text>
               </Group>
+              <Kbd size="xs">⌘K</Kbd>
             </UnstyledButton>
             <Tooltip label="Search">
               <ActionIcon
@@ -178,59 +218,41 @@ export function AppLayout() {
                 <IconSearch size={17} />
               </ActionIcon>
             </Tooltip>
-
-            <Menu position="bottom-end" withinPortal shadow="md" width={210}>
-              <Menu.Target>
-                <UnstyledButton>
-                  <Group gap={8} wrap="nowrap">
-                    <Avatar color="ink.2" radius="xl" size={28}>
-                      <Text fz={11} fw={600} c="ink.8">
-                        {initials(user?.name)}
-                      </Text>
-                    </Avatar>
-                    <Box visibleFrom="sm">
-                      <Text fz="sm" fw={550} lh={1.25} c="ink.9">
-                        {user?.name}
-                      </Text>
-                      <Text fz="xs" c="ink.5" tt="capitalize">
-                        {user?.role.toLowerCase()}
-                      </Text>
-                    </Box>
-                    <IconChevronDown size={14} color="var(--mantine-color-ink-4)" />
-                  </Group>
-                </UnstyledButton>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>{user?.email}</Menu.Label>
-                <Menu.Item leftSection={<IconSettings size={15} />} component={Link} to="/settings">
-                  Settings
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="rust" leftSection={<IconLogout size={15} />} onClick={signOut}>
-                  Sign out
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+            <Button
+              leftSection={<IconPlus size={15} />}
+              radius="xl"
+              onClick={() => setInquiryOpen(true)}
+              visibleFrom="md"
+            >
+              New inquiry
+            </Button>
           </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar
-        p="md"
-        style={{ borderRight: '1px solid var(--hairline)', background: 'var(--surface)' }}
-      >
-        <AppShell.Section grow component={ScrollArea} type="scroll">
-          <Stack gap={2} pb="md">
+      <AppShell.Navbar p="md" className="shell-nav">
+        <AppShell.Section>
+          <Link to="/" className="shell-brand" onClick={closeMobile}>
+            <span className="shell-mark">L</span>
+            <Box>
+              <div className="shell-wordmark">Labdhi</div>
+              <div className="shell-sub">Polymer trading</div>
+            </Box>
+          </Link>
+        </AppShell.Section>
+
+        <AppShell.Section grow component={ScrollArea} type="scroll" scrollbarSize={6}>
+          <Stack gap={2} pb="md" px={4}>
             {NAV.map((section) => (
               <Box key={section.label}>
                 <Text className="nav-section-label">{section.label}</Text>
-                <Stack gap={1}>
+                <Stack gap={2}>
                   {section.items.map((item) => (
                     <Link
                       key={item.to}
                       to={item.to}
                       className="nav-link"
-                      data-active={location.pathname === item.to || undefined}
+                      data-active={isActive(item.to) || undefined}
                       onClick={closeMobile}
                     >
                       <span className="nav-icon">{item.icon}</span>
@@ -242,15 +264,58 @@ export function AppLayout() {
             ))}
           </Stack>
         </AppShell.Section>
+
+        <AppShell.Section pt="sm">
+          <Menu position="top-start" withinPortal width={220}>
+            <Menu.Target>
+              <UnstyledButton className="shell-user" w="100%">
+                <Avatar
+                  radius="md"
+                  size={34}
+                  styles={{
+                    root: { background: 'linear-gradient(145deg,#e2bd6b,#b8862a)' },
+                    placeholder: { background: 'transparent', color: '#1a1206' },
+                  }}
+                >
+                  <Text fz={12} fw={700}>
+                    {initials(user?.name)}
+                  </Text>
+                </Avatar>
+                <Box style={{ minWidth: 0, flex: 1 }}>
+                  <Text fz="sm" fw={600} c="#fff" lh={1.25} truncate>
+                    {user?.name}
+                  </Text>
+                  <Text fz="xs" c="var(--shell-muted)" tt="capitalize">
+                    {user?.role.toLowerCase()}
+                  </Text>
+                </Box>
+                <IconSelector size={15} color="var(--shell-muted)" />
+              </UnstyledButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>{user?.email}</Menu.Label>
+              <Menu.Item leftSection={<IconSettings size={15} />} component={Link} to="/settings">
+                Settings
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item color="rust" leftSection={<IconLogout size={15} />} onClick={signOut}>
+                Sign out
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main className="app-main">
-        <Box className="page">
+        <Box className="page" key={location.pathname}>
           <Outlet />
         </Box>
       </AppShell.Main>
 
       <GlobalSearch opened={searchOpened} onClose={() => setSearchOpened(false)} />
+      {inquiryOpen && (
+        <InquiryFormModal opened onClose={() => setInquiryOpen(false)} defaultType="CUSTOMER" />
+      )}
     </AppShell>
   );
 }

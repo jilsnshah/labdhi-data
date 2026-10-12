@@ -39,10 +39,10 @@ import { Link, useParams } from 'react-router-dom';
 import { partyApi, useApiMutation, useParty360 } from '@/api/hooks';
 import type { PartyLocation, PartyProduct } from '@/api/types';
 import { ActivityTable } from '@/components/ActivityTable';
-import { DetailLayout, RailHighlight, RailSection } from '@/components/DetailLayout';
+import { DetailLayout, RailSection } from '@/components/DetailLayout';
+import { PartyAvatar } from '@/components/market/Visuals';
 import { EventTimeline } from '@/components/EventTimeline';
 import { InquiryTable } from '@/components/InquiryTable';
-import { StatusBadge } from '@/components/StatusBadge';
 import { ActivityFormModal } from '@/components/modals/ActivityModals';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { NoteFormModal } from '@/components/modals/NoteFormModal';
@@ -98,12 +98,6 @@ export function PartyDetailPage() {
 
   const rail = (
     <>
-      <RailHighlight
-        label="Active inquiries"
-        value={stats.open_inquiries}
-        caption={`${stats.closed_inquiries} closed`}
-      />
-
       <RailSection label="Contact">
         <Field label="Person" value={party.contact_person || '—'} width={74} />
         <Field label="Phone" value={party.phone || '—'} width={74} />
@@ -256,61 +250,124 @@ export function PartyDetailPage() {
 
   return (
     <>
-      <Group justify="space-between" align="center" wrap="wrap" gap="md" mb="lg">
-        <Stack gap={2} style={{ minWidth: 0 }}>
-          <Group gap="sm" wrap="nowrap">
-            <Text fz={20} fw={600} c="ink.9" lh={1.2} truncate>
-              {party.name}
-            </Text>
-            {party.stage !== 'ACTIVE' && <StatusBadge value={party.stage} size="md" />}
-            {party.status === 'INACTIVE' && <StatusBadge value="INACTIVE" size="md" />}
+      <section className="hero" style={{ padding: '1.5rem 1.75rem', marginBottom: '1.5rem' }}>
+        <Group justify="space-between" align="flex-start" wrap="wrap" gap="lg">
+          <Group gap="lg" wrap="nowrap" style={{ minWidth: 0 }}>
+            <PartyAvatar name={party.name} size={64} />
+            <Stack gap={4} style={{ minWidth: 0 }}>
+              <Group gap="sm" wrap="nowrap">
+                <Text className="hero-kpi-label">{humanize(party.party_type)}</Text>
+                {party.stage !== 'ACTIVE' && (
+                  <Text
+                    fz={11}
+                    fw={700}
+                    c="#e2bd6b"
+                    tt="uppercase"
+                    style={{ letterSpacing: '0.12em' }}
+                  >
+                    · {humanize(party.stage)}
+                  </Text>
+                )}
+                {party.status === 'INACTIVE' && (
+                  <Text
+                    fz={11}
+                    fw={700}
+                    c="#f0a49d"
+                    tt="uppercase"
+                    style={{ letterSpacing: '0.12em' }}
+                  >
+                    · Inactive
+                  </Text>
+                )}
+              </Group>
+              <Text className="hero-greeting" fz={38} truncate>
+                {party.name}
+              </Text>
+              <Text fz="sm" c="#aab4c7" truncate>
+                {[party.contact_person, party.phone, party.email].filter(Boolean).join('  ·  ') ||
+                  'No contact details yet'}
+              </Text>
+            </Stack>
           </Group>
-          <Text fz="sm" c="ink.5">
-            {humanize(party.party_type)} · {stats.activities} activities · {stats.notes} notes
-          </Text>
-        </Stack>
-
-        <Group gap="xs" wrap="nowrap">
-          {party.stage === 'PROSPECT' && (
+          <Group gap="xs" wrap="nowrap">
+            {party.stage === 'PROSPECT' && (
+              <Button
+                variant="white"
+                color="dark"
+                leftSection={<IconUserCheck size={15} />}
+                loading={promote.isPending}
+                onClick={() => promote.mutate(undefined)}
+              >
+                Mark as known
+              </Button>
+            )}
             <Button
-              variant="default"
-              leftSection={<IconUserCheck size={15} />}
-              loading={promote.isPending}
-              onClick={() => promote.mutate(undefined)}
+              variant="white"
+              color="dark"
+              leftSection={<IconCalendarPlus size={15} />}
+              onClick={() => setActivityOpen(true)}
             >
-              Mark as known
+              Activity
             </Button>
-          )}
-          <Button
-            variant="default"
-            leftSection={<IconCalendarPlus size={15} />}
-            onClick={() => setActivityOpen(true)}
-          >
-            Activity
-          </Button>
-          <Button leftSection={<IconPlus size={15} />} onClick={() => setInquiryOpen(true)}>
-            New inquiry
-          </Button>
-          <Menu position="bottom-end" withinPortal width={210}>
-            <Menu.Target>
-              <ActionIcon variant="default" size={34} aria-label="More actions">
-                <IconDotsVertical size={16} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item leftSection={<IconPencil size={15} />} onClick={() => setEditOpen(true)}>
-                Edit details
-              </Menu.Item>
-              <Menu.Item leftSection={<IconNotes size={15} />} onClick={() => setNoteOpen(true)}>
-                Add a note
-              </Menu.Item>
-              <Menu.Item leftSection={<IconGitMerge size={15} />} onClick={() => setMergeOpen(true)}>
-                Merge a duplicate
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+            <Button
+              leftSection={<IconPlus size={15} />}
+              onClick={() => setInquiryOpen(true)}
+              styles={{
+                root: { background: 'linear-gradient(145deg,#e2bd6b,#b8862a)', color: '#1a1206' },
+              }}
+            >
+              New inquiry
+            </Button>
+            <Menu position="bottom-end" withinPortal width={210}>
+              <Menu.Target>
+                <ActionIcon variant="white" color="dark" size={36} aria-label="More actions">
+                  <IconDotsVertical size={16} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconPencil size={15} />} onClick={() => setEditOpen(true)}>
+                  Edit details
+                </Menu.Item>
+                <Menu.Item leftSection={<IconNotes size={15} />} onClick={() => setNoteOpen(true)}>
+                  Add a note
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconGitMerge size={15} />}
+                  onClick={() => setMergeOpen(true)}
+                >
+                  Merge a duplicate
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
         </Group>
-      </Group>
+        <div className="hero-kpis" style={{ marginTop: '1.25rem' }}>
+          <div className="hero-kpi">
+            <div className="hero-kpi-label">Active inquiries</div>
+            <div className="hero-kpi-value">{stats.open_inquiries}</div>
+            <div className="hero-kpi-hint">{stats.closed_inquiries} closed</div>
+          </div>
+          <div className="hero-kpi">
+            <div className="hero-kpi-label">Activities</div>
+            <div className="hero-kpi-value">{stats.activities}</div>
+            <div className="hero-kpi-hint">{stats.upcoming_activities} upcoming</div>
+          </div>
+          <div className="hero-kpi">
+            <div className="hero-kpi-label">
+              {isSupplier ? 'Supplies' : isCustomer ? 'Buys' : 'Locations'}
+            </div>
+            <div className="hero-kpi-value">
+              {isTransporter ? party.locations.length : party.products.length}
+            </div>
+            <div className="hero-kpi-hint">{isTransporter ? 'on file' : 'products linked'}</div>
+          </div>
+          <div className="hero-kpi">
+            <div className="hero-kpi-label">Notes</div>
+            <div className="hero-kpi-value">{stats.notes}</div>
+            <div className="hero-kpi-hint">since {formatDate(party.created_at)}</div>
+          </div>
+        </div>
+      </section>
 
       {party.stage === 'MERGED' && party.merged_into_id && (
         <Alert color="ink" icon={<IconGitMerge size={16} />} mb="lg">
@@ -323,8 +380,11 @@ export function PartyDetailPage() {
       )}
       {party.stage === 'PROSPECT' && (
         <Alert color="amber" icon={<IconUserCheck size={16} />} mb="lg">
-          Created in one step from an inquiry or a call, so the identity is not verified yet.
-          Closing an inquiry as <b>converted to deal</b> promotes it automatically.
+          {party.source === 'FIELD'
+            ? 'Added by a salesperson from the field app after a cold call or visit'
+            : 'Created in one step from an inquiry or a call'}
+          , so the identity is not verified yet. Use <b>Mark as known</b> once you have confirmed
+          who they are.
         </Alert>
       )}
 
@@ -471,7 +531,11 @@ export function PartyDetailPage() {
         />
       )}
       {noteOpen && (
-        <NoteFormModal partyId={party.id} partyLabel={party.name} onClose={() => setNoteOpen(false)} />
+        <NoteFormModal
+          partyId={party.id}
+          partyLabel={party.name}
+          onClose={() => setNoteOpen(false)}
+        />
       )}
       {locationModal && (
         <PartyLocationModal

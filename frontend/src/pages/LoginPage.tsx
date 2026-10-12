@@ -1,29 +1,25 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Center,
-  Group,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from '@mantine/core';
-import { IconBuildingWarehouse, IconInfoCircle } from '@tabler/icons-react';
+import { Alert, Box, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
+import { IconArrowRight, IconInfoCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/lib/auth';
 
+/** Decorative board for the brand panel - illustrative rows, not live data. */
+const BOARD = [
+  { product: 'PVC K-67', buy: '90.80', sell: '93.00', spread: '+2.20' },
+  { product: 'LLDPE Film', buy: '98.40', sell: '101.25', spread: '+2.85' },
+  { product: 'HDPE MFI 0.3', buy: '103.50', sell: '106.00', spread: '+2.50' },
+  { product: 'PP Raffia', buy: '95.10', sell: '96.40', spread: '+1.30' },
+];
+
 export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@tradercrm.in');
-  const [password, setPassword] = useState('admin123');
+  // Demo credentials are prefilled only on a local dev server.
+  const [email, setEmail] = useState(import.meta.env.DEV ? 'admin@tradercrm.in' : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'admin123' : '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,33 +38,61 @@ export function LoginPage() {
   };
 
   return (
-    <Center h="100vh" p="lg" bg="var(--surface)">
-      <Stack gap="lg" w={400} maw="100%">
-        <Group gap="sm" justify="center">
-          <ThemeIcon size={40} radius="md" color="ink">
-            <IconBuildingWarehouse size={22} />
-          </ThemeIcon>
-          <Box>
-            <Title order={3} fz={20} lh={1.2}>
-              Trader CRM
-            </Title>
-            <Text fz="xs" c="dimmed">
-              Inquiries, relationships and field work
-            </Text>
-          </Box>
-        </Group>
+    <div className="login">
+      <section className="login-brand">
+        <div className="login-brand-top">
+          <span className="shell-mark">L</span>
+          <div>
+            <div className="shell-wordmark">Labdhi</div>
+            <div className="shell-sub">Polymer trading</div>
+          </div>
+        </div>
 
-        <Card padding="xl" shadow="md">
+        <div>
+          <h1 className="login-headline">
+            Every offer, every bid, <em>one desk.</em>
+          </h1>
+          <p className="login-lede">
+            Supplier quotes, customer demand and transport rates in one place — with the spread
+            between them always in view.
+          </p>
+
+          <div className="login-board" aria-hidden>
+            <div className="login-board-row login-board-head">
+              <span>Product</span>
+              <span>Buy</span>
+              <span>Sell</span>
+              <span>Spread</span>
+            </div>
+            {BOARD.map((row, index) => (
+              <div
+                className="login-board-row"
+                key={row.product}
+                style={{ animationDelay: `${300 + index * 90}ms` }}
+              >
+                <span>{row.product}</span>
+                <span className="buy">₹{row.buy}</span>
+                <span className="sell">₹{row.sell}</span>
+                <span className="spread">{row.spread}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="login-foot">Rates in ₹/kg · illustrative</div>
+      </section>
+
+      <section className="login-form-side">
+        <Box w={380} maw="100%">
+          <div className="page-eyebrow">Trade desk</div>
+          <h2 className="page-title" style={{ fontSize: '2.75rem' }}>
+            Sign in
+          </h2>
+          <Text c="ink.5" fz="sm" mt={6} mb="xl">
+            Use your desk account to open today's book.
+          </Text>
           <form onSubmit={submit}>
             <Stack gap="md">
-              <Box>
-                <Title order={5} fz="md">
-                  Sign in
-                </Title>
-                <Text fz="xs" c="dimmed">
-                  Use your trade desk account.
-                </Text>
-              </Box>
               <TextInput
                 label="Email"
                 type="email"
@@ -89,17 +113,24 @@ export function LoginPage() {
                   <Text fz="xs">{error}</Text>
                 </Alert>
               )}
-              <Button type="submit" loading={loading} fullWidth size="md" mt={4}>
+              <Button
+                type="submit"
+                loading={loading}
+                fullWidth
+                size="md"
+                mt={6}
+                rightSection={<IconArrowRight size={17} />}
+              >
                 Sign in
               </Button>
             </Stack>
           </form>
-        </Card>
-
-        <Text fz="xs" c="dimmed" ta="center">
-          Demo: admin@tradercrm.in / admin123 · field app users sign in on the phone
-        </Text>
-      </Stack>
-    </Center>
+          <Text fz="xs" c="ink.4" mt="xl">
+            {import.meta.env.DEV && 'Demo: admin@tradercrm.in / admin123 · '}
+            Field staff sign in on the phone app.
+          </Text>
+        </Box>
+      </section>
+    </div>
   );
 }

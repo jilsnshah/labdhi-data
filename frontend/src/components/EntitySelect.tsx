@@ -27,6 +27,7 @@ interface Row {
   name?: string;
   display_name?: string;
   label?: string | null;
+  area?: string | null;
   city?: string;
   state?: string | null;
   status?: string;
@@ -46,7 +47,7 @@ const PATHS: Record<EntityKind, string> = {
 function labelOf(kind: EntityKind, row: Row): string {
   if (kind === 'product') return row.display_name ?? `#${row.id}`;
   if (kind === 'location') {
-    return [row.label, row.city, row.state].filter(Boolean).join(' - ') || `#${row.id}`;
+    return [row.label, row.area, row.city, row.state].filter(Boolean).join(' - ') || `#${row.id}`;
   }
   return row.name ?? `#${row.id}`;
 }

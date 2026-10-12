@@ -66,6 +66,13 @@ export const useProducts = (params: Params = {}) =>
   useQuery(listQuery<Product>('products', '/products', params));
 export const useLocations = (params: Params = {}) =>
   useQuery(listQuery<Location>('locations', '/locations', params));
+/** Distinct areas already in use - offered as suggestions and filter options. */
+export const useLocationAreas = () =>
+  useQuery({
+    queryKey: ['locations', 'areas'],
+    queryFn: () => api.get<string[]>('/locations/areas'),
+    ...stale,
+  });
 
 export const useProduct = (id?: number) =>
   useQuery({

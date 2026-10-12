@@ -54,6 +54,7 @@ class ApplicationRef(ORMBase):
 class LocationRef(ORMBase):
     id: int
     label: str | None = None
+    area: str | None = None
     city: str
     state: str | None = None
 

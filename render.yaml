@@ -1,0 +1,78 @@
+# Render Blueprint: API + Postgres + the two web apps.
+#
+# Public URLs follow the service names:
+#   API      https://labdhi-crm-api.onrender.com   (docs at /docs)
+#   Admin    https://labdhi-crm.onrender.com
+#   Field    https://labdhi-field.onrender.com     (same bundle as the APK)
+# If Render adds a suffix to a taken name, update VITE_API_BASE_URL and
+# CORS_ORIGINS below to match.
+
+databases:
+  - name: labdhi-db
+    plan: free
+    region: singapore
+    databaseName: trader_crm
+    user: trader
+
+services:
+  - type: web
+    name: labdhi-crm-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Free instances have no pre-deploy step, so migrate on start. The bootstrap
+    # creates only the admin account, and only when the database has no users.
+    startCommand: >-
+      alembic upgrade head &&
+      python -m app.seed --bootstrap &&
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: labdhi-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SEED_ADMIN_EMAIL
+        value: admin@tradercrm.in
+      - key: SEED_ADMIN_NAME
+        value: Trade Desk Admin
+      - key: SEED_ADMIN_PASSWORD
+        generateValue: true
+      - key: DISPLAY_TIMEZONE_OFFSET_MINUTES
+        value: "330"
+      # The two web apps, plus the origins the APK's WebView uses.
+      - key: CORS_ORIGINS
+        value: https://labdhi-crm.onrender.com,https://labdhi-field.onrender.com,https://localhost,capacitor://localhost
+
+  - type: web
+    name: labdhi-crm
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://labdhi-crm-api.onrender.com/api/v1
+    routes:
+      # Client-side routing: every path serves the app.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: labdhi-field
+    runtime: static
+    rootDir: salesperson-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://labdhi-crm-api.onrender.com/api/v1

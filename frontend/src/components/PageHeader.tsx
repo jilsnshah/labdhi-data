@@ -1,6 +1,10 @@
-import { Group, Stack, Text, Title } from '@mantine/core';
+import { Group } from '@mantine/core';
 import type { ReactNode } from 'react';
 
+/**
+ * Every page opens the same way: a brass eyebrow naming the section, a serif
+ * title, one line on what the page is for, and the page's actions on the right.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -14,22 +18,12 @@ export function PageHeader({
   eyebrow?: string;
 }) {
   return (
-    <Group justify="space-between" align="flex-end" mb="lg" wrap="wrap" gap="md">
-      <Stack gap={2} style={{ minWidth: 0 }}>
-        {eyebrow && (
-          <Text fz={11} fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: '0.08em' }}>
-            {eyebrow}
-          </Text>
-        )}
-        <Title order={2} fz={22} lh={1.25}>
-          {title}
-        </Title>
-        {subtitle && (
-          <Text c="dimmed" fz="sm" style={{ maxWidth: '72ch' }}>
-            {subtitle}
-          </Text>
-        )}
-      </Stack>
+    <Group className="page-head" justify="space-between" align="flex-end" wrap="wrap" gap="md">
+      <div style={{ minWidth: 0 }}>
+        {eyebrow && <div className="page-eyebrow">{eyebrow}</div>}
+        <h1 className="page-title">{title}</h1>
+        {subtitle && <div className="page-subtitle">{subtitle}</div>}
+      </div>
       {actions && (
         <Group gap="xs" wrap="wrap">
           {actions}

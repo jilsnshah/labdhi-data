@@ -20,12 +20,13 @@ def list_locations(
     session: SessionDep,
     _: StaffUser,
     params: PageParams = Depends(page_params),
-    q: str | None = Query(None, description="Label, city, state, address or pincode"),
+    q: str | None = Query(None, description="Label, area, city, state, address or pincode"),
     city: str | None = None,
+    area: str | None = Query(None, description="Exact area, case-insensitive"),
     state: str | None = None,
     party_id: int | None = None,
     status: RecordStatus | None = None,
-    sort_by: str | None = Query(None, pattern="^(city|label|created_at|id)$"),
+    sort_by: str | None = Query(None, pattern="^(city|area|label|created_at|id)$"),
     sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
 ) -> Page[LocationOut]:
     rows, total = service.list_locations(
@@ -33,6 +34,7 @@ def list_locations(
         params,
         q=q,
         city=city,
+        area=area,
         state=state,
         party_id=party_id,
         status=status,
@@ -40,6 +42,12 @@ def list_locations(
         sort_dir=sort_dir,
     )
     return Page.build([LocationOut.model_validate(row) for row in rows], total, params)
+
+
+@router.get("/areas", response_model=list[str])
+def list_areas(session: SessionDep, _: StaffUser) -> list[str]:
+    """Distinct areas in use on active locations - feeds pickers and filters."""
+    return service.list_areas(session)
 
 
 @router.post("", response_model=LocationOut, status_code=201)

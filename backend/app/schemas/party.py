@@ -18,10 +18,20 @@ from app.schemas.common import ApplicationRef, ORMBase, ProductRef, TimestampsOu
 
 
 # --- Location ---------------------------------------------------------------
+def _clean_area(value: str | None) -> str | None:
+    """One spelling per area: trim and collapse spaces, blank means none."""
+    if value is None:
+        return None
+    cleaned = " ".join(value.split())
+    return cleaned or None
+
+
 class LocationCreate(BaseModel):
     label: str | None = Field(default=None, max_length=120)
     address_line_1: str | None = Field(default=None, max_length=200)
     address_line_2: str | None = Field(default=None, max_length=200)
+    #: Locality within the city, e.g. "Shapar" or "GIDC Vapi".
+    area: str | None = Field(default=None, max_length=120)
     city: str = Field(min_length=1, max_length=120)
     state: str | None = Field(default=None, max_length=120)
     country: str = Field(default="India", max_length=120)
@@ -29,11 +39,14 @@ class LocationCreate(BaseModel):
     latitude: Decimal | None = Field(default=None, ge=-90, le=90)
     longitude: Decimal | None = Field(default=None, ge=-180, le=180)
 
+    _area = field_validator("area")(_clean_area)
+
 
 class LocationUpdate(BaseModel):
     label: str | None = Field(default=None, max_length=120)
     address_line_1: str | None = None
     address_line_2: str | None = None
+    area: str | None = Field(default=None, max_length=120)
     city: str | None = Field(default=None, min_length=1, max_length=120)
     state: str | None = None
     country: str | None = None
@@ -42,12 +55,15 @@ class LocationUpdate(BaseModel):
     longitude: Decimal | None = Field(default=None, ge=-180, le=180)
     status: RecordStatus | None = None
 
+    _area = field_validator("area")(_clean_area)
+
 
 class LocationOut(TimestampsOut, ORMBase):
     id: int
     label: str | None
     address_line_1: str | None
     address_line_2: str | None
+    area: str | None
     city: str
     state: str | None
     country: str

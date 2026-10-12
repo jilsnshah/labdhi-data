@@ -390,3 +390,91 @@ def test_transport_rows_show_the_route(client, auth, parties, locations):
     assert row["pickup_name"] == "Ahmedabad Warehouse, Ahmedabad"
     assert row["delivery_name"] == "Rajkot Factory, Rajkot"
     assert row["price"] == "18000.00"
+
+
+# --------------------------------------------------------------------------- #
+# Area and product-attribute filters
+# --------------------------------------------------------------------------- #
+def _set_area(client, auth, location_id, area):
+    response = client.patch(f"/api/v1/locations/{location_id}", json={"area": area}, headers=auth)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_a_location_carries_a_tidied_area(client, auth):
+    created = client.post(
+        "/api/v1/locations",
+        json={"label": "ABC Factory", "area": "  Shapar   Veraval ", "city": "Rajkot"},
+        headers=auth,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["area"] == "Shapar Veraval"
+    assert body["display_name"] == "ABC Factory - Shapar Veraval - Rajkot"
+
+
+def test_areas_in_use_are_listed_once_each(client, auth, locations):
+    _set_area(client, auth, locations["pickup_id"], "Narol")
+    _set_area(client, auth, locations["delivery_id"], "Shapar")
+    client.post("/api/v1/locations", json={"city": "Ahmedabad", "area": "Narol"}, headers=auth)
+    assert client.get("/api/v1/locations/areas", headers=auth).json() == ["Narol", "Shapar"]
+    narol = client.get("/api/v1/locations", params={"area": "narol"}, headers=auth).json()
+    assert narol["total"] == 2
+
+
+def test_inquiries_filter_by_area_including_either_end_of_a_route(
+    client, auth, masters, parties, locations
+):
+    _set_area(client, auth, locations["pickup_id"], "Narol")
+    _set_area(client, auth, locations["delivery_id"], "Shapar")
+    supplier = _supplier_inquiry(
+        client, auth, masters, parties, location_id=locations["pickup_id"]
+    ).json()
+    customer = _customer_inquiry(
+        client, auth, masters, parties, location_id=locations["delivery_id"]
+    ).json()
+    transport = _transport_inquiry(client, auth, parties, locations).json()
+
+    def ids(area):
+        rows = client.get("/api/v1/inquiries", params={"area": area}, headers=auth).json()
+        return {row["id"] for row in rows["items"]}
+
+    assert ids("Narol") == {supplier["id"], transport["id"]}
+    assert ids("shapar") == {customer["id"], transport["id"]}
+    assert ids("Udhna") == set()
+
+    row = client.get("/api/v1/inquiries", params={"inquiry_type": "SUPPLIER"}, headers=auth).json()[
+        "items"
+    ][0]
+    assert row["location_name"] == "Ahmedabad Warehouse, Narol, Ahmedabad"
+    assert (row["location_area"], row["location_city"]) == ("Narol", "Ahmedabad")
+
+
+def test_inquiries_filter_by_material_grade_brand_and_application(
+    client, auth, masters, parties, locations
+):
+    other_product = client.post(
+        "/api/v1/products",
+        json={
+            "material_id": masters["other_material_id"],
+            "grade_id": masters["other_grade_id"],
+            "manufacturer_id": masters["manufacturer_id"],
+        },
+        headers=auth,
+    ).json()
+    pvc = _customer_inquiry(client, auth, masters, parties).json()
+    hdpe = _supplier_inquiry(client, auth, masters, parties, product_id=other_product["id"]).json()
+    _transport_inquiry(client, auth, parties, locations)
+
+    def ids(**params):
+        rows = client.get("/api/v1/inquiries", params=params, headers=auth).json()
+        return {row["id"] for row in rows["items"]}
+
+    assert ids(material_id=masters["material_id"]) == {pvc["id"]}
+    assert ids(material_id=masters["other_material_id"]) == {hdpe["id"]}
+    assert ids(grade_id=masters["grade_id"]) == {pvc["id"]}
+    # Same brand on both products; transport has no product, so it never matches.
+    assert ids(manufacturer_id=masters["manufacturer_id"]) == {pvc["id"], hdpe["id"]}
+    # Only the PVC product is tagged for the PVC Pipes application.
+    assert ids(application_id=masters["application_id"]) == {pvc["id"]}
+    assert ids(material_id=masters["material_id"], grade_id=masters["other_grade_id"]) == set()

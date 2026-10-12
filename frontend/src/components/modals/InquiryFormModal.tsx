@@ -48,7 +48,7 @@ const TITLE: Record<InquiryType, string> = {
 
 function placeName(location: LocationRef | null | undefined): string | null {
   if (!location) return null;
-  return [location.label, location.city, location.state].filter(Boolean).join(' - ');
+  return [location.label, location.area, location.city, location.state].filter(Boolean).join(' - ');
 }
 
 /** Pull the editable values out of an existing inquiry, whichever type it is. */

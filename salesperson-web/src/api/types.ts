@@ -50,6 +50,8 @@ export interface FieldActivity {
   parent_activity_id: number | null;
   is_visit: boolean;
   can_complete: boolean;
+  /** Logged by the salesperson (a cold call or visit), not assigned by the office. */
+  self_logged: boolean;
   customer: ActivityCustomer;
   location: ActivityLocation | null;
 }
@@ -79,4 +81,59 @@ export interface LoginResponse {
 export interface CompleteResponse {
   activity: FieldActivity;
   already_completed: boolean;
+}
+
+/** Someone this salesperson has already worked with; `ref` is an own activity id. */
+export interface FieldContact {
+  ref: number;
+  name: string;
+  contact_person: string | null;
+  phone: string | null;
+  party_type: 'CUSTOMER' | 'SUPPLIER' | string;
+  is_prospect: boolean;
+  place: string | null;
+  last_activity_at: string | null;
+  activity_count: number;
+}
+
+export interface NewContact {
+  name: string;
+  phone: string | null;
+  contact_person: string | null;
+  party_type: 'CUSTOMER' | 'SUPPLIER';
+}
+
+export interface LogActivityRequest {
+  contact_ref?: number | null;
+  new_contact?: NewContact | null;
+  activity_type: ActivityType;
+  done: boolean;
+  outcome_code?: ActivityOutcome | null;
+  note?: string | null;
+  at?: string | null;
+  place?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  client_token?: string | null;
+}
+
+export interface LogActivityResponse {
+  activity: FieldActivity;
+  duplicate: boolean;
+  new_contact_created: boolean;
+}
+
+export interface DayTally {
+  date: string;
+  completed: number;
+}
+
+export interface FieldStats {
+  days: DayTally[];
+  completed_7d: number;
+  visits_7d: number;
+  calls_7d: number;
+  self_logged_7d: number;
+  new_contacts_7d: number;
+  on_time_rate: number | null;
 }

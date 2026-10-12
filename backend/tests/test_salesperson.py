@@ -1,7 +1,8 @@
 """The authorization matrix for the field role, enforced server-side.
 
 These tests are the security contract: a salesperson may read only the activities
-assigned to them and may write only a completion or a follow-up.
+assigned to them, and may write only a completion, a follow-up, or an activity
+they log themselves - which is always assigned to them.
 """
 
 from __future__ import annotations
@@ -601,3 +602,212 @@ def test_salesperson_cannot_change_other_users_password(client, sales_auth, admi
         f"/api/v1/users/{admin.id}", json={"password": "hacked123"}, headers=sales_auth
     )
     assert response.status_code == 403
+
+
+# --------------------------------------------------------------------------- #
+# Logging an activity from the field
+# --------------------------------------------------------------------------- #
+def _ago(hours: float = 1) -> str:
+    return (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+
+
+def _log(client, sales_auth, **body):
+    payload = {"activity_type": "CALL", "done": True, "outcome_code": "COMPLETED", "note": "x"}
+    payload.update(body)
+    return client.post("/api/v1/salesperson/activities", json=payload, headers=sales_auth)
+
+
+def test_a_cold_call_to_someone_new_creates_a_field_prospect(client, auth, sales_auth, salesperson):
+    response = _log(
+        client,
+        sales_auth,
+        new_contact={
+            "name": "Rajkot Polymers",
+            "phone": "+91 90011 22334",
+            "party_type": "SUPPLIER",
+        },
+        outcome_code="CUSTOMER_INTERESTED",
+        note="Has 20 MT K-67, wants to quote.",
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["new_contact_created"] is True
+    activity = body["activity"]
+    assert activity["self_logged"] is True
+    assert activity["status"] == "COMPLETED"
+    assert activity["outcome_code"] == "CUSTOMER_INTERESTED"
+    assert activity["completion_note"] == "Has 20 MT K-67, wants to quote."
+    # The payload still exposes no party id.
+    assert "id" not in activity["customer"]
+
+    # The office sees it: assigned to and created by the salesperson, and the
+    # new contact is a FIELD prospect of the right type.
+    rows = client.get(
+        "/api/v1/activities", params={"assigned_salesperson_id": salesperson.id}, headers=auth
+    ).json()["items"]
+    logged = next(row for row in rows if row["id"] == activity["id"])
+    assert logged["created_by"] == salesperson.id
+    party = client.get(f"/api/v1/parties/{logged['party_id']}", headers=auth).json()
+    assert (party["stage"], party["source"], party["party_type"]) == (
+        "PROSPECT",
+        "FIELD",
+        "SUPPLIER",
+    )
+
+
+def test_a_retried_submission_is_logged_once(client, sales_auth):
+    body = {"new_contact": {"name": "Retry Co"}, "client_token": "same-token-1"}
+    first = _log(client, sales_auth, **body)
+    second = _log(client, sales_auth, **body)
+    assert first.status_code == second.status_code == 201
+    assert second.json()["duplicate"] is True
+    assert second.json()["activity"]["id"] == first.json()["activity"]["id"]
+    assert second.json()["new_contact_created"] is False
+
+
+def test_tokens_are_per_salesperson(client, sales_auth, other_sales_auth):
+    """Another rep reusing a token string must not see the first rep's activity."""
+    mine = _log(client, sales_auth, new_contact={"name": "A Co"}, client_token="shared")
+    theirs = _log(client, other_sales_auth, new_contact={"name": "B Co"}, client_token="shared")
+    assert theirs.json()["duplicate"] is False
+    assert theirs.json()["activity"]["id"] != mine.json()["activity"]["id"]
+
+
+def test_contacts_are_only_parties_the_salesperson_has_worked_with(
+    client, sales_auth, assigned_visit, other_visit
+):
+    contacts = client.get("/api/v1/salesperson/contacts", headers=sales_auth).json()
+    assert [contact["ref"] for contact in contacts] == [assigned_visit["id"]]
+    assert "id" not in contacts[0]
+    # Someone else's customer never appears, even by name search.
+    other_name = other_visit["party"]["name"]
+    found = client.get(
+        "/api/v1/salesperson/contacts", params={"q": other_name}, headers=sales_auth
+    ).json()
+    if other_name != assigned_visit["party"]["name"]:
+        assert found == []
+
+
+def test_a_known_contact_is_addressed_through_an_own_activity(client, sales_auth, assigned_visit):
+    response = _log(client, sales_auth, contact_ref=assigned_visit["id"], note="Checked in.")
+    assert response.status_code == 201, response.text
+    assert response.json()["activity"]["customer"]["name"] == assigned_visit["party"]["name"]
+    assert response.json()["new_contact_created"] is False
+
+
+def test_another_persons_activity_cannot_be_used_as_a_contact(client, sales_auth, other_visit):
+    response = _log(client, sales_auth, contact_ref=other_visit["id"])
+    assert response.status_code == 404
+
+
+def test_the_assignee_is_always_the_signed_in_salesperson(
+    client, auth, sales_auth, salesperson, other_salesperson
+):
+    """Extra fields trying to reassign the activity are ignored."""
+    response = _log(
+        client,
+        sales_auth,
+        new_contact={"name": "Sneaky Co"},
+        assigned_salesperson_id=other_salesperson.id,
+        salesperson_id=other_salesperson.id,
+    )
+    assert response.status_code == 201
+    activity_id = response.json()["activity"]["id"]
+    row = client.get(f"/api/v1/activities/{activity_id}", headers=auth).json()
+    assert row["assigned_salesperson_id"] == salesperson.id
+
+
+def test_a_done_activity_needs_an_outcome_and_a_note(client, sales_auth):
+    assert _log(client, sales_auth, new_contact={"name": "X"}, outcome_code=None).status_code == 422
+    assert _log(client, sales_auth, new_contact={"name": "X"}, note="  ").status_code == 422
+
+
+def test_done_cannot_be_in_the_future_or_older_than_a_week(client, sales_auth):
+    future = _log(client, sales_auth, new_contact={"name": "X"}, at=_soon(3))
+    old = _log(client, sales_auth, new_contact={"name": "X"}, at=_ago(24 * 8))
+    earlier_today = _log(client, sales_auth, new_contact={"name": "X"}, at=_ago(2))
+    assert future.status_code == 422
+    assert old.status_code == 422
+    assert earlier_today.status_code == 201
+
+
+def test_a_planned_activity_needs_a_future_time(client, sales_auth, assigned_visit):
+    planned = _log(
+        client, sales_auth, contact_ref=assigned_visit["id"], done=False, at=_soon(24), note="Prep"
+    )
+    assert planned.status_code == 201, planned.text
+    assert planned.json()["activity"]["status"] == "SCHEDULED"
+    assert planned.json()["activity"]["purpose"] == "Prep"
+    past = _log(client, sales_auth, contact_ref=assigned_visit["id"], done=False, at=_ago(2))
+    missing = _log(client, sales_auth, contact_ref=assigned_visit["id"], done=False)
+    assert past.status_code == missing.status_code == 422
+
+
+def test_a_cold_visit_needs_somewhere_to_be(client, auth, sales_auth):
+    nowhere = _log(client, sales_auth, activity_type="VISIT", new_contact={"name": "Shop"})
+    assert nowhere.status_code == 422
+
+    typed = _log(
+        client,
+        sales_auth,
+        activity_type="VISIT",
+        new_contact={"name": "Shop"},
+        place="Opposite bus stand, Gondal Road",
+    )
+    assert typed.status_code == 201, typed.text
+    assert typed.json()["activity"]["location"]["formatted"] == "Opposite bus stand, Gondal Road"
+
+    pinned = _log(
+        client,
+        sales_auth,
+        activity_type="VISIT",
+        new_contact={"name": "Shop 2"},
+        latitude="21.96",
+        longitude="70.80",
+    )
+    assert pinned.status_code == 201, pinned.text
+    assert pinned.json()["activity"]["location"]["maps_url"].endswith("21.96,70.8")
+
+    # The office sees where it happened too.
+    office = client.get(f"/api/v1/activities/{pinned.json()['activity']['id']}", headers=auth)
+    snapshot = office.json()["location_snapshot"]
+    assert (snapshot["latitude"], snapshot["longitude"]) == ("21.96", "70.80")
+
+
+def test_logged_types_are_restricted(client, sales_auth):
+    assert (
+        _log(client, sales_auth, activity_type="MEETING", new_contact={"name": "X"}).status_code
+        == 422
+    )
+
+
+def test_exactly_one_way_of_saying_who(client, sales_auth, assigned_visit):
+    neither = _log(client, sales_auth)
+    both = _log(client, sales_auth, contact_ref=assigned_visit["id"], new_contact={"name": "X"})
+    assert neither.status_code == both.status_code == 422
+
+
+def test_staff_cannot_use_the_field_logging_endpoints(client, auth):
+    assert _log(client, auth, new_contact={"name": "X"}).status_code == 403
+    assert client.get("/api/v1/salesperson/contacts", headers=auth).status_code == 403
+    assert client.get("/api/v1/salesperson/stats", headers=auth).status_code == 403
+
+
+def test_stats_count_only_own_work(client, sales_auth, other_sales_auth):
+    _log(client, sales_auth, new_contact={"name": "Mine 1"})
+    _log(client, sales_auth, activity_type="VISIT", new_contact={"name": "Mine 2"}, place="Here")
+    _log(client, other_sales_auth, new_contact={"name": "Theirs"})
+
+    stats = client.get("/api/v1/salesperson/stats", headers=sales_auth).json()
+    assert stats["completed_7d"] == 2
+    assert stats["calls_7d"] == 1
+    assert stats["visits_7d"] == 1
+    assert stats["self_logged_7d"] == 2
+    assert stats["new_contacts_7d"] == 2
+    assert len(stats["days"]) == 7
+    assert stats["days"][-1]["completed"] == 2
+
+
+def test_office_assigned_work_is_not_marked_self_logged(client, sales_auth, assigned_visit):
+    row = client.get(f"/api/v1/salesperson/activities/{assigned_visit['id']}", headers=sales_auth)
+    assert row.json()["self_logged"] is False

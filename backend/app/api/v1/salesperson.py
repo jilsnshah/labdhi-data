@@ -8,7 +8,7 @@ token.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.core.deps import SalespersonUser, SessionDep
 from app.schemas.common import Message
@@ -16,9 +16,13 @@ from app.schemas.salesperson import (
     ChangePasswordRequest,
     CompleteActivityRequest,
     CompleteActivityResponse,
+    FieldContact,
+    FieldStats,
     FollowUpRequest,
     FollowUpResponse,
     LocationFixRequest,
+    LogActivityRequest,
+    LogActivityResponse,
     SalespersonActivity,
     SalespersonDashboard,
     SalespersonProfile,
@@ -67,6 +71,39 @@ def history(
 def todays_visits(session: SessionDep, user: SalespersonUser) -> list[SalespersonActivity]:
     """Chronological visit list with a ready-made Google Maps link per stop."""
     return service.views(service.today_activities(session, user, visits_only=True))
+
+
+@router.get("/contacts", response_model=list[FieldContact])
+def my_contacts(
+    session: SessionDep,
+    user: SalespersonUser,
+    q: str | None = Query(None, max_length=100, description="Name, contact person or phone"),
+) -> list[FieldContact]:
+    """People this salesperson has already worked with - never the whole party book."""
+    return service.contacts(session, user, q=q)
+
+
+@router.post("/activities", response_model=LogActivityResponse, status_code=201)
+def log_activity(
+    payload: LogActivityRequest, session: SessionDep, user: SalespersonUser
+) -> LogActivityResponse:
+    """Log a cold call or visit the salesperson did - or plans - on their own.
+
+    Always assigned to the signed-in salesperson. A repeated ``client_token``
+    returns the activity it already created instead of logging it twice.
+    """
+    activity, duplicate, new_contact = service.log_activity(session, user, payload)
+    return LogActivityResponse(
+        activity=service.to_view(activity),
+        duplicate=duplicate,
+        new_contact_created=new_contact,
+    )
+
+
+@router.get("/stats", response_model=FieldStats)
+def my_stats(session: SessionDep, user: SalespersonUser) -> FieldStats:
+    """The salesperson's own last seven days."""
+    return service.stats(session, user)
 
 
 @router.get("/activities/{activity_id}", response_model=SalespersonActivity)

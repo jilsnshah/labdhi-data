@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +48,22 @@ class Settings(BaseSettings):
         "http://localhost:5174,http://127.0.0.1:5174,"
         "https://localhost,capacitor://localhost"
     )
+
+    @field_validator("database_url", "test_database_url")
+    @classmethod
+    def _psycopg_driver(cls, value: str) -> str:
+        """Hosted Postgres (Render, Neon) hands out ``postgres://`` / ``postgresql://``
+        URLs; SQLAlchemy needs the driver named to use psycopg 3."""
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix) :]
+        return value
+
+    @model_validator(mode="after")
+    def _production_secrets(self) -> "Settings":
+        if self.is_production and self.secret_key in {"", "change-me"}:
+            raise ValueError("SECRET_KEY must be set to a random value in production")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from './client';
-import type { CompleteResponse, Dashboard, FieldActivity } from './types';
+import type { CompleteResponse, Dashboard, FieldActivity, FieldContact, FieldStats } from './types';
 
-export const useDashboard = () =>
+export const useDashboard = (enabled = true) =>
   useQuery({
     queryKey: ['dashboard'],
+    enabled,
     queryFn: () => api.get<Dashboard>('/salesperson/dashboard'),
     staleTime: 15_000,
   });
@@ -41,21 +42,42 @@ export const useActivity = (id: number | undefined) =>
     enabled: Boolean(id),
   });
 
+export const useContacts = (q: string) =>
+  useQuery({
+    queryKey: ['contacts', q],
+    queryFn: () =>
+      api.get<FieldContact[]>(`/salesperson/contacts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    placeholderData: (previous) => previous,
+  });
+
+export const useStats = () =>
+  useQuery({
+    queryKey: ['stats'],
+    queryFn: () => api.get<FieldStats>('/salesperson/stats'),
+    staleTime: 60_000,
+  });
+
 /** Everything changes after a write, and the data set is tiny - refetch all. */
 export function useRefreshAll() {
   const queryClient = useQueryClient();
   return () => {
-    ['dashboard', 'today', 'visits', 'upcoming', 'history', 'activity'].forEach((key) =>
-      queryClient.invalidateQueries({ queryKey: [key] }),
-    );
+    [
+      'dashboard',
+      'today',
+      'visits',
+      'upcoming',
+      'history',
+      'activity',
+      'contacts',
+      'stats',
+    ].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
   };
 }
 
 export function useStartActivity() {
   const refresh = useRefreshAll();
   return useMutation({
-    mutationFn: (id: number) =>
-      api.post<FieldActivity>(`/salesperson/activities/${id}/start`),
+    mutationFn: (id: number) => api.post<FieldActivity>(`/salesperson/activities/${id}/start`),
     onSuccess: refresh,
   });
 }

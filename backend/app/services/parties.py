@@ -82,6 +82,7 @@ def list_locations(
     *,
     q: str | None = None,
     city: str | None = None,
+    area: str | None = None,
     state: str | None = None,
     party_id: int | None = None,
     status: RecordStatus | None = None,
@@ -94,6 +95,7 @@ def list_locations(
         stmt = stmt.where(
             or_(
                 Location.label.ilike(like),
+                Location.area.ilike(like),
                 Location.city.ilike(like),
                 Location.state.ilike(like),
                 Location.address_line_1.ilike(like),
@@ -102,6 +104,8 @@ def list_locations(
         )
     if city:
         stmt = stmt.where(Location.city.ilike(f"%{city}%"))
+    if area:
+        stmt = stmt.where(func.lower(Location.area) == area.strip().lower())
     if state:
         stmt = stmt.where(Location.state.ilike(f"%{state}%"))
     if party_id is not None:
@@ -118,6 +122,7 @@ def list_locations(
         sort_dir,
         {
             "city": Location.city,
+            "area": Location.area,
             "label": Location.label,
             "created_at": Location.created_at,
             "id": Location.id,
@@ -125,6 +130,20 @@ def list_locations(
         "city",
     )
     return paginate(session, stmt, params)
+
+
+def list_areas(session: Session) -> list[str]:
+    """Every distinct area on an active location, alphabetically.
+
+    Areas are free text on the location, so this is what the pickers offer: the
+    spellings already in use, which keeps "Shapar" from turning into "shapar".
+    """
+    rows = session.execute(
+        select(Location.area)
+        .where(Location.area.is_not(None), Location.status == RecordStatus.ACTIVE)
+        .distinct()
+    ).scalars()
+    return sorted(rows, key=str.lower)
 
 
 def create_location(session: Session, payload: LocationCreate, user_id: int) -> Location:
@@ -137,7 +156,7 @@ def create_location(session: Session, payload: LocationCreate, user_id: int) -> 
         entity_type="location",
         entity_id=location.id,
         action=AuditAction.CREATE,
-        new_value={"city": location.city, "label": location.label},
+        new_value={"city": location.city, "area": location.area, "label": location.label},
     )
     return location
 

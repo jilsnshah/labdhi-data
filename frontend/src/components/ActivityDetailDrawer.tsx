@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useActivity } from '@/api/hooks';
+import { isFieldLogged, type Activity } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
   ActivityFormModal,
@@ -40,8 +41,7 @@ export function ActivityDetailDrawer({
   const [assigning, setAssigning] = useState(false);
 
   const open = activityId !== null;
-  const isOpenStatus =
-    activity?.status === 'SCHEDULED' || activity?.status === 'IN_PROGRESS';
+  const isOpenStatus = activity?.status === 'SCHEDULED' || activity?.status === 'IN_PROGRESS';
 
   return (
     <Drawer
@@ -68,12 +68,7 @@ export function ActivityDetailDrawer({
             <Field
               label="Customer"
               value={
-                <Text
-                  fz="sm"
-                  component={Link}
-                  to={`/parties/${activity.party_id}`}
-                  c="accent.9"
-                >
+                <Text fz="sm" component={Link} to={`/parties/${activity.party_id}`} c="accent.9">
                   {activity.party?.name}
                 </Text>
               }
@@ -93,7 +88,23 @@ export function ActivityDetailDrawer({
                 )
               }
             />
+            {isFieldLogged(activity) && (
+              <Field
+                label="Source"
+                value={
+                  <Badge color="brass" variant="light" size="sm">
+                    Logged from the field by {activity.creator?.name ?? 'the salesperson'}
+                  </Badge>
+                }
+              />
+            )}
             <Field label="Scheduled" value={formatDateTime(activity.scheduled_at)} />
+            {!activity.location && activity.location_snapshot && (
+              <Field
+                label="Location"
+                value={<SnapshotPlace snapshot={activity.location_snapshot} />}
+              />
+            )}
             {activity.location && (
               <Field
                 label="Location"
@@ -131,10 +142,7 @@ export function ActivityDetailDrawer({
               value={`${formatDateTime(activity.created_at)} by ${activity.creator?.name ?? '-'}`}
             />
             {activity.parent_activity_id && (
-              <Field
-                label="Follow-up of"
-                value={`Activity #${activity.parent_activity_id}`}
-              />
+              <Field label="Follow-up of" value={`Activity #${activity.parent_activity_id}`} />
             )}
           </Stack>
 
@@ -213,14 +221,37 @@ export function ActivityDetailDrawer({
           {completing && (
             <CompleteActivityModal activity={activity} onClose={() => setCompleting(false)} />
           )}
-          {editing && (
-            <ActivityFormModal record={activity} onClose={() => setEditing(false)} />
-          )}
+          {editing && <ActivityFormModal record={activity} onClose={() => setEditing(false)} />}
           {assigning && (
             <AssignActivityModal activity={activity} onClose={() => setAssigning(false)} />
           )}
         </Stack>
       )}
     </Drawer>
+  );
+}
+
+function SnapshotPlace({ snapshot }: { snapshot: NonNullable<Activity['location_snapshot']> }) {
+  const pinned = snapshot.latitude && snapshot.longitude;
+  return (
+    <Group gap={6} wrap="nowrap">
+      <IconMapPin size={14} />
+      <Text fz="sm">
+        {[snapshot.label, snapshot.city].filter(Boolean).join(', ') || 'Pinned spot'}
+      </Text>
+      {pinned && (
+        <Text
+          fz="xs"
+          component="a"
+          href={`https://www.google.com/maps?q=${snapshot.latitude},${snapshot.longitude}`}
+          target="_blank"
+          rel="noreferrer"
+          c="accent.9"
+          style={{ whiteSpace: 'nowrap' }}
+        >
+          Open pin
+        </Text>
+      )}
+    </Group>
   );
 }

@@ -3,12 +3,13 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 
 import { useDashboard, useRefreshAll } from '@/api/hooks';
 import { BottomNav } from '@/components/BottomNav';
-import { Spinner } from '@/components/Shell';
+import { Spinner, Toaster } from '@/components/Shell';
 import { useAuth } from '@/lib/auth';
 import { onNetworkRestored, onResume, registerBackButton } from '@/lib/native';
 import * as outbox from '@/lib/offline';
 import { ActivityDetailPage } from '@/pages/ActivityDetailPage';
 import { HistoryPage } from '@/pages/HistoryPage';
+import { LogActivityPage } from '@/pages/LogActivityPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { TodayPage } from '@/pages/TodayPage';
@@ -22,7 +23,7 @@ export function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const refresh = useRefreshAll();
-  const { data } = useDashboard();
+  const { data } = useDashboard(Boolean(profile));
 
   // Hardware back: navigate inside the app, and only leave from a tab root.
   useEffect(() => {
@@ -30,7 +31,7 @@ export function App() {
       () => !NAV_ROUTES.includes(window.location.hash.replace('#', '') || '/today'),
       () => navigate(-1),
       () => {
-        if (window.confirm('Close Field Sales?')) {
+        if (window.confirm('Close Labdhi Field?')) {
           void import('@capacitor/app').then(({ App: CapApp }) => CapApp.exitApp());
         }
       },
@@ -50,7 +51,12 @@ export function App() {
   }, [refresh]);
 
   if (restoring) {
-    return <Spinner />;
+    return (
+      <div className="boot">
+        <span className="brand-mark">L</span>
+        <Spinner />
+      </div>
+    );
   }
 
   if (!profile) {
@@ -71,10 +77,12 @@ export function App() {
         <Route path="/visits" element={<VisitsPage />} />
         <Route path="/upcoming" element={<UpcomingPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/log" element={<LogActivityPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/activity/:activityId" element={<ActivityDetailPage />} />
         <Route path="*" element={<Navigate to="/today" replace />} />
       </Routes>
+      <Toaster />
       {showNav && (
         <BottomNav
           badges={{

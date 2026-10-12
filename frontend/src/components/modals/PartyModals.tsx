@@ -26,6 +26,7 @@ import type {
   PartyProductRelationship,
   PartyType,
 } from '@/api/types';
+import { AreaInput } from '@/components/AreaInput';
 import { EntityMultiSelect, EntitySelect } from '@/components/EntitySelect';
 import { humanize } from '@/lib/format';
 
@@ -253,7 +254,14 @@ export function PartyLocationModal({
     record?.location_type ?? 'WAREHOUSE',
   );
   const [isPrimary, setIsPrimary] = useState(record?.is_primary ?? false);
-  const [form, setForm] = useState({ label: '', city: '', state: '', pincode: '', line1: '' });
+  const [form, setForm] = useState({
+    label: '',
+    area: '',
+    city: '',
+    state: '',
+    pincode: '',
+    line1: '',
+  });
 
   const save = useApiMutation(
     (body: Record<string, unknown>) =>
@@ -275,6 +283,7 @@ export function PartyLocationModal({
           : {
               location: {
                 label: form.label.trim() || null,
+                area: form.area.trim() || null,
                 city: form.city.trim(),
                 state: form.state.trim() || null,
                 pincode: form.pincode.trim() || null,
@@ -328,6 +337,7 @@ export function PartyLocationModal({
               onChange={(event) => setForm({ ...form, line1: event.currentTarget.value })}
             />
             <Group grow>
+              <AreaInput value={form.area} onChange={(value) => setForm({ ...form, area: value })} />
               <TextInput
                 label="City"
                 required

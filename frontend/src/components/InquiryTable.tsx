@@ -1,10 +1,11 @@
-import { Group, Stack, Text } from '@mantine/core';
+import { Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 
 import type { InquiryListItem, InquiryType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column, SortState } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PartyAvatar } from '@/components/market/Visuals';
 import { formatDate, formatMoney, formatQuantity, formatRate } from '@/lib/format';
 
 interface Props {
@@ -77,15 +78,18 @@ export function InquiryTable({
             key: 'party',
             label: 'Party',
             render: (row: InquiryListItem) => (
-              <Group gap={6} wrap="nowrap">
-                <Text fz="sm" fw={550} truncate maw={190}>
-                  {row.party_name ?? '—'}
-                </Text>
-                {row.party_stage === 'PROSPECT' && (
-                  <Text fz="xs" c="amber.8">
-                    prospect
+              <Group gap={10} wrap="nowrap">
+                <PartyAvatar name={row.party_name} size={30} />
+                <Stack gap={0} style={{ minWidth: 0 }}>
+                  <Text fz="sm" fw={600} c="ink.9" truncate maw={200}>
+                    {row.party_name ?? '—'}
                   </Text>
-                )}
+                  {row.party_stage === 'PROSPECT' && (
+                    <Text fz={11} fw={600} c="brass.8" tt="uppercase" style={{ letterSpacing: '0.08em' }}>
+                      Prospect
+                    </Text>
+                  )}
+                </Stack>
               </Group>
             ),
           },
@@ -135,9 +139,12 @@ export function InquiryTable({
                   </Text>
                 </Stack>
               ) : (
-                <Text fz="sm" c={row.location_name ? undefined : 'dimmed'} truncate maw={380}>
-                  {row.location_name ?? '—'}
-                </Text>
+                // Area and city are what a trader reads; the full place is on hover.
+                <Tooltip label={row.location_name} disabled={!row.location_name} withinPortal>
+                  <Text fz="sm" c={row.location_city ? undefined : 'dimmed'} truncate maw={300}>
+                    {[row.location_area, row.location_city].filter(Boolean).join(', ') || '—'}
+                  </Text>
+                </Tooltip>
               ),
           } as Column<InquiryListItem>,
         ]
@@ -156,7 +163,7 @@ export function InquiryTable({
           );
         }
         return (
-          <Text fz="sm" fw={650} className="mono-tight">
+          <Text fz="sm" fw={600} className="figure">
             {row.inquiry_type === 'TRANSPORT' ? formatMoney(quoted) : formatRate(quoted)}
           </Text>
         );

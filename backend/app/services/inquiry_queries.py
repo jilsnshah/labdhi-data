@@ -16,7 +16,7 @@ from app.models.inquiry import (
     SupplierInquiry,
     TransportInquiry,
 )
-from app.models.masters import Product
+from app.models.masters import Product, product_applications
 from app.models.party import Location, Party
 from app.schemas.inquiry import InquiryListItem
 from app.services.inquiries import DETAIL_LOADERS
@@ -27,9 +27,15 @@ SORTABLE = {"id", "created_at", "updated_at", "status", "closed_at"}
 def _place(location: Location | None) -> str | None:
     if location is None:
         return None
-    if location.label and location.label != location.city:
-        return f"{location.label}, {location.city}"
-    return location.city
+    parts = [location.label, location.area, location.city]
+    # A label that just repeats the city adds nothing.
+    if location.label == location.city:
+        parts[0] = None
+    seen: list[str] = []
+    for part in parts:
+        if part and part not in seen:
+            seen.append(part)
+    return ", ".join(seen)
 
 
 def to_list_item(inquiry: Inquiry) -> InquiryListItem:
@@ -56,6 +62,8 @@ def to_list_item(inquiry: Inquiry) -> InquiryListItem:
             quantity=detail.quantity,
             unit=detail.unit,
             location_name=_place(detail.location),
+            location_area=detail.location.area if detail.location else None,
+            location_city=detail.location.city if detail.location else None,
             rate=detail.rate,
         )
     elif inquiry.transport_detail is not None:
@@ -85,9 +93,14 @@ def _apply_filters(
     party_id: int | None,
     product_id: int | None,
     location_id: int | None,
+    area: str | None,
     created_from: date | None,
     created_to: date | None,
     q: str | None,
+    material_id: int | None = None,
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = None,
 ) -> Select:
     customer = aliased(CustomerInquiry)
     supplier = aliased(SupplierInquiry)
@@ -112,6 +125,24 @@ def _apply_filters(
         )
     if product_id is not None:
         stmt = stmt.where(or_(customer.product_id == product_id, supplier.product_id == product_id))
+    if any(v is not None for v in (material_id, grade_id, manufacturer_id, application_id)):
+        # Narrow through the product: transport inquiries carry none, so they drop out.
+        products = select(Product.id)
+        if material_id is not None:
+            products = products.where(Product.material_id == material_id)
+        if grade_id is not None:
+            products = products.where(Product.grade_id == grade_id)
+        if manufacturer_id is not None:
+            products = products.where(Product.manufacturer_id == manufacturer_id)
+        if application_id is not None:
+            products = products.where(
+                Product.id.in_(
+                    select(product_applications.c.product_id).where(
+                        product_applications.c.application_id == application_id
+                    )
+                )
+            )
+        stmt = stmt.where(or_(customer.product_id.in_(products), supplier.product_id.in_(products)))
     if location_id is not None:
         stmt = stmt.where(
             or_(
@@ -119,6 +150,18 @@ def _apply_filters(
                 supplier.location_id == location_id,
                 transport.pickup_location_id == location_id,
                 transport.delivery_location_id == location_id,
+            )
+        )
+    if area:
+        # Any location on the inquiry in that area: its own location, or either
+        # end of a transport route.
+        in_area = select(Location.id).where(func.lower(Location.area) == area.strip().lower())
+        stmt = stmt.where(
+            or_(
+                customer.location_id.in_(in_area),
+                supplier.location_id.in_(in_area),
+                transport.pickup_location_id.in_(in_area),
+                transport.delivery_location_id.in_(in_area),
             )
         )
     if created_from:
@@ -162,6 +205,11 @@ def list_inquiries(
     party_id: int | None = None,
     product_id: int | None = None,
     location_id: int | None = None,
+    area: str | None = None,
+    material_id: int | None = None,
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = None,
     created_from: date | None = None,
     created_to: date | None = None,
     q: str | None = None,
@@ -176,9 +224,14 @@ def list_inquiries(
         party_id=party_id,
         product_id=product_id,
         location_id=location_id,
+        area=area,
         created_from=created_from,
         created_to=created_to,
         q=q,
+        material_id=material_id,
+        grade_id=grade_id,
+        manufacturer_id=manufacturer_id,
+        application_id=application_id,
     )
     column = getattr(Inquiry, sort_by if sort_by in SORTABLE else "created_at")
     stmt = stmt.order_by(column.desc() if sort_dir.lower() == "desc" else column.asc())
@@ -197,6 +250,7 @@ def inquiries_for_party(
         party_id=party_id,
         product_id=None,
         location_id=None,
+        area=None,
         created_from=None,
         created_to=None,
         q=None,

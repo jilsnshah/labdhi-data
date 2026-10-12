@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -128,6 +129,9 @@ class ActivityOut(ORMBase):
     completer: UserRef | None = None
     location_id: int | None = None
     location: LocationRef | None = None
+    #: Where it happened when there is no location row: an address known only as
+    #: text, or a spot pinned from the field app (label, latitude, longitude...).
+    location_snapshot: dict[str, Any] | None = None
 
 
 class ActivityWithChain(ActivityOut):

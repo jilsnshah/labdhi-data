@@ -1,17 +1,14 @@
-import { ActionIcon, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { IconCircleCheck, IconUserCheck } from '@tabler/icons-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { Activity } from '@/api/types';
+import { isFieldLogged, type Activity } from '@/api/types';
 import { ActivityDetailDrawer } from '@/components/ActivityDetailDrawer';
 import { DataTable } from '@/components/DataTable';
 import type { Column, SortState } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
-import {
-  AssignActivityModal,
-  CompleteActivityModal,
-} from '@/components/modals/ActivityModals';
+import { AssignActivityModal, CompleteActivityModal } from '@/components/modals/ActivityModals';
 import { dayLabel, formatDateTime, humanize, isOverdue, time } from '@/lib/format';
 
 interface Props {
@@ -96,6 +93,13 @@ export function ActivityTable({
               <Text fz="xs" c="ink.5">
                 follow-up
               </Text>
+            )}
+            {isFieldLogged(row) && (
+              <Tooltip label="Logged by the salesperson from the field app">
+                <Badge color="brass" variant="light" size="xs" radius="sm">
+                  Field
+                </Badge>
+              </Tooltip>
             )}
           </Group>
           <Group gap={6} wrap="nowrap">
@@ -214,9 +218,7 @@ export function ActivityTable({
       {completing && (
         <CompleteActivityModal activity={completing} onClose={() => setCompleting(null)} />
       )}
-      {assigning && (
-        <AssignActivityModal activity={assigning} onClose={() => setAssigning(null)} />
-      )}
+      {assigning && <AssignActivityModal activity={assigning} onClose={() => setAssigning(null)} />}
     </>
   );
 }

@@ -1,79 +1,129 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
-import { useChangePassword } from '@/api/hooks';
-import { Banner, Screen, Sheet } from '@/components/Shell';
+import { useChangePassword, useRefreshAll, useStats } from '@/api/hooks';
+import type { FieldStats } from '@/api/types';
+import { Icon, type IconName } from '@/components/Icon';
+import { Avatar, Banner, Screen, SectionTitle, Sheet } from '@/components/Shell';
 import { useAuth } from '@/lib/auth';
+import { dayjs } from '@/lib/format';
 import { isNative } from '@/lib/native';
 import * as outbox from '@/lib/offline';
+import { toast } from '@/lib/toast';
 
 export function ProfilePage() {
   const { profile, signOut } = useAuth();
+  const { data: stats } = useStats();
+  const refresh = useRefreshAll();
   const [sheet, setSheet] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const queued = outbox.pending();
+  const [queued, setQueued] = useState(outbox.pending());
+
+  useEffect(() => outbox.subscribe(setQueued), []);
 
   return (
-    <Screen title="Profile" subtitle={profile?.email}>
-      {notice && <Banner kind="info">{notice}</Banner>}
-      <div className="card">
-        <div className="section-title" style={{ marginTop: 0 }}>
-          Account
-        </div>
-        <Row label="Name" value={profile?.name ?? '-'} />
-        <Row label="Phone" value={profile?.phone ?? '-'} />
-        <Row label="Email" value={profile?.email ?? '-'} />
-        <Row label="Role" value="Salesperson" />
-      </div>
+    <Screen
+      eyebrow="Field salesperson"
+      title={profile?.name ?? 'Me'}
+      subtitle={profile?.email}
+      action={<Avatar name={profile?.name ?? '?'} size={46} tone="brass" />}
+      hero={stats ? <WeekChart stats={stats} /> : undefined}
+    >
+      {stats && (
+        <>
+          <SectionTitle aside="Last 7 days">My week</SectionTitle>
+          <div className="kpi-grid">
+            <Kpi icon="check" value={stats.completed_7d} label="Completed" tone="teal" />
+            <Kpi icon="pin" value={stats.visits_7d} label="Visits" tone="brass" />
+            <Kpi icon="phone" value={stats.calls_7d} label="Calls" tone="indigo" />
+            <Kpi icon="bolt" value={stats.self_logged_7d} label="Self-logged" tone="brass" />
+            <Kpi icon="userPlus" value={stats.new_contacts_7d} label="New prospects" tone="teal" />
+            <Kpi
+              icon="clock"
+              value={stats.on_time_rate == null ? '–' : `${Math.round(stats.on_time_rate * 100)}%`}
+              label="On time"
+              tone="slate"
+            />
+          </div>
+        </>
+      )}
 
-      <div className="card">
-        <div className="section-title" style={{ marginTop: 0 }}>
-          My work
-        </div>
-        <Link className="btn secondary" to="/history">
-          Completed activities
-        </Link>
-        {queued.length > 0 && (
-          <div className="small muted" style={{ marginTop: 10 }}>
-            {queued.length} report{queued.length > 1 ? 's' : ''} waiting to sync.{' '}
+      {queued.length > 0 && (
+        <Banner kind="warn">
+          <strong>
+            {queued.length} report{queued.length > 1 ? 's' : ''} waiting to sync.
+          </strong>
+          <div style={{ marginTop: 8 }}>
             <button
-              className="btn ghost"
+              className="btn small ghost"
               onClick={async () => {
                 const synced = await outbox.flush();
-                setNotice(
-                  synced > 0 ? `${synced} report(s) synced.` : 'Still offline, will retry later.',
-                );
+                if (synced > 0) {
+                  refresh();
+                  toast(`${synced} report${synced > 1 ? 's' : ''} synced.`);
+                } else {
+                  toast('Still offline - will retry by itself.', 'warn');
+                }
               }}
             >
-              Retry now
+              <Icon name="refresh" size={15} /> Retry now
             </button>
           </div>
-        )}
+        </Banner>
+      )}
+
+      <SectionTitle>Work</SectionTitle>
+      <div className="menu">
+        <Link to="/history" className="menu-row">
+          <span className="menu-icon">
+            <Icon name="history" size={19} />
+          </span>
+          <span className="grow">Completed activities</span>
+          <Icon name="chevron" size={17} />
+        </Link>
+        <Link to="/log" className="menu-row">
+          <span className="menu-icon brass">
+            <Icon name="plus" size={19} />
+          </span>
+          <span className="grow">Log an activity</span>
+          <Icon name="chevron" size={17} />
+        </Link>
       </div>
 
-      <div className="card">
-        <div className="section-title" style={{ marginTop: 0 }}>
-          Security
+      <SectionTitle>Account</SectionTitle>
+      <div className="menu">
+        <div className="menu-row static">
+          <span className="menu-icon">
+            <Icon name="phone" size={19} />
+          </span>
+          <span className="grow">Phone</span>
+          <span className="muted small">{profile?.phone ?? 'Not set'}</span>
         </div>
-        <button className="btn secondary" onClick={() => setSheet(true)}>
-          Change password
+        <button className="menu-row" onClick={() => setSheet(true)}>
+          <span className="menu-icon">
+            <Icon name="lock" size={19} />
+          </span>
+          <span className="grow">Change password</span>
+          <Icon name="chevron" size={17} />
         </button>
-        <button className="btn danger" style={{ marginTop: 10 }} onClick={() => signOut()}>
-          Log out
+        <button className="menu-row danger" onClick={() => signOut()}>
+          <span className="menu-icon">
+            <Icon name="logout" size={19} />
+          </span>
+          <span className="grow">Log out</span>
         </button>
-        <div className="tiny muted" style={{ marginTop: 10 }}>
-          {isNative
-            ? 'Your session is kept in the app’s private storage on this phone.'
-            : 'Running in a browser - the session is kept in this browser only.'}
-        </div>
+      </div>
+      <div className="tiny muted" style={{ textAlign: 'center', margin: '18px 0 6px' }}>
+        {isNative
+          ? 'Your session is kept in the app’s private storage on this phone.'
+          : 'Running in a browser - the session is kept in this browser only.'}
       </div>
 
       {sheet && (
         <ChangePasswordSheet
           onClose={() => setSheet(false)}
           onDone={(message) => {
-            setNotice(message);
+            toast(message);
             setSheet(false);
           }}
         />
@@ -82,11 +132,62 @@ export function ProfilePage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function WeekChart({ stats }: { stats: FieldStats }) {
+  const peak = Math.max(1, ...stats.days.map((day) => day.completed));
   return (
-    <div className="kv">
-      <span className="k">{label}</span>
-      <span className="v">{value}</span>
+    <div className="week-chart">
+      <div className="week-chart-head">
+        <div>
+          <div className="week-chart-figure">{stats.completed_7d}</div>
+          <div className="week-chart-caption">done this week</div>
+        </div>
+        {stats.on_time_rate != null && (
+          <div className="week-chart-badge">
+            <Icon name="clock" size={13} /> {Math.round(stats.on_time_rate * 100)}% on time
+          </div>
+        )}
+      </div>
+      <div className="week-bars">
+        {stats.days.map((day) => {
+          const date = dayjs(day.date);
+          const today = date.isSame(dayjs(), 'day');
+          return (
+            <div key={day.date} className={`week-col${today ? ' today' : ''}`}>
+              <div className="week-col-value">{day.completed || ''}</div>
+              <div className="week-col-bar">
+                <span
+                  style={{
+                    height: `${Math.max(day.completed ? 8 : 3, (day.completed / peak) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="week-col-day">{today ? 'Today' : date.format('ddd')}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Kpi({
+  icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: IconName;
+  value: number | string;
+  label: string;
+  tone: string;
+}) {
+  return (
+    <div className="kpi">
+      <span className={`kpi-icon tone-${tone}`}>
+        <Icon name={icon} size={16} />
+      </span>
+      <div className="kpi-value">{value}</div>
+      <div className="kpi-label">{label}</div>
     </div>
   );
 }
@@ -133,11 +234,11 @@ function ChangePasswordSheet({
         />
       </label>
       <div className="btn-row">
-        <button className="btn secondary" onClick={onClose}>
+        <button className="btn ghost" onClick={onClose}>
           Cancel
         </button>
         <button
-          className="btn"
+          className="btn primary"
           onClick={submit}
           disabled={change.isPending || !current || next.length < 6}
         >

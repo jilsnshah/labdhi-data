@@ -3,6 +3,7 @@ import {
   Group,
   Modal,
   NumberInput,
+  Select,
   Stack,
   Switch,
   Text,
@@ -12,8 +13,9 @@ import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import { api } from '@/api/client';
-import { useApiMutation, useLocations } from '@/api/hooks';
+import { useApiMutation, useLocationAreas, useLocations } from '@/api/hooks';
 import type { Location } from '@/api/types';
+import { AreaInput } from '@/components/AreaInput';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { FilterBar, StatusFilter } from '@/components/FilterBar';
@@ -22,11 +24,12 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { useListState } from '@/hooks/useListState';
 
 export function LocationsPage() {
-  const list = useListState<{ status?: string; city?: string }>(
+  const list = useListState<{ status?: string; city?: string; area?: string }>(
     {},
     { sortBy: 'city', sortDir: 'asc' },
   );
   const { data, isFetching } = useLocations(list.params);
+  const { data: areas } = useLocationAreas();
   const [editing, setEditing] = useState<Location | null>(null);
   const [opened, setOpened] = useState(false);
 
@@ -41,6 +44,16 @@ export function LocationsPage() {
       label: 'Label',
       sortable: true,
       render: (row) => <Text fw={500}>{row.label || `Location #${row.id}`}</Text>,
+    },
+    {
+      key: 'area',
+      label: 'Area',
+      sortable: true,
+      render: (row) => (
+        <Text fz="sm" c={row.area ? undefined : 'dimmed'}>
+          {row.area || '-'}
+        </Text>
+      ),
     },
     { key: 'city', label: 'City', sortable: true, render: (row) => <Text fz="sm">{row.city}</Text> },
     { key: 'state', label: 'State', render: (row) => <Text fz="sm">{row.state || '-'}</Text> },
@@ -71,9 +84,18 @@ export function LocationsPage() {
       <FilterBar
         q={list.q}
         onQChange={list.setQ}
-        placeholder="Search label, city, address, pincode"
+        placeholder="Search label, area, city, address, pincode"
         onReset={list.resetFilters}
       >
+        <Select
+          w={170}
+          placeholder="Any area"
+          data={areas ?? []}
+          value={(list.filters.area as string) ?? null}
+          onChange={(value) => list.setFilter('area', value ?? undefined)}
+          searchable
+          clearable
+        />
         <TextInput
           w={150}
           placeholder="City"
@@ -124,6 +146,7 @@ export function LocationModal({
     label: record?.label ?? '',
     address_line_1: record?.address_line_1 ?? '',
     address_line_2: record?.address_line_2 ?? '',
+    area: record?.area ?? '',
     city: record?.city ?? '',
     state: record?.state ?? '',
     country: record?.country ?? 'India',
@@ -147,6 +170,7 @@ export function LocationModal({
       label: form.label || null,
       address_line_1: form.address_line_1 || null,
       address_line_2: form.address_line_2 || null,
+      area: form.area.trim() || null,
       state: form.state || null,
       pincode: form.pincode || null,
       ...(record ? { status: active ? 'ACTIVE' : 'INACTIVE' } : {}),
@@ -179,19 +203,20 @@ export function LocationModal({
           onChange={(event) => set('address_line_2', event.currentTarget.value)}
         />
         <Group grow>
+          <AreaInput value={form.area} onChange={(value) => set('area', value)} />
           <TextInput
             label="City"
             required
             value={form.city}
             onChange={(event) => set('city', event.currentTarget.value)}
           />
+        </Group>
+        <Group grow>
           <TextInput
             label="State"
             value={form.state}
             onChange={(event) => set('state', event.currentTarget.value)}
           />
-        </Group>
-        <Group grow>
           <TextInput
             label="Country"
             value={form.country}

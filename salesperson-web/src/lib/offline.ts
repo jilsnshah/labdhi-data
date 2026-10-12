@@ -1,45 +1,67 @@
 /**
- * Completion outbox.
+ * Report outbox.
  *
  * A visit report must never be lost because the phone had no signal in a
- * factory. Completions (and their optional follow-up) are written to local
- * storage first, then pushed; the queue is retried on reconnect and on app
- * resume. The server treats a repeated completion as idempotent, so retries are
- * safe.
+ * factory. Two kinds of write go through here: completing an assigned activity,
+ * and logging one the salesperson did on their own (a cold call or visit).
+ * Both are written to local storage first, then pushed; the queue is retried on
+ * reconnect and on app resume. Each carries a client token the server uses to
+ * recognise a retry, so sending twice never records twice.
  */
 
 import { api, ApiError } from '@/api/client';
-import type { ActivityOutcome, ActivityType } from '@/api/types';
+import type {
+  ActivityOutcome,
+  ActivityType,
+  LogActivityRequest,
+  LogActivityResponse,
+} from '@/api/types';
 import { localJson } from './storage';
 
 const KEY = 'fieldsales.outbox';
 
+export interface QueuedFollowUp {
+  activity_type: ActivityType;
+  scheduled_at: string;
+  note: string | null;
+}
+
 export interface QueuedCompletion {
+  kind?: 'complete';
   token: string;
   activityId: number;
   outcome_code: ActivityOutcome;
   completion_note: string;
   completed_at: string;
-  followUp?: {
-    activity_type: ActivityType;
-    scheduled_at: string;
-    note: string | null;
-  } | null;
+  followUp?: QueuedFollowUp | null;
 }
 
-type Listener = (pending: QueuedCompletion[]) => void;
+export interface QueuedLog {
+  kind: 'log';
+  token: string;
+  /** Shown while it waits: "Call · Rajkot Polymers". */
+  label: string;
+  payload: LogActivityRequest;
+  followUp?: QueuedFollowUp | null;
+}
+
+export type QueuedItem = QueuedCompletion | QueuedLog;
+
+export const isLog = (item: QueuedItem): item is QueuedLog => item.kind === 'log';
+
+type Listener = (pending: QueuedItem[]) => void;
 const listeners = new Set<Listener>();
 
-function read(): QueuedCompletion[] {
-  return localJson.read<QueuedCompletion[]>(KEY, []);
+function read(): QueuedItem[] {
+  return localJson.read<QueuedItem[]>(KEY, []);
 }
 
-function write(items: QueuedCompletion[]): void {
+function write(items: QueuedItem[]): void {
   localJson.write(KEY, items);
   listeners.forEach((listener) => listener(items));
 }
 
-export function pending(): QueuedCompletion[] {
+export function pending(): QueuedItem[] {
   return read();
 }
 
@@ -49,7 +71,7 @@ export function subscribe(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-export function enqueue(item: QueuedCompletion): void {
+export function enqueue(item: QueuedItem): void {
   const items = read().filter((existing) => existing.token !== item.token);
   write([...items, item]);
 }
@@ -58,15 +80,33 @@ function dequeue(token: string): void {
   write(read().filter((item) => item.token !== token));
 }
 
-async function send(item: QueuedCompletion): Promise<void> {
-  await api.post(`/salesperson/activities/${item.activityId}/complete`, {
-    outcome_code: item.outcome_code,
-    completion_note: item.completion_note,
-    completed_at: item.completed_at,
-    client_token: item.token,
-  });
+/** Results of the last flush, keyed by token, so a screen can show what was created. */
+const results = new Map<string, LogActivityResponse>();
+
+export function resultFor(token: string): LogActivityResponse | undefined {
+  return results.get(token);
+}
+
+async function send(item: QueuedItem): Promise<void> {
+  let activityId: number;
+  if (isLog(item)) {
+    const response = await api.post<LogActivityResponse>('/salesperson/activities', {
+      ...item.payload,
+      client_token: item.token,
+    });
+    results.set(item.token, response);
+    activityId = response.activity.id;
+  } else {
+    await api.post(`/salesperson/activities/${item.activityId}/complete`, {
+      outcome_code: item.outcome_code,
+      completion_note: item.completion_note,
+      completed_at: item.completed_at,
+      client_token: item.token,
+    });
+    activityId = item.activityId;
+  }
   if (item.followUp) {
-    await api.post(`/salesperson/activities/${item.activityId}/follow-up`, item.followUp);
+    await api.post(`/salesperson/activities/${activityId}/follow-up`, item.followUp);
   }
 }
 
@@ -88,12 +128,22 @@ export async function flush(): Promise<number> {
         // A real rejection (e.g. the office cancelled the activity) must not
         // block the queue forever - drop it and let the user see the server state.
         dequeue(item.token);
+        lastRejection = error instanceof ApiError ? error.message : 'A queued report was rejected.';
       }
     }
   } finally {
     flushing = false;
   }
   return synced;
+}
+
+let lastRejection: string | null = null;
+
+/** The server's reason for refusing the most recent queued item, read once. */
+export function takeRejection(): string | null {
+  const message = lastRejection;
+  lastRejection = null;
+  return message;
 }
 
 export function newToken(): string {

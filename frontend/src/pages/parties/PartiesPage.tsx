@@ -11,6 +11,7 @@ import { EntitySelect } from '@/components/EntitySelect';
 import { FilterBar, StatusFilter } from '@/components/FilterBar';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
+import { KpiTile, PartyAvatar } from '@/components/market/Visuals';
 import { PartyFormModal } from '@/components/modals/PartyModals';
 import { useListState } from '@/hooks/useListState';
 import { humanize } from '@/lib/format';
@@ -40,6 +41,18 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
     stale_days?: number;
   }>({}, { sortBy: 'name', sortDir: 'asc' });
   const { data, isFetching } = useParties({ ...list.params, party_type: partyType });
+  // Book-level figures for this party type, independent of the table's filters.
+  const { data: book } = useParties({ party_type: partyType, page_size: 200 });
+  const rows = book?.items ?? [];
+  const prospects = rows.filter((row) => row.stage === 'PROSPECT').length;
+  const engaged = rows.filter((row) => row.open_inquiry_count > 0).length;
+  const cities = new Set(rows.map((row) => row.primary_city).filter(Boolean)).size;
+  const accent =
+    partyType === 'SUPPLIER'
+      ? 'var(--supply)'
+      : partyType === 'CUSTOMER'
+        ? 'var(--demand)'
+        : 'var(--mantine-color-ink-7)';
   const [createOpen, setCreateOpen] = useState(false);
 
   const columns: Column<PartyListItem>[] = [
@@ -48,17 +61,22 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       label: humanize(partyType),
       sortable: true,
       render: (row) => (
-        <Stack gap={0}>
-          <Group gap={6} wrap="nowrap">
-            <Text fw={500}>{row.name}</Text>
-            {row.stage !== 'ACTIVE' && <StatusBadge value={row.stage} size="xs" />}
-          </Group>
-          {row.contact_person && (
-            <Text fz="xs" c="dimmed">
-              {row.contact_person}
-            </Text>
-          )}
-        </Stack>
+        <Group gap={12} wrap="nowrap">
+          <PartyAvatar name={row.name} size={36} />
+          <Stack gap={0} style={{ minWidth: 0 }}>
+            <Group gap={6} wrap="nowrap">
+              <Text fw={600} c="ink.9" truncate maw={240}>
+                {row.name}
+              </Text>
+              {row.stage !== 'ACTIVE' && <StatusBadge value={row.stage} size="xs" />}
+            </Group>
+            {row.contact_person && (
+              <Text fz="xs" c="dimmed">
+                {row.contact_person}
+              </Text>
+            )}
+          </Stack>
+        </Group>
       ),
     },
     {
@@ -123,6 +141,22 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
           </Button>
         }
       />
+      <div className="kpi-row">
+        <KpiTile
+          label={`${humanize(partyType)}s`}
+          value={book?.total ?? '—'}
+          hint={`${rows.length - prospects} verified`}
+          accent={accent}
+        />
+        <KpiTile
+          label="With live inquiries"
+          value={engaged}
+          hint={rows.length ? `${Math.round((engaged / rows.length) * 100)}% of the book` : '—'}
+          accent={accent}
+        />
+        <KpiTile label="Prospects" value={prospects} hint="to verify" accent="var(--brass)" />
+        <KpiTile label="Cities" value={cities} hint="primary locations" accent={accent} />
+      </div>
       <FilterBar
         q={list.q}
         onQChange={list.setQ}

@@ -57,9 +57,9 @@ export async function request<T>(
     const message = aborted
       ? 'The network is slow right now. Your work is saved on this phone and will sync.'
       : connected
-        ? `Cannot reach the server at ${BASE_URL}. Check that the app points at the right ` +
-          'address and that the server allows this app.'
-        : 'No internet connection.';
+      ? `Cannot reach the server at ${BASE_URL}. Check that the app points at the right ` +
+        'address and that the server allows this app.'
+      : 'No internet connection.';
     throw new ApiError(0, message, 'offline', true);
   } finally {
     clearTimeout(timer);

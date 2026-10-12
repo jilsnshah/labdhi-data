@@ -1,96 +1,119 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import type { FieldActivity } from '@/api/types';
-import { openExternal } from '@/lib/native';
 import { dayLabel, humanize, isPast, time } from '@/lib/format';
+import { openExternal } from '@/lib/native';
+import { Icon, TypeIcon } from './Icon';
 
-const TYPE_ICON: Record<string, string> = {
-  VISIT: '📍',
-  CALL: '📞',
-  WHATSAPP: '💬',
-  SMS: '✉️',
-  EMAIL: '📧',
-  MEETING: '🤝',
-};
-
-function statusBadge(activity: FieldActivity) {
+export function StatusPill({
+  activity,
+  pendingSync = false,
+}: {
+  activity: FieldActivity;
+  pendingSync?: boolean;
+}) {
+  if (pendingSync) return <span className="pill amber">Waiting to sync</span>;
   if (activity.status === 'COMPLETED') {
-    return <span className="badge green">{humanize(activity.outcome_code ?? 'COMPLETED')}</span>;
+    return (
+      <span className="pill teal">
+        <Icon name="check" size={12} stroke={2.6} />
+        {humanize(activity.outcome_code ?? 'COMPLETED')}
+      </span>
+    );
   }
-  if (activity.status === 'CANCELLED') {
-    return <span className="badge grey">Cancelled</span>;
-  }
-  if (activity.status === 'IN_PROGRESS') {
-    return <span className="badge amber">In progress</span>;
-  }
-  if (isPast(activity.scheduled_at)) {
-    return <span className="badge red">Overdue</span>;
-  }
-  return <span className="badge">Scheduled</span>;
+  if (activity.status === 'CANCELLED') return <span className="pill slate">Cancelled</span>;
+  if (activity.status === 'IN_PROGRESS')
+    return <span className="pill amber live">In progress</span>;
+  if (isPast(activity.scheduled_at)) return <span className="pill rust">Overdue</span>;
+  return <span className="pill slate">Scheduled</span>;
+}
+
+/** Strip the trailing state / pincode noise: "Plot 12, GIDC, Rajkot" reads better. */
+export function shortPlace(activity: FieldActivity): string | null {
+  const location = activity.location;
+  if (!location) return null;
+  return location.label || location.formatted;
 }
 
 export function ActivityCard({
   activity,
   showDay = false,
+  showTime = true,
   pendingSync = false,
 }: {
   activity: FieldActivity;
   showDay?: boolean;
+  showTime?: boolean;
   pendingSync?: boolean;
 }) {
-  const late = activity.status === 'SCHEDULED' && isPast(activity.scheduled_at);
-  return (
-    <div className="card raised">
-      <div className="row top">
-        <div className={`time-chip${late ? ' late' : ''}`}>
-          <div className="t">{time(activity.scheduled_at)}</div>
-          {showDay && <div className="d">{dayLabel(activity.scheduled_at)}</div>}
-        </div>
-        <div className="grow">
-          <div className="row between">
-            <div className="tiny strong muted">
-              {TYPE_ICON[activity.activity_type] ?? '•'} {humanize(activity.activity_type)}
-            </div>
-            {pendingSync ? (
-              <span className="badge amber">Waiting to sync</span>
-            ) : (
-              statusBadge(activity)
-            )}
-          </div>
-          <div className="strong" style={{ marginTop: 3, fontSize: 16 }}>
-            {activity.customer.name}
-          </div>
-          {activity.location && (
-            <div className="small muted ellipsis" style={{ marginTop: 1 }}>
-              📍 {activity.location.formatted}
-            </div>
-          )}
-          {(activity.subject || activity.purpose) && (
-            <div className="small" style={{ marginTop: 6, color: 'var(--ink-soft)' }}>
-              {activity.subject || activity.purpose}
-            </div>
-          )}
-        </div>
-      </div>
+  const navigate = useNavigate();
+  const open = () => navigate(`/activity/${activity.id}`);
+  const place = shortPlace(activity);
+  const phone = activity.customer.phone;
+  const live = activity.status === 'SCHEDULED' || activity.status === 'IN_PROGRESS';
 
-      <div className="btn-row" style={{ marginTop: 14 }}>
-        <Link className="btn secondary" to={`/activity/${activity.id}`}>
-          View
-        </Link>
-        {activity.location && (
-          <button
-            className="btn"
-            onClick={() => openExternal(activity.location!.maps_url)}
-          >
-            Navigate
-          </button>
+  return (
+    <div
+      className={`act-card${activity.status === 'COMPLETED' ? ' done' : ''}`}
+      role="link"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(event) => event.key === 'Enter' && open()}
+    >
+      <TypeIcon type={activity.activity_type} size={42} />
+      <div className="grow act-body">
+        <div className="act-top">
+          <span className="act-type">{humanize(activity.activity_type)}</span>
+          {showTime && activity.scheduled_at && (
+            <span className="act-when">
+              {showDay ? `${dayLabel(activity.scheduled_at)} · ` : ''}
+              {time(activity.scheduled_at)}
+            </span>
+          )}
+          {activity.self_logged && <span className="tag brass">Self-logged</span>}
+        </div>
+        <div className="act-name">{activity.customer.name}</div>
+        {place && (
+          <div className="act-meta">
+            <Icon name="pin" size={13} />
+            <span className="ellipsis">{place}</span>
+          </div>
         )}
-        {!activity.location && activity.customer.phone && (
-          <a className="btn" href={`tel:${activity.customer.phone}`}>
-            Call
-          </a>
+        {!place && activity.customer.contact_person && (
+          <div className="act-meta">
+            <Icon name="user" size={13} />
+            <span className="ellipsis">{activity.customer.contact_person}</span>
+          </div>
         )}
+        {(activity.subject || activity.purpose) && activity.status !== 'COMPLETED' && (
+          <div className="act-brief">{activity.subject || activity.purpose}</div>
+        )}
+        {activity.status === 'COMPLETED' && activity.completion_note && (
+          <div className="act-brief">{activity.completion_note}</div>
+        )}
+        <div className="act-foot">
+          <StatusPill activity={activity} pendingSync={pendingSync} />
+        </div>
       </div>
+      {live && (
+        <div className="act-actions" onClick={(event) => event.stopPropagation()}>
+          {activity.location && (
+            <button
+              className="round-btn brass"
+              aria-label="Navigate"
+              onClick={() => openExternal(activity.location!.maps_url)}
+            >
+              <Icon name="navigate" size={17} />
+            </button>
+          )}
+          {phone && (
+            <a className="round-btn" aria-label="Call" href={`tel:${phone}`}>
+              <Icon name="phone" size={17} />
+            </a>
+          )}
+        </div>
+      )}
+      {!live && <Icon name="chevron" size={18} className="act-chevron" />}
     </div>
   );
 }

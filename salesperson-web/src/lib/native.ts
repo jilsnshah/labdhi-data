@@ -13,7 +13,7 @@ export async function initNative(): Promise<void> {
   if (!isNative) return;
   try {
     await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: '#1f2a44' });
+    await StatusBar.setBackgroundColor({ color: '#0c1528' });
   } catch {
     /* status bar is unavailable on some devices */
   }

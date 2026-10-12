@@ -64,7 +64,8 @@ returns:
 | GET/PATCH | `/products/{id}` | |
 | GET | `/products/{id}/suppliers` | “which suppliers can provide product X?” |
 | GET | `/products/{id}/customers` | “which customers want product X?” |
-| GET/POST | `/locations` | `q`, `city`, `state`, `party_id`, `status` |
+| GET/POST | `/locations` | `q` (label, area, city, state, address, pincode), `city`, `area` (exact, case-insensitive), `state`, `party_id`, `status`, `sort_by=city\|area\|label\|created_at\|id`. A location carries an optional `area` - the locality within the city (e.g. Shapar, GIDC Vapi) |
+| GET | `/locations/areas` | distinct areas in use on active locations, alphabetical - for pickers and filters |
 | GET/PATCH | `/locations/{id}` | |
 
 Create a product:
@@ -198,7 +199,7 @@ as any other field, in either direction.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/inquiries` | `q`, `inquiry_type`, `status` (`ACTIVE`/`CLOSED`), `party_id`, `product_id`, `location_id` (any location on the inquiry), `created_from`, `created_to`, `sort_by=id\|created_at\|updated_at\|status\|closed_at` |
+| GET | `/inquiries` | `q`, `inquiry_type`, `status` (`ACTIVE`/`CLOSED`), `party_id`, `product_id`, `location_id` (any location on the inquiry), `area` (any location on the inquiry - for transport either end - is in this area), `material_id`, `grade_id`, `manufacturer_id`, `application_id` (through the inquiry's product; transport inquiries have no product and never match these), `created_from`, `created_to`, `sort_by=id\|created_at\|updated_at\|status\|closed_at` |
 | POST | `/inquiries` | one entry point; the `inquiry_type` selects the detail block; optional top-level `status` |
 | GET | `/inquiries/{id}` | the inquiry and its detail block |
 | PATCH | `/inquiries/{id}` | any field: `status`, `party_id`, `product_id`, `quantity`, `unit`, `location_id`, `rate` (supplier / customer), `pickup_location_id`, `delivery_location_id`, `price` (transport) |

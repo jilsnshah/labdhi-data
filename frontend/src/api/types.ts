@@ -6,12 +6,7 @@ export type PartyType = 'CUSTOMER' | 'SUPPLIER' | 'TRANSPORTER';
 /** How well we know a party. Orthogonal to `status`. */
 export type PartyStage = 'PROSPECT' | 'ACTIVE' | 'MERGED';
 export type PartySource = 'DESK' | 'QUICK_CREATE' | 'IMPORT' | 'FIELD';
-export type LocationType =
-  | 'HEAD_OFFICE'
-  | 'FACTORY'
-  | 'WAREHOUSE'
-  | 'DELIVERY_LOCATION'
-  | 'OTHER';
+export type LocationType = 'HEAD_OFFICE' | 'FACTORY' | 'WAREHOUSE' | 'DELIVERY_LOCATION' | 'OTHER';
 export type PartyProductRelationship = 'SUPPLIES' | 'PURCHASES' | 'INTERESTED_IN';
 export type InquiryType = 'CUSTOMER' | 'SUPPLIER' | 'TRANSPORT';
 /** An inquiry is still being worked, or it is done. Nothing in between. */
@@ -128,6 +123,8 @@ export interface Location {
   label: string | null;
   address_line_1: string | null;
   address_line_2: string | null;
+  /** Locality within the city, e.g. Shapar or GIDC Vapi. */
+  area: string | null;
   city: string;
   state: string | null;
   country: string;
@@ -249,6 +246,8 @@ export interface InquiryListItem {
   unit: QuantityUnit | null;
   /** Supplier / customer inquiries. */
   location_name: string | null;
+  location_area: string | null;
+  location_city: string | null;
   /** Rupees per kilogram (supplier / customer inquiries). */
   rate: string | null;
   /** Transport inquiries. */
@@ -280,6 +279,7 @@ export interface ProductRef {
 export interface LocationRef {
   id: number;
   label: string | null;
+  area: string | null;
   city: string;
   state: string | null;
 }
@@ -370,6 +370,13 @@ export interface Activity {
   completer: IdName | null;
   location_id: number | null;
   location: LocationRef | null;
+  /** Text-only address or a spot pinned from the field app, when there is no location row. */
+  location_snapshot: {
+    label?: string | null;
+    city?: string | null;
+    latitude?: string | null;
+    longitude?: string | null;
+  } | null;
 }
 
 export interface SalespersonWorkload {
@@ -507,3 +514,13 @@ export interface ApplicationRef {
   name: string;
   status: RecordStatus;
 }
+
+/** Logged by the salesperson themselves from the field app (a cold call or visit). */
+export const isFieldLogged = (activity: {
+  created_by: number;
+  assigned_salesperson_id: number | null;
+  parent_activity_id: number | null;
+}): boolean =>
+  activity.parent_activity_id == null &&
+  activity.assigned_salesperson_id != null &&
+  activity.created_by === activity.assigned_salesperson_id;

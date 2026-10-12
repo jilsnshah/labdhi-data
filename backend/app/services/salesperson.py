@@ -13,22 +13,36 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote_plus
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import salesperson_followup_types, settings
 from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.core.security import hash_password, verify_password
 from app.models.activity import Activity
-from app.models.enums import ActivityStatus, ActivityType, AuditAction
-from app.models.party import Location
+from app.models.audit import AuditLog
+from app.models.enums import (
+    ActivityStatus,
+    ActivityType,
+    AuditAction,
+    PartySource,
+    PartyStage,
+    PartyType,
+    RecordStatus,
+)
+from app.models.party import Location, Party
 from app.models.user import User
-from app.schemas.activity import LOCATION_REQUIRED_TYPES, ActivityCompleteRequest
+from app.schemas.activity import LOCATION_REQUIRED_TYPES, ActivityCompleteRequest, ActivityCreate
+from app.schemas.party import PartyQuickCreate
 from app.schemas.salesperson import (
     ActivityCustomerView,
     ActivityLocationView,
     CompleteActivityRequest,
+    DayTally,
+    FieldContact,
+    FieldStats,
     FollowUpRequest,
+    LogActivityRequest,
     SalespersonActivity,
     SalespersonDashboard,
     SalespersonDayCounts,
@@ -36,6 +50,7 @@ from app.schemas.salesperson import (
 )
 from app.services import activities as activity_service
 from app.services import audit
+from app.services import parties as party_service
 
 MAPS_DIRECTIONS = "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="
 
@@ -106,6 +121,10 @@ def to_view(activity: Activity) -> SalespersonActivity:
         parent_activity_id=activity.parent_activity_id,
         is_visit=activity.activity_type == ActivityType.VISIT,
         can_complete=activity.status in OPEN_STATUSES,
+        self_logged=(
+            activity.parent_activity_id is None
+            and activity.created_by == activity.assigned_salesperson_id
+        ),
         customer=ActivityCustomerView(
             name=customer.name,
             contact_person=customer.contact_person,
@@ -398,6 +417,276 @@ def schedule_follow_up(
         },
     )
     return follow_up
+
+
+# --------------------------------------------------------------------------- #
+# Logging from the field
+# --------------------------------------------------------------------------- #
+def contacts(session: Session, user: User, *, q: str | None = None, limit: int = 50) -> list:
+    """Parties this salesperson has already worked with - and nobody else.
+
+    Derived from their own activities, so the list can never reveal a party the
+    office has not put in front of them (or that they did not meet themselves).
+    Each contact is addressed by their latest own activity id, not a party id.
+    """
+    rows = session.execute(
+        select(
+            Activity.party_id,
+            func.max(Activity.id),
+            func.count(Activity.id),
+            func.max(
+                func.coalesce(Activity.completed_at, Activity.scheduled_at, Activity.created_at)
+            ),
+        )
+        .where(_own(user))
+        .group_by(Activity.party_id)
+    ).all()
+    if not rows:
+        return []
+
+    parties = {
+        party.id: party
+        for party in session.execute(
+            select(Party).where(
+                Party.id.in_([row[0] for row in rows]),
+                Party.stage != PartyStage.MERGED,
+                Party.status == RecordStatus.ACTIVE,
+            )
+        ).scalars()
+    }
+    needle = (q or "").strip().lower()
+    result: list[FieldContact] = []
+    for party_id, latest_id, count, last_at in rows:
+        party = parties.get(party_id)
+        if party is None:
+            continue
+        haystack = " ".join(filter(None, [party.name, party.contact_person, party.phone])).lower()
+        if needle and needle not in haystack:
+            continue
+        location = activity_service.default_party_location(session, party.id)
+        place = (
+            ", ".join(filter(None, [location.area, location.city]))
+            if location is not None
+            else None
+        )
+        result.append(
+            FieldContact(
+                ref=latest_id,
+                name=party.name,
+                contact_person=party.contact_person,
+                phone=party.phone,
+                party_type=party.party_type.value,
+                is_prospect=party.stage == PartyStage.PROSPECT,
+                place=place,
+                last_activity_at=last_at,
+                activity_count=count,
+            )
+        )
+    result.sort(
+        key=lambda contact: contact.last_activity_at or datetime.min.replace(tzinfo=UTC),
+        reverse=True,
+    )
+    return result[:limit]
+
+
+def _logged_with_token(session: Session, user: User, token: str) -> Activity | None:
+    """The activity an earlier submission with this token created, if any."""
+    activity_id = session.scalar(
+        select(AuditLog.entity_id)
+        .where(
+            AuditLog.user_id == user.id,
+            AuditLog.entity_type == "activity",
+            AuditLog.new_value["client_token"].astext == token,
+        )
+        .limit(1)
+    )
+    if activity_id is None:
+        return None
+    return session.scalar(select(Activity).where(Activity.id == activity_id, _own(user)))
+
+
+def log_activity(
+    session: Session, user: User, payload: LogActivityRequest
+) -> tuple[Activity, bool, bool]:
+    """Record a call or visit the salesperson did - or plans - on their own.
+
+    Returns ``(activity, duplicate, new_contact_created)``. The activity is always
+    assigned to the signed-in salesperson; a new contact lands as a FIELD
+    prospect so the office can verify or merge it.
+    """
+    if payload.client_token:
+        existing = _logged_with_token(session, user, payload.client_token)
+        if existing is not None:
+            return existing, True, False
+
+    allowed = salesperson_followup_types()
+    if payload.activity_type.value not in allowed:
+        raise ValidationError(f"You can log: {', '.join(sorted(allowed))}.", field="activity_type")
+    if (payload.contact_ref is None) == (payload.new_contact is None):
+        raise ValidationError(
+            "Pick someone you know, or add a new contact - one of the two.", field="contact"
+        )
+
+    now = datetime.now(UTC)
+    note = (payload.note or "").strip() or None
+    if payload.done:
+        if payload.outcome_code is None:
+            raise ValidationError("Pick how it went.", field="outcome_code")
+        if note is None:
+            raise ValidationError("Say briefly what happened.", field="note")
+        at = payload.at or now
+        if at > now + timedelta(minutes=5):
+            raise ValidationError(
+                "Something that already happened cannot be in the future.", field="at"
+            )
+        if at < now - timedelta(days=7):
+            raise ValidationError(
+                "Only the last seven days can be logged from the app.", field="at"
+            )
+    else:
+        if payload.at is None:
+            raise ValidationError("Choose when it is planned for.", field="at")
+        at = payload.at
+        if at < now - timedelta(minutes=5):
+            raise ValidationError("A planned activity must be in the future.", field="at")
+        if at > now + timedelta(days=365):
+            raise ValidationError("That date is too far ahead.", field="at")
+
+    # --- who ----------------------------------------------------------------
+    new_contact_created = False
+    if payload.contact_ref is not None:
+        party = get_own_activity(session, user, payload.contact_ref).party
+    else:
+        contact = payload.new_contact
+        party = party_service.quick_create_party(
+            session,
+            PartyQuickCreate(
+                name=contact.name, phone=contact.phone, contact_person=contact.contact_person
+            ),
+            party_type=PartyType(contact.party_type),
+            user_id=user.id,
+            source=PartySource.FIELD,
+        )
+        new_contact_created = True
+
+    # --- where (visits) -------------------------------------------------------
+    place = (payload.place or "").strip() or None
+    has_gps = payload.latitude is not None and payload.longitude is not None
+    location_text = place
+    if payload.activity_type in LOCATION_REQUIRED_TYPES and not place:
+        has_address = activity_service.default_party_location(session, party.id) is not None
+        if not has_address:
+            if not has_gps:
+                raise ValidationError(
+                    "Say where this visit is, or use your current location.", field="place"
+                )
+            location_text = "Pinned in the field"
+
+    activity = activity_service.create_activity(
+        session,
+        ActivityCreate(
+            party_id=party.id,
+            activity_type=payload.activity_type,
+            subject=payload.subject,
+            scheduled_at=at,
+            note=None if payload.done else note,
+            assigned_salesperson_id=user.id,
+            location_text=location_text,
+            status=ActivityStatus.COMPLETED if payload.done else ActivityStatus.SCHEDULED,
+            completed_at=at if payload.done else None,
+            outcome=note if payload.done else None,
+        ),
+        user.id,
+    )
+    if payload.done:
+        activity.outcome_code = payload.outcome_code
+        activity.started_at = at
+    if has_gps and payload.activity_type in LOCATION_REQUIRED_TYPES:
+        # Where the salesperson actually was - kept on this activity only.
+        snapshot = dict(activity.location_snapshot or {"label": location_text})
+        snapshot["latitude"] = str(payload.latitude)
+        snapshot["longitude"] = str(payload.longitude)
+        activity.location_snapshot = snapshot
+
+    audit.record(
+        session,
+        user_id=user.id,
+        entity_type="activity",
+        entity_id=activity.id,
+        action=AuditAction.CREATE,
+        new_value={
+            "source": "salesperson_app",
+            "self_logged": True,
+            "done": payload.done,
+            "new_contact": new_contact_created,
+            "client_token": payload.client_token,
+        },
+    )
+    session.flush()
+    return activity, False, new_contact_created
+
+
+def stats(session: Session, user: User) -> FieldStats:
+    """The salesperson's own last seven business days."""
+    today = activity_service.business_today()
+    window_start, _ = activity_service.day_bounds(today - timedelta(days=6))
+    _, window_end = activity_service.day_bounds(today)
+
+    completed = (
+        session.execute(
+            select(Activity).where(
+                _own(user),
+                Activity.status == ActivityStatus.COMPLETED,
+                Activity.completed_at >= window_start,
+                Activity.completed_at < window_end,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    days: list[DayTally] = []
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        start, end = activity_service.day_bounds(day)
+        days.append(
+            DayTally(
+                date=day.isoformat(),
+                completed=sum(1 for a in completed if start <= a.completed_at < end),
+            )
+        )
+
+    logs = (
+        session.execute(
+            select(AuditLog.new_value).where(
+                AuditLog.user_id == user.id,
+                AuditLog.entity_type == "activity",
+                AuditLog.new_value["self_logged"].astext == "true",
+                AuditLog.created_at >= window_start,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # On time: assigned work finished no later than the business day it was due.
+    tz = activity_service.business_tz()
+    timed = [a for a in completed if a.scheduled_at is not None and a.created_by != user.id]
+    on_time = [
+        a
+        for a in timed
+        if a.completed_at.astimezone(tz).date() <= a.scheduled_at.astimezone(tz).date()
+    ]
+
+    return FieldStats(
+        days=days,
+        completed_7d=len(completed),
+        visits_7d=sum(1 for a in completed if a.activity_type == ActivityType.VISIT),
+        calls_7d=sum(1 for a in completed if a.activity_type == ActivityType.CALL),
+        self_logged_7d=len(logs),
+        new_contacts_7d=sum(1 for value in logs if value and value.get("new_contact")),
+        on_time_rate=round(len(on_time) / len(timed), 3) if timed else None,
+    )
 
 
 def timezone_offset_minutes() -> int:

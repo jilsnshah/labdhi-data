@@ -136,6 +136,9 @@ class Location(Base, TimestampMixin, StatusMixin):
     label: Mapped[str | None] = mapped_column(String(120))
     address_line_1: Mapped[str | None] = mapped_column(String(200))
     address_line_2: Mapped[str | None] = mapped_column(String(200))
+    #: Locality within the city (e.g. Shapar, Aslali, GIDC Vapi) - what traders
+    #: group and filter by, more precise than the city and less than an address.
+    area: Mapped[str | None] = mapped_column(String(120), index=True)
     city: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     state: Mapped[str | None] = mapped_column(String(120), index=True)
     country: Mapped[str] = mapped_column(String(120), nullable=False, server_default="India")
@@ -145,7 +148,7 @@ class Location(Base, TimestampMixin, StatusMixin):
 
     @property
     def display_name(self) -> str:
-        parts = [self.label, self.city, self.state]
+        parts = [self.label, self.area, self.city, self.state]
         return " - ".join(p for p in parts if p)
 
 

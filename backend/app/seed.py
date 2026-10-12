@@ -5,6 +5,8 @@ Usage::
     python -m app.seed             # wipe demo tables and reseed
     python -m app.seed --if-empty  # only seed when the database has no users
     python -m app.seed --reset     # same as the default, explicit
+    python -m app.seed --bootstrap # production: create only the admin account,
+                                   # from SEED_ADMIN_*, when there are no users
 """
 
 from __future__ import annotations
@@ -362,6 +364,26 @@ def seed(session: Session) -> dict[str, int]:
         "trn_ahm": location("Shree Logistics Hub", "Ahmedabad", "Gujarat", "Aslali", "382427"),
         "trn_sur": location("Patel Roadways Depot", "Surat", "Gujarat", "Katargam", "395004"),
     }
+    # Locality within the city: what the desk actually filters by.
+    areas = {
+        "abc_ho": "Gondal Road",
+        "abc_factory": "Shapar",
+        "xyz_ho": "Navrangpura",
+        "xyz_plant": "Sanand GIDC",
+        "shreeji_ho": "Udhna",
+        "kiran_ho": "Makarpura",
+        "deep_ho": "Sanwer Road",
+        "sup_mumbai": "Masjid Bunder",
+        "sup_ahm_wh": "Narol",
+        "sup_del": "Naraina",
+        "sup_vapi": "GIDC Vapi",
+        "sup_kandla": "Kandla",
+        "trn_rjk": "Bhavnagar Road",
+        "trn_ahm": "Aslali",
+        "trn_sur": "Katargam",
+    }
+    for key, area in areas.items():
+        locations[key].area = area
     session.add_all(locations.values())
     session.flush()
 
@@ -1193,7 +1215,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--reset", action="store_true", help="Truncate existing data first (default)"
     )
+    parser.add_argument(
+        "--bootstrap",
+        action="store_true",
+        help="Create only the admin account (no demo data) when there are no users",
+    )
     args = parser.parse_args(argv)
+
+    if args.bootstrap:
+        return bootstrap()
 
     with SessionLocal() as session:
         existing = session.scalar(select(User.id).limit(1))
@@ -1208,6 +1238,31 @@ def main(argv: list[str] | None = None) -> int:
     for key, value in counts.items():
         print(f"  {key:>14}: {value}")
     print(f"\nSign in with {settings.seed_admin_email} / {settings.seed_admin_password}")
+    return 0
+
+
+def bootstrap() -> int:
+    """First start of a real deployment: one admin, nothing else.
+
+    Everything else (salespeople, masters, parties) is created from the app.
+    """
+    with SessionLocal() as session:
+        if session.scalar(select(User.id).limit(1)) is not None:
+            print("Users exist - bootstrap skipped.")
+            return 0
+        if settings.is_production and settings.seed_admin_password == "admin123":
+            print("Refusing to create the admin with the demo password; set SEED_ADMIN_PASSWORD.")
+            return 1
+        session.add(
+            User(
+                name=settings.seed_admin_name,
+                email=settings.seed_admin_email.lower(),
+                password_hash=hash_password(settings.seed_admin_password),
+                role=UserRole.ADMIN,
+            )
+        )
+        session.commit()
+    print(f"Created admin {settings.seed_admin_email}")
     return 0
 
 

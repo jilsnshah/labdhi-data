@@ -53,3 +53,38 @@ export function greeting(name: string): string {
 }
 
 export { dayjs };
+
+export function initials(name?: string | null): string {
+  const words = (name ?? '')
+    .replace(/[^A-Za-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return '?';
+  return (words[0][0] + (words.length > 1 ? words[1][0] : words[0][1] ?? '')).toUpperCase();
+}
+
+/** "in 25 min", "in 2 h", "40 min late" - for the next-up card. */
+export function countdown(value?: string | null): string {
+  if (!value) return '';
+  const minutes = dayjs(value).diff(dayjs(), 'minute');
+  const span = Math.abs(minutes);
+  const text =
+    span < 1
+      ? 'now'
+      : span < 60
+      ? `${span} min`
+      : span < 60 * 24
+      ? `${Math.round(span / 60)} h`
+      : `${Math.round(span / 1440)} d`;
+  if (text === 'now') return 'Now';
+  return minutes >= 0 ? `in ${text}` : `${text} late`;
+}
+
+export function shortAgo(value?: string | null): string {
+  if (!value) return '';
+  const days = dayjs().startOf('day').diff(dayjs(value).startOf('day'), 'day');
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return dayjs(value).format('DD MMM');
+}

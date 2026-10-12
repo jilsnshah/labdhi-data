@@ -11,9 +11,10 @@ import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import { locationApi, useApiMutation } from '@/api/hooks';
+import { AreaInput } from '@/components/AreaInput';
 import { EntitySelect } from '@/components/EntitySelect';
 
-const EMPTY = { label: '', city: '', state: '' };
+const EMPTY = { label: '', area: '', city: '', state: '' };
 
 export function LocationPicker({
   label,
@@ -41,12 +42,13 @@ export function LocationPicker({
   const save = async () => {
     const location = await create.mutateAsync({
       label: draft.label.trim() || null,
+      area: draft.area.trim() || null,
       city: draft.city.trim(),
       state: draft.state.trim() || null,
     });
     onChange(
       location.id,
-      [location.label, location.city, location.state].filter(Boolean).join(' - '),
+      [location.label, location.area, location.city, location.state].filter(Boolean).join(' - '),
     );
     setDraft(EMPTY);
     setAdding(false);
@@ -67,6 +69,10 @@ export function LocationPicker({
             onChange={(event) => setDraft({ ...draft, label: event.currentTarget.value })}
           />
           <Group grow>
+            <AreaInput
+              value={draft.area}
+              onChange={(value) => setDraft({ ...draft, area: value })}
+            />
             <TextInput
               label="City"
               required

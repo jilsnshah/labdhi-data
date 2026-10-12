@@ -164,6 +164,8 @@ class InquiryListItem(BaseModel):
     unit: QuantityUnit | None = None
     #: Supplier / customer inquiries.
     location_name: str | None = None
+    location_area: str | None = None
+    location_city: str | None = None
     #: Rupees per kilogram (supplier / customer inquiries).
     rate: Decimal | None = None
     #: Transport inquiries.

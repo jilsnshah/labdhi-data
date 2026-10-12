@@ -6,19 +6,22 @@ import { useParams } from 'react-router-dom';
 import { ApiError, api } from '@/api/client';
 import { useActivity, useRefreshAll, useStartActivity } from '@/api/hooks';
 import type { ActivityOutcome, ActivityType, FieldActivity } from '@/api/types';
-import { Banner, Empty, Screen, Sheet, Spinner } from '@/components/Shell';
-import { dateTime, dayjs, humanize, time } from '@/lib/format';
+import { StatusPill } from '@/components/ActivityCard';
+import { Icon, TypeIcon } from '@/components/Icon';
+import { Avatar, Banner, Empty, Screen, Sheet, Spinner } from '@/components/Shell';
+import { dateTime, dayLabel, dayjs, humanize, time } from '@/lib/format';
 import { currentPosition, openExternal } from '@/lib/native';
 import * as outbox from '@/lib/offline';
+import { toast } from '@/lib/toast';
 
-const OUTCOMES: ActivityOutcome[] = [
-  'COMPLETED',
-  'CUSTOMER_INTERESTED',
-  'FOLLOW_UP_REQUIRED',
-  'CUSTOMER_NOT_INTERESTED',
-  'NO_RESPONSE',
-  'RESCHEDULED',
-  'OTHER',
+const OUTCOMES: { code: ActivityOutcome; label: string; tone: string }[] = [
+  { code: 'COMPLETED', label: 'Done as planned', tone: 'teal' },
+  { code: 'CUSTOMER_INTERESTED', label: 'Interested', tone: 'teal' },
+  { code: 'FOLLOW_UP_REQUIRED', label: 'Needs follow-up', tone: 'amber' },
+  { code: 'CUSTOMER_NOT_INTERESTED', label: 'Not interested', tone: 'rust' },
+  { code: 'NO_RESPONSE', label: 'No response', tone: 'slate' },
+  { code: 'RESCHEDULED', label: 'Rescheduled', tone: 'slate' },
+  { code: 'OTHER', label: 'Other', tone: 'slate' },
 ];
 
 /** Must match SALESPERSON_FOLLOWUP_TYPES on the backend. */
@@ -35,7 +38,6 @@ export function ActivityDetailPage() {
   const refresh = useRefreshAll();
   const start = useStartActivity();
   const [sheet, setSheet] = useState<'complete' | 'follow-up' | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pinning, setPinning] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
 
@@ -49,14 +51,14 @@ export function ActivityDetailPage() {
         longitude: position.longitude.toFixed(6),
       });
       refresh();
-      setNotice('Saved this spot for the office.');
+      toast('Saved this spot for the office.');
     } catch (error) {
       setPinError(
         error instanceof ApiError
           ? error.message
           : error instanceof Error
-            ? error.message
-            : 'Could not save this location.',
+          ? error.message
+          : 'Could not save this location.',
       );
     } finally {
       setPinning(false);
@@ -77,159 +79,232 @@ export function ActivityDetailPage() {
         <Banner kind="error">
           {(error as ApiError)?.message ?? 'This activity is not available.'}
         </Banner>
-        <Empty icon="🔒" title="Not found" hint="It may have been reassigned by the office." />
+        <Empty icon="lock" title="Not found" hint="It may have been reassigned by the office." />
       </Screen>
     );
   }
 
   const open = activity.status === 'SCHEDULED' || activity.status === 'IN_PROGRESS';
+  const phone = activity.customer.phone;
+  const digits = phone?.replace(/[^0-9]/g, '') ?? '';
+  const done = (message: string) => {
+    toast(message, message.startsWith('Saved on this phone') ? 'warn' : 'ok');
+    refresh();
+    setSheet(null);
+  };
 
   return (
     <Screen
-      title={humanize(activity.activity_type)}
-      subtitle={`${activity.customer.name} · ${time(activity.scheduled_at)}`}
+      eyebrow={
+        <>
+          {humanize(activity.activity_type)}
+          {activity.self_logged
+            ? ' · self-logged'
+            : activity.parent_activity_id
+            ? ' · follow-up'
+            : ''}
+        </>
+      }
+      title={activity.customer.name}
+      subtitle={
+        activity.scheduled_at
+          ? `${dayLabel(activity.scheduled_at)} · ${time(activity.scheduled_at)}`
+          : undefined
+      }
       back
       withNav={false}
-    >
-      {notice && <Banner kind="info">{notice}</Banner>}
-
-      <div className="card raised">
-        <div className="row between">
-          <div className="strong" style={{ fontSize: 18 }}>
-            {activity.customer.name}
-          </div>
-          <span className={`badge ${activity.status === 'COMPLETED' ? 'green' : ''}`}>
-            {activity.status === 'COMPLETED'
-              ? humanize(activity.outcome_code ?? 'Completed')
-              : humanize(activity.status)}
-          </span>
+      hero={
+        <div className="contact-actions">
+          {phone && (
+            <a className="contact-action" href={`tel:${phone}`}>
+              <span>
+                <Icon name="phone" size={20} />
+              </span>
+              Call
+            </a>
+          )}
+          {phone && (
+            <button
+              className="contact-action"
+              onClick={() => openExternal(`https://wa.me/${digits}`)}
+            >
+              <span>
+                <Icon name="chat" size={20} />
+              </span>
+              WhatsApp
+            </button>
+          )}
+          {phone && (
+            <a className="contact-action" href={`sms:${phone}`}>
+              <span>
+                <Icon name="sms" size={20} />
+              </span>
+              SMS
+            </a>
+          )}
+          {activity.location && (
+            <button
+              className="contact-action brass"
+              onClick={() => openExternal(activity.location!.maps_url)}
+            >
+              <span>
+                <Icon name="navigate" size={20} />
+              </span>
+              Directions
+            </button>
+          )}
         </div>
-        {activity.customer.contact_person && (
-          <div className="small muted" style={{ marginTop: 2 }}>
-            {activity.customer.contact_person}
+      }
+      footer={
+        open ? (
+          <div className="btn-row">
+            {activity.status === 'SCHEDULED' && (
+              <button
+                className="btn ghost"
+                onClick={() => start.mutate(activity.id)}
+                disabled={start.isPending}
+              >
+                <Icon name="play" size={16} /> Start
+              </button>
+            )}
+            <button className="btn primary" onClick={() => setSheet('complete')}>
+              <Icon name="check" size={18} stroke={2.4} /> Complete
+            </button>
           </div>
-        )}
-        <div className="small muted">🕑 {dateTime(activity.scheduled_at)}</div>
-
-        {activity.customer.phone && (
-          <a className="btn secondary" style={{ marginTop: 12 }} href={`tel:${activity.customer.phone}`}>
-            📞 {activity.customer.phone}
-          </a>
-        )}
-        {activity.activity_type === 'WHATSAPP' && activity.customer.phone && (
-          <button
-            className="btn secondary"
-            style={{ marginTop: 10 }}
-            onClick={() =>
-              openExternal(
-                `https://wa.me/${activity.customer.phone!.replace(/[^0-9]/g, '')}`,
-              )
-            }
-          >
-            💬 Open WhatsApp
-          </button>
+        ) : undefined
+      }
+    >
+      <div className="detail-card">
+        <div className="detail-head">
+          <TypeIcon type={activity.activity_type} size={46} />
+          <div className="grow">
+            <div className="detail-kicker">{humanize(activity.activity_type)}</div>
+            <div className="detail-when">{dateTime(activity.scheduled_at)}</div>
+          </div>
+          <StatusPill activity={activity} />
+        </div>
+        <Progress activity={activity} />
+        {(activity.customer.contact_person || phone) && (
+          <div className="detail-person">
+            <Avatar name={activity.customer.contact_person || activity.customer.name} size={36} />
+            <div className="grow">
+              <div className="strong small">
+                {activity.customer.contact_person ?? activity.customer.name}
+              </div>
+              {phone && <div className="tiny muted mono">{phone}</div>}
+            </div>
+          </div>
         )}
       </div>
 
-      {activity.location && (
-        <div className="card raised">
-          <div className="section-title" style={{ marginTop: 0 }}>
-            Where
+      {activity.purpose && (
+        <div className="brief">
+          <div className="brief-label">
+            <Icon name="note" size={14} />
+            {activity.self_logged ? 'Your plan' : 'Brief from the office'}
           </div>
-          <div className="strong">{activity.location.label ?? activity.location.city}</div>
-          <div className="small muted">{activity.location.formatted}</div>
-          <button
-            className="btn"
-            style={{ marginTop: 12 }}
-            onClick={() => openExternal(activity.location!.maps_url)}
-          >
-            🧭 Navigate with Google Maps
-          </button>
-          {pinError && (
-            <div style={{ marginTop: 10 }}>
-              <Banner kind="error">{pinError}</Banner>
-            </div>
-          )}
-          <button
-            className="btn secondary"
-            style={{ marginTop: 10 }}
-            onClick={pinHere}
-            disabled={pinning}
-          >
-            {pinning ? 'Reading your location…' : "📌 I'm here - save this spot"}
-          </button>
-          <div className="tiny muted" style={{ marginTop: 6 }}>
-            Helps the office fix an address they only had as text.
-          </div>
+          <div className="brief-text">{activity.purpose}</div>
         </div>
       )}
 
-      {activity.purpose && (
-        <div className="card">
-          <div className="section-title" style={{ marginTop: 0 }}>
-            Purpose from the office
+      {activity.location && (
+        <div className="where-card">
+          <div className="where-map" aria-hidden>
+            <svg viewBox="0 0 320 110" preserveAspectRatio="xMidYMid slice">
+              <path d="M0 78 C 60 60, 110 96, 170 70 S 280 40, 320 58" className="road major" />
+              <path d="M40 0 L 90 110" className="road" />
+              <path d="M210 0 C 200 40, 240 70, 230 110" className="road" />
+              <path d="M0 30 C 80 36, 160 18, 320 26" className="road" />
+            </svg>
+            <span className="where-pin">
+              <Icon name="pin" size={22} stroke={2} />
+            </span>
           </div>
-          <div className="timeline-note">{activity.purpose}</div>
+          <div className="where-body">
+            <div className="strong">
+              {activity.location.label ?? activity.location.city ?? 'Location'}
+            </div>
+            {activity.location.formatted !== activity.location.label && (
+              <div className="small muted">{activity.location.formatted}</div>
+            )}
+            <div className="btn-row tight" style={{ marginTop: 12 }}>
+              <button
+                className="btn small brass"
+                onClick={() => openExternal(activity.location!.maps_url)}
+              >
+                <Icon name="navigate" size={15} /> Navigate
+              </button>
+              <button className="btn small ghost" onClick={pinHere} disabled={pinning}>
+                <Icon name="crosshair" size={15} />
+                {pinning ? 'Locating…' : "I'm here"}
+              </button>
+            </div>
+            {pinError && (
+              <div className="tiny" style={{ color: 'var(--rust)', marginTop: 8 }}>
+                {pinError}
+              </div>
+            )}
+            <div className="tiny muted" style={{ marginTop: 8 }}>
+              “I'm here” saves this spot so the office can fix an address they only had as text.
+            </div>
+          </div>
         </div>
       )}
 
       {activity.status === 'COMPLETED' && (
-        <div className="card">
-          <div className="section-title" style={{ marginTop: 0 }}>
-            Your report
+        <div className="report">
+          <div className="brief-label">
+            <Icon name="check" size={14} stroke={2.4} /> Your report
           </div>
-          <div className="small">{activity.completion_note}</div>
-          <div className="tiny muted" style={{ marginTop: 6 }}>
+          <div className="brief-text">{activity.completion_note}</div>
+          <div className="tiny muted" style={{ marginTop: 8 }}>
             Reported {dateTime(activity.completed_at)}
           </div>
-          <button className="btn secondary" style={{ marginTop: 12 }} onClick={() => setSheet('follow-up')}>
-            Schedule a follow-up
+          <button
+            className="btn ghost small"
+            style={{ marginTop: 12 }}
+            onClick={() => setSheet('follow-up')}
+          >
+            <Icon name="calendar" size={15} /> Schedule a follow-up
           </button>
         </div>
       )}
 
-      {open && (
-        <div className="sticky-actions">
-          <div className="btn-row">
-            {activity.status === 'SCHEDULED' && (
-              <button
-                className="btn secondary"
-                onClick={() => start.mutate(activity.id)}
-                disabled={start.isPending}
-              >
-                Start
-              </button>
-            )}
-            <button className="btn success" onClick={() => setSheet('complete')}>
-              Complete
-            </button>
-          </div>
-        </div>
-      )}
-
       {sheet === 'complete' && (
-        <CompleteSheet
-          activity={activity}
-          onClose={() => setSheet(null)}
-          onDone={(message) => {
-            setNotice(message);
-            refresh();
-            setSheet(null);
-          }}
-        />
+        <CompleteSheet activity={activity} onClose={() => setSheet(null)} onDone={done} />
       )}
       {sheet === 'follow-up' && (
-        <FollowUpSheet
-          activity={activity}
-          onClose={() => setSheet(null)}
-          onDone={(message) => {
-            setNotice(message);
-            refresh();
-            setSheet(null);
-          }}
-        />
+        <FollowUpSheet activity={activity} onClose={() => setSheet(null)} onDone={done} />
       )}
     </Screen>
+  );
+}
+
+function Progress({ activity }: { activity: FieldActivity }) {
+  const steps = [
+    { label: 'Planned', at: activity.scheduled_at, on: true },
+    {
+      label: 'Started',
+      at: activity.started_at,
+      on: Boolean(activity.started_at) || activity.status === 'COMPLETED',
+    },
+    {
+      label: activity.status === 'CANCELLED' ? 'Cancelled' : 'Reported',
+      at: activity.completed_at,
+      on: activity.status === 'COMPLETED' || activity.status === 'CANCELLED',
+    },
+  ];
+  return (
+    <div className="progress">
+      {steps.map((step, index) => (
+        <div key={step.label} className={`progress-step${step.on ? ' on' : ''}`}>
+          <span className="progress-dot" />
+          {index < steps.length - 1 && <span className="progress-line" />}
+          <div className="progress-label">{step.label}</div>
+          <div className="progress-at">{step.at && step.on ? time(step.at) : '—'}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -246,9 +321,16 @@ function CompleteSheet({
   const [note, setNote] = useState('');
   const [withFollowUp, setWithFollowUp] = useState(false);
   const [followUpType, setFollowUpType] = useState<ActivityType>('CALL');
-  const [followUpAt, setFollowUpAt] = useState(pickerValue(dayjs().add(3, 'day').hour(11).minute(0)));
+  const [followUpAt, setFollowUpAt] = useState(
+    pickerValue(dayjs().add(3, 'day').hour(11).minute(0)),
+  );
   const [followUpNote, setFollowUpNote] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const pick = (code: ActivityOutcome) => {
+    setOutcome(code);
+    if (code === 'FOLLOW_UP_REQUIRED') setWithFollowUp(true);
+  };
 
   const submit = async () => {
     if (busy || !note.trim()) return;
@@ -278,22 +360,23 @@ function CompleteSheet({
   };
 
   return (
-    <Sheet title="Complete activity" onClose={onClose}>
-      <label className="field">
-        <span>Outcome</span>
-        <div className="chip-group">
-          {OUTCOMES.map((value) => (
+    <Sheet title="Report back" subtitle={activity.customer.name} onClose={onClose}>
+      <div className="field">
+        <span>How did it go</span>
+        <div className="outcome-grid">
+          {OUTCOMES.map((item) => (
             <button
-              key={value}
+              key={item.code}
               type="button"
-              className={`chip ${outcome === value ? 'selected' : ''}`}
-              onClick={() => setOutcome(value)}
+              className={`outcome tone-${item.tone}${outcome === item.code ? ' on' : ''}`}
+              onClick={() => pick(item.code)}
             >
-              {humanize(value)}
+              <span className="outcome-dot" />
+              {item.label}
             </button>
           ))}
         </div>
-      </label>
+      </div>
 
       <label className="field">
         <span>What happened?</span>
@@ -304,62 +387,52 @@ function CompleteSheet({
         />
       </label>
 
-      <label className="field">
-        <span>
-          <input
-            type="checkbox"
-            style={{ width: 20, height: 20, minHeight: 20, marginRight: 8, verticalAlign: 'middle' }}
-            checked={withFollowUp}
-            onChange={(event) => setWithFollowUp(event.currentTarget.checked)}
-          />
-          Schedule a follow-up for me
-        </span>
-      </label>
-
-      {withFollowUp && (
-        <>
-          <label className="field">
-            <span>Follow-up type</span>
+      <div className={`toggle-card${withFollowUp ? ' on' : ''}`}>
+        <button
+          type="button"
+          className="toggle-row"
+          onClick={() => setWithFollowUp((value) => !value)}
+        >
+          <span className="grow strong">Schedule a follow-up for me</span>
+          <span className={`switch${withFollowUp ? ' on' : ''}`} />
+        </button>
+        {withFollowUp && (
+          <div style={{ marginTop: 12 }}>
             <div className="chip-group">
               {FOLLOW_UP_TYPES.map((value) => (
                 <button
                   key={value}
                   type="button"
-                  className={`chip ${followUpType === value ? 'selected' : ''}`}
+                  className={`chip${followUpType === value ? ' selected' : ''}`}
                   onClick={() => setFollowUpType(value)}
                 >
                   {humanize(value)}
                 </button>
               ))}
             </div>
-          </label>
-          <label className="field">
-            <span>When</span>
             <input
               type="datetime-local"
+              style={{ marginTop: 10 }}
               value={followUpAt}
               min={pickerValue(dayjs())}
               onChange={(event) => setFollowUpAt(event.currentTarget.value)}
             />
-          </label>
-          <label className="field">
-            <span>Note (optional)</span>
             <textarea
-              style={{ minHeight: 70 }}
+              style={{ minHeight: 64, marginTop: 10 }}
               value={followUpNote}
               onChange={(event) => setFollowUpNote(event.currentTarget.value)}
-              placeholder="Call about the October requirement."
+              placeholder="Note for the follow-up (optional)"
             />
-          </label>
-        </>
-      )}
+          </div>
+        )}
+      </div>
 
-      <div className="btn-row">
-        <button className="btn secondary" onClick={onClose} disabled={busy}>
+      <div className="btn-row" style={{ marginTop: 16 }}>
+        <button className="btn ghost" onClick={onClose} disabled={busy}>
           Cancel
         </button>
-        <button className="btn success" onClick={submit} disabled={busy || !note.trim()}>
-          {busy ? 'Saving…' : 'Complete activity'}
+        <button className="btn primary" onClick={submit} disabled={busy || !note.trim()}>
+          {busy ? 'Saving…' : 'Send report'}
         </button>
       </div>
     </Sheet>
@@ -406,11 +479,12 @@ function FollowUpSheet({
   };
 
   return (
-    <Sheet title="Schedule follow-up" onClose={onClose}>
+    <Sheet
+      title="Schedule follow-up"
+      subtitle={`Stays with ${activity.customer.name} and with you`}
+      onClose={onClose}
+    >
       {error && <Banner kind="error">{error}</Banner>}
-      <div className="small muted" style={{ marginBottom: 12 }}>
-        Stays with {activity.customer.name} and with you.
-      </div>
       <label className="field">
         <span>Type</span>
         <div className="chip-group">
@@ -418,7 +492,7 @@ function FollowUpSheet({
             <button
               key={value}
               type="button"
-              className={`chip ${type === value ? 'selected' : ''}`}
+              className={`chip${type === value ? ' selected' : ''}`}
               onClick={() => setType(value)}
             >
               {humanize(value)}
@@ -444,10 +518,10 @@ function FollowUpSheet({
         />
       </label>
       <div className="btn-row">
-        <button className="btn secondary" onClick={onClose} disabled={busy}>
+        <button className="btn ghost" onClick={onClose} disabled={busy}>
           Cancel
         </button>
-        <button className="btn" onClick={submit} disabled={busy}>
+        <button className="btn primary" onClick={submit} disabled={busy}>
           {busy ? 'Scheduling…' : 'Schedule'}
         </button>
       </div>
