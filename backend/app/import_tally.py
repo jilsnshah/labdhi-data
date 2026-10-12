@@ -294,16 +294,34 @@ KNOWN_CITIES = (
 )
 KNOWN_CITIES_UPPER = {city.upper() for city in KNOWN_CITIES}
 
+#: One locality, one spelling, so the area filter does not split in two.
+AREA_ALIASES = {
+    "AMBAWDI": "Ambawadi",
+    "ASARAWA": "Asarwa",
+    "KATHWADA GIDC": "Kathwada",
+    "GIDC ESTATE": None,
+    "INDUSTRIAL AREA": None,
+}
+
+
+def _canonical_area(text: str) -> str | None:
+    """One spelling per locality."""
+    cleaned = text.strip(" .,:;-")
+    key = cleaned.upper()
+    if key in AREA_ALIASES:
+        return AREA_ALIASES[key]
+    return cleaned.title()
+
 
 def _normalize_area(text: str) -> str | None:
     """ "GIDC Vatva", "Vatva GIDC", "GIDC-Vatva" are one place; bare "GIDC" is none."""
     cleaned = re.sub(r"\bG\.?I\.?D\.?C\.?\b", " ", text, flags=re.IGNORECASE)
     cleaned = re.sub(r"[\s\-]+", " ", cleaned).strip(" .,:;-")
     if cleaned.upper() in LOCALITY_CITY:
-        return cleaned.title()
+        return _canonical_area(cleaned)
     if not cleaned:
         return None  # "GIDC" on its own says nothing
-    return text.strip(" .,:;-").title()
+    return _canonical_area(text)
 
 
 def _city_token(token: str) -> str | None:
@@ -374,13 +392,14 @@ def split_address(raw: str) -> tuple[str, str | None, str | None, str | None]:
     if city_index < len(parts):
         tail = (_city_token(parts[city_index]) or "").upper()
         if tail in LOCALITY_CITY:
-            area = tail.title()
+            area = _canonical_area(tail)
     if area is None:
         for part in reversed(body):
             candidate = CITY_PREFIX.sub("", part).strip(" .,:;-")
             if candidate.upper() in LOCALITY_CITY:
-                area = candidate.title()
-                break
+                area = _canonical_area(candidate)
+                if area:
+                    break
             if (
                 AREA_WORDS.search(candidate)
                 and not AREA_REJECT.search(candidate)
@@ -459,6 +478,37 @@ def merge(ledgers: list[Ledger]) -> list[Ledger]:
     return merged
 
 
+def disambiguate(candidates: list[Candidate]) -> None:
+    """Give each of two firms trading under one name a name of its own.
+
+    One company registered in two states and two unrelated firms with the same
+    trade name both land here; the state tells the first pair apart, and the
+    GSTIN the second.
+    """
+    groups: dict[tuple[str, str], list[Candidate]] = {}
+    for candidate in candidates:
+        groups.setdefault((candidate.party_type.value, candidate.ledger.name.upper()), []).append(
+            candidate
+        )
+
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        states = [
+            (candidate.ledger.primary.state if candidate.ledger.primary else None)
+            for candidate in group
+        ]
+        by_state = len(set(states)) == len(states) and all(states)
+        for candidate, state in zip(group[1:], states[1:], strict=False):
+            if by_state:
+                suffix = state
+            elif candidate.ledger.gst:
+                suffix = f"GST {candidate.ledger.gst[-4:]}"
+            else:
+                continue
+            candidate.ledger.name = f"{candidate.ledger.name} ({suffix})"
+
+
 def classify(ledgers: list[Ledger]) -> tuple[list[Candidate], list[Ledger]]:
     """Split the merged list into parties to import and ledgers to leave out."""
     candidates: list[Candidate] = []
@@ -487,13 +537,18 @@ def _existing_party(session: Session, candidate: Candidate) -> Party | None:
         found = session.scalar(select(Party).where(Party.gst_number == ledger.gst))
         if found is not None:
             return found
-    return session.scalar(
+    by_name = session.scalar(
         select(Party).where(
             Party.party_type == candidate.party_type,
             Party.name == ledger.name,
             Party.merged_into_id.is_(None),
         )
     )
+    # Two firms can trade under one name. A GSTIN of its own makes this a
+    # different company, not the one already on file.
+    if by_name is not None and ledger.gst and by_name.gst_number != ledger.gst:
+        return None
+    return by_name
 
 
 def _import_user(session: Session) -> int | None:
@@ -503,21 +558,14 @@ def _import_user(session: Session) -> int | None:
 
 def apply(session: Session, candidates: list[Candidate], *, user_id: int | None) -> Counter:
     stats: Counter = Counter()
-    taken_names: set[tuple[str, str]] = set()
 
     for candidate in candidates:
         ledger = candidate.ledger
         party = _existing_party(session, candidate)
 
         if party is None:
-            name = ledger.name
-            key = (candidate.party_type.value, name.lower())
-            if key in taken_names and candidate.stage == PartyStage.ACTIVE:
-                # Same name, different GSTIN: keep both, tell them apart.
-                name = f"{name} ({ledger.gst[:2]}{ledger.gst[-4:]})" if ledger.gst else name
-            taken_names.add((candidate.party_type.value, name.lower()))
             party = Party(
-                name=name[:200],
+                name=ledger.name[:200],
                 party_type=candidate.party_type,
                 gst_number=ledger.gst,
                 stage=candidate.stage,
@@ -645,6 +693,7 @@ def main(argv: list[str] | None = None) -> int:
         ledgers += found
 
     candidates, skipped = classify(merge(ledgers))
+    disambiguate(candidates)
     print(f"\n{summarise(candidates, skipped)}\n")
     if args.list_skipped:
         for ledger in skipped:

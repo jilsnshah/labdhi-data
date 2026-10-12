@@ -319,6 +319,56 @@ def list_parties(
     return rows, total, extras
 
 
+def book_summary(session: Session, party_type: PartyType) -> dict[str, int]:
+    """Figures for the whole book of one party type, not just the page on screen.
+
+    The list page shows these above the table, so they have to count every row;
+    reading them off the loaded page was right only while the book was small.
+    """
+    live = (Party.party_type == party_type, Party.merged_into_id.is_(None))
+
+    total = session.scalar(select(func.count()).select_from(Party).where(*live)) or 0
+    prospects = (
+        session.scalar(
+            select(func.count()).select_from(Party).where(*live, Party.stage == PartyStage.PROSPECT)
+        )
+        or 0
+    )
+    cities = (
+        session.scalar(
+            select(func.count(func.distinct(Location.city)))
+            .select_from(Party)
+            .join(PartyLocation, PartyLocation.party_id == Party.id)
+            .join(Location, Location.id == PartyLocation.location_id)
+            .where(*live)
+        )
+        or 0
+    )
+
+    detail = {
+        PartyType.CUSTOMER: (CustomerInquiry, CustomerInquiry.customer_id),
+        PartyType.SUPPLIER: (SupplierInquiry, SupplierInquiry.supplier_id),
+        PartyType.TRANSPORTER: (TransportInquiry, TransportInquiry.transporter_id),
+    }[party_type]
+    engaged = (
+        session.scalar(
+            select(func.count(func.distinct(detail[1])))
+            .select_from(detail[0])
+            .join(Inquiry, Inquiry.id == detail[0].inquiry_id)
+            .where(Inquiry.status == InquiryStatus.ACTIVE)
+        )
+        or 0
+    )
+
+    return {
+        "total": total,
+        "prospects": prospects,
+        "verified": total - prospects,
+        "with_open_inquiries": engaged,
+        "cities": cities,
+    }
+
+
 def get_party(session: Session, party_id: int, *, expected_type: PartyType | None = None) -> Party:
     party = session.get(
         Party,

@@ -217,3 +217,47 @@ def test_the_same_end_use_cannot_be_linked_twice(client, auth, masters, parties)
         headers=auth,
     )
     assert again.status_code == 409, again.text
+
+
+def test_book_summary_counts_the_whole_book_not_one_page(client, auth, parties):
+    """The cards above the table must not read their figures off the loaded page."""
+    for index, city in enumerate(["Morbi", "Morbi", "Rajkot"]):
+        client.post(
+            "/api/v1/parties",
+            json={
+                "name": f"Bulk Customer {index}",
+                "party_type": "CUSTOMER",
+                "locations": [{"location": {"city": city, "state": "Gujarat"}}],
+            },
+            headers=auth,
+        )
+    client.post(
+        "/api/v1/parties/prospects",
+        json={"name": "Met at the gate", "party_type": "CUSTOMER", "phone": "+91 90000 11111"},
+        headers=auth,
+    )
+
+    summary = client.get(
+        "/api/v1/parties/summary", params={"party_type": "CUSTOMER"}, headers=auth
+    ).json()
+    listed = client.get(
+        "/api/v1/parties", params={"party_type": "CUSTOMER", "page_size": 2}, headers=auth
+    ).json()
+
+    assert summary["total"] == listed["total"], "the page size must not change the figures"
+    assert summary["total"] > len(listed["items"])
+    assert summary["prospects"] == 1
+    assert summary["verified"] == summary["total"] - 1
+    assert summary["cities"] == 2, "distinct cities, not one per party"
+
+    other = client.get(
+        "/api/v1/parties/summary", params={"party_type": "SUPPLIER"}, headers=auth
+    ).json()
+    assert other["total"] < summary["total"], "each book is counted on its own"
+
+
+def test_book_summary_is_staff_only(client, sales_auth):
+    response = client.get(
+        "/api/v1/parties/summary", params={"party_type": "CUSTOMER"}, headers=sales_auth
+    )
+    assert response.status_code == 403

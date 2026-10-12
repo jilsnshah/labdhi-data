@@ -14,6 +14,7 @@ from app.schemas.party import (
     PartyApplicationCreate,
     PartyApplicationOut,
     PartyApplicationUpdate,
+    PartyBookSummary,
     PartyCreate,
     PartyDetailOut,
     PartyListItem,
@@ -32,6 +33,16 @@ from app.services import dashboard as dashboard_service
 from app.services import parties as service
 
 router = APIRouter(prefix="/parties", tags=["parties"])
+
+
+@router.get("/summary", response_model=PartyBookSummary)
+def party_book_summary(
+    session: SessionDep,
+    _: StaffUser,
+    party_type: PartyType = Query(..., description="Which book to summarise"),
+) -> PartyBookSummary:
+    """Totals across the whole book, so the cards do not count only one page."""
+    return PartyBookSummary(**service.book_summary(session, party_type))
 
 
 @router.get("", response_model=Page[PartyListItem])

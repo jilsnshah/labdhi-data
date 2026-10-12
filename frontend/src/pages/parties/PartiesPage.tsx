@@ -1,9 +1,18 @@
-import { Badge, Button, Group, SegmentedControl, Stack, Switch, Text, TextInput } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  Group,
+  SegmentedControl,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useParties } from '@/api/hooks';
+import { usePartyBookSummary, useParties } from '@/api/hooks';
 import type { PartyListItem, PartyType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -42,11 +51,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
   }>({}, { sortBy: 'name', sortDir: 'asc' });
   const { data, isFetching } = useParties({ ...list.params, party_type: partyType });
   // Book-level figures for this party type, independent of the table's filters.
-  const { data: book } = useParties({ party_type: partyType, page_size: 200 });
-  const rows = book?.items ?? [];
-  const prospects = rows.filter((row) => row.stage === 'PROSPECT').length;
-  const engaged = rows.filter((row) => row.open_inquiry_count > 0).length;
-  const cities = new Set(rows.map((row) => row.primary_city).filter(Boolean)).size;
+  const { data: book } = usePartyBookSummary(partyType);
   const accent =
     partyType === 'SUPPLIER'
       ? 'var(--supply)'
@@ -145,17 +150,31 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         <KpiTile
           label={`${humanize(partyType)}s`}
           value={book?.total ?? '—'}
-          hint={`${rows.length - prospects} verified`}
+          hint={book ? `${book.verified} verified` : '—'}
           accent={accent}
         />
         <KpiTile
           label="With live inquiries"
-          value={engaged}
-          hint={rows.length ? `${Math.round((engaged / rows.length) * 100)}% of the book` : '—'}
+          value={book?.with_open_inquiries ?? '—'}
+          hint={
+            book?.total
+              ? `${Math.round((book.with_open_inquiries / book.total) * 100)}% of the book`
+              : '—'
+          }
           accent={accent}
         />
-        <KpiTile label="Prospects" value={prospects} hint="to verify" accent="var(--brass)" />
-        <KpiTile label="Cities" value={cities} hint="primary locations" accent={accent} />
+        <KpiTile
+          label="Prospects"
+          value={book?.prospects ?? '—'}
+          hint="to verify"
+          accent="var(--brass)"
+        />
+        <KpiTile
+          label="Cities"
+          value={book?.cities ?? '—'}
+          hint="primary locations"
+          accent={accent}
+        />
       </div>
       <FilterBar
         q={list.q}
@@ -218,9 +237,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         emptyMessage={`No ${partyType.toLowerCase()}s match these filters`}
         emptyHint="Try clearing the filters, or add the first one."
       />
-      {createOpen && (
-        <PartyFormModal partyType={partyType} onClose={() => setCreateOpen(false)} />
-      )}
+      {createOpen && <PartyFormModal partyType={partyType} onClose={() => setCreateOpen(false)} />}
     </div>
   );
 }

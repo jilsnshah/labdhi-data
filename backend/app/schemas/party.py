@@ -311,6 +311,16 @@ class PartyDetailOut(PartyOut):
     applications: list[PartyApplicationOut] = Field(default_factory=list)
 
 
+class PartyBookSummary(BaseModel):
+    """Whole-book figures for one party type, for the cards above the table."""
+
+    total: int = 0
+    verified: int = 0
+    prospects: int = 0
+    with_open_inquiries: int = 0
+    cities: int = 0
+
+
 class PartyListItem(PartyOut):
     primary_city: str | None = None
     product_count: int = 0

@@ -13,6 +13,7 @@ from app.import_tally import (
     Address,
     Ledger,
     classify,
+    disambiguate,
     merge,
     normalized_name,
     split_address,
@@ -174,3 +175,29 @@ def test_the_pincode_is_lifted_out_of_the_line():
 def test_an_address_the_parser_cannot_read_still_keeps_its_text():
     street, _, _, _ = split_address("SOME UNPARSEABLE LINE")
     assert street == "SOME UNPARSEABLE LINE"
+
+
+# --- two firms, one trade name --------------------------------------------- #
+def _candidates(*ledgers):
+    candidates, _ = classify(merge(list(ledgers)))
+    disambiguate(candidates)
+    return candidates
+
+
+def test_one_company_registered_in_two_states_is_told_apart_by_state():
+    gujarat = ledger("R P SHAH AND SONS", gst="24AGNPS9348A1Z5", address="Odhav, Ahmedabad")
+    maharashtra = ledger("R P SHAH AND SONS", gst="27AGNPS9348A1ZZ")
+    maharashtra.addresses = [Address(None, "Nariman Point, Mumbai", "Maharashtra", "India")]
+    names = [candidate.ledger.name for candidate in _candidates(gujarat, maharashtra)]
+    assert names == ["R P SHAH AND SONS", "R P SHAH AND SONS (Maharashtra)"]
+
+
+def test_two_firms_in_one_state_are_told_apart_by_gstin():
+    names = [
+        candidate.ledger.name
+        for candidate in _candidates(
+            ledger("HARIOM PLASTICS", gst="24AAPHS3296B1ZZ", address="Narol, Ahmedabad"),
+            ledger("HARIOM PLASTICS", gst="24ADZPS9590H1ZH", address="Odhav, Ahmedabad"),
+        )
+    ]
+    assert names == ["HARIOM PLASTICS", "HARIOM PLASTICS (GST H1ZH)"]

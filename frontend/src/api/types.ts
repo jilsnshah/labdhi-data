@@ -210,6 +210,14 @@ export interface PartyMergeResult {
   message: string;
 }
 
+export interface PartyBookSummary {
+  total: number;
+  verified: number;
+  prospects: number;
+  with_open_inquiries: number;
+  cities: number;
+}
+
 export interface PartyListItem extends Party {
   primary_city: string | null;
   product_count: number;

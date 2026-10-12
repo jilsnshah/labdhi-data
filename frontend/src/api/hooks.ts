@@ -1,11 +1,6 @@
 /** React Query hooks. Lists are server-paginated, filtered and sorted. */
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
 
 import { ApiError, api } from './client';
@@ -29,6 +24,7 @@ import type {
   Note,
   Page,
   Party360,
+  PartyBookSummary,
   PartyDetail,
   PartyListItem,
   PartyLocation,
@@ -98,6 +94,14 @@ export const useProductCustomers = (id?: number) =>
 /* -------------------------------- parties ------------------------------- */
 export const useParties = (params: Params = {}) =>
   useQuery(listQuery<PartyListItem>('parties', '/parties', params));
+
+/** Whole-book figures for the cards above the table, not just the loaded page. */
+export const usePartyBookSummary = (partyType: string) =>
+  useQuery({
+    queryKey: ['party-book-summary', partyType],
+    queryFn: () => api.get<PartyBookSummary>('/parties/summary', { party_type: partyType }),
+    staleTime: 60_000,
+  });
 
 export const useParty = (id?: number) =>
   useQuery({
@@ -290,8 +294,8 @@ export function useApiMutation<TInput, TResult>(
 }
 
 /* Convenience writers used across the app. */
-export const createEntity = <T,>(path: string, body: unknown) => api.post<T>(path, body);
-export const patchEntity = <T,>(path: string, body: unknown) => api.patch<T>(path, body);
+export const createEntity = <T>(path: string, body: unknown) => api.post<T>(path, body);
+export const patchEntity = <T>(path: string, body: unknown) => api.patch<T>(path, body);
 
 export const inquiryApi = {
   create: (body: unknown) => api.post<InquiryDetail>('/inquiries', body),
