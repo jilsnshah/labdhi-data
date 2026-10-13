@@ -20,10 +20,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!tokenStore.get()) return;
     let cancelled = false;
+    // Renew on the way in, so a desk that is opened every morning is never
+    // asked to sign in again; only a session left alone for a month lapses.
     api
-      .get<User>('/auth/me')
-      .then((me) => {
-        if (!cancelled) setUser(me);
+      .post<LoginResponse>('/auth/refresh')
+      .then((result) => {
+        tokenStore.set(result.token.access_token);
+        if (!cancelled) setUser(result.user);
       })
       .catch(() => {
         tokenStore.clear();

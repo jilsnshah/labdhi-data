@@ -35,6 +35,24 @@ def login(payload: LoginRequest, session: SessionDep) -> LoginResponse:
     )
 
 
+@router.post("/auth/refresh", response_model=LoginResponse)
+def refresh(user: CurrentUser) -> LoginResponse:
+    """Hand back a fresh token to a caller who still has a valid one.
+
+    The clients call this when they start, so anyone who keeps using the app
+    stays signed in indefinitely while an abandoned session still lapses. It
+    proves nothing new - an expired or forged token cannot renew itself.
+    """
+    token = create_access_token(user.id, {"role": user.role.value, "name": user.name})
+    return LoginResponse(
+        token=Token(
+            access_token=token,
+            expires_in_minutes=settings.access_token_expire_minutes,
+        ),
+        user=UserOut.model_validate(user),
+    )
+
+
 @router.get("/auth/me", response_model=UserOut)
 def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)

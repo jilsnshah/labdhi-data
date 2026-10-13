@@ -34,7 +34,11 @@ class Settings(BaseSettings):
 
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 720
+    #: 30 days. A trader opening the app each morning, and a salesperson whose
+    #: phone sits in a pocket all week, should not be asked to sign in again;
+    #: the clients renew the token on every launch, so a session only lapses
+    #: after a month of not being used at all.
+    access_token_expire_minutes: int = 60 * 24 * 30
 
     seed_admin_email: str = "admin@tradercrm.in"
     seed_admin_password: str = "admin123"

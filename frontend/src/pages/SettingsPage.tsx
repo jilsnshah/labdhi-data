@@ -1,15 +1,5 @@
-import {
-  Badge,
-  Button,
-  Code,
-  Group,
-  Select,
-  Stack,
-  Table,
-  Tabs,
-  Text,
-} from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { Badge, Button, Code, Group, Select, Stack, Table, Tabs, Text } from '@mantine/core';
+import { IconKey, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import { useAuditLogs, useUsers } from '@/api/hooks';
@@ -19,6 +9,7 @@ import type { Column } from '@/components/DataTable';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Field, SectionCard } from '@/components/ui';
+import { SetPasswordModal } from '@/components/modals/SetPasswordModal';
 import { UserFormModal } from '@/components/modals/UserFormModal';
 import { useAuth } from '@/lib/auth';
 import { useListState } from '@/hooks/useListState';
@@ -76,9 +67,15 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
   const { data, isFetching } = useUsers(list.params);
   const [editing, setEditing] = useState<User | null>(null);
   const [opened, setOpened] = useState(false);
+  const [passwordFor, setPasswordFor] = useState<User | null>(null);
 
   const columns: Column<User>[] = [
-    { key: 'name', label: 'Name', sortable: true, render: (row) => <Text fw={500}>{row.name}</Text> },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (row) => <Text fw={500}>{row.name}</Text>,
+    },
     {
       key: 'email',
       label: 'Email',
@@ -96,6 +93,28 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
       ),
     },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge value={row.status} /> },
+    ...(isAdmin
+      ? [
+          {
+            key: 'password',
+            label: 'Password',
+            width: 130,
+            render: (row: User) => (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                leftSection={<IconKey size={13} />}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setPasswordFor(row);
+                }}
+              >
+                Set password
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -140,6 +159,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
             : undefined
         }
       />
+      {passwordFor && <SetPasswordModal user={passwordFor} onClose={() => setPasswordFor(null)} />}
       {opened && (
         <UserFormModal
           key={editing?.id ?? 'new'}
@@ -152,7 +172,10 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AuditTab() {
-  const list = useListState<{ entity_type?: string }>({}, { sortBy: 'created_at', sortDir: 'desc' });
+  const list = useListState<{ entity_type?: string }>(
+    {},
+    { sortBy: 'created_at', sortDir: 'desc' },
+  );
   const { data, isFetching } = useAuditLogs(list.params);
 
   return (

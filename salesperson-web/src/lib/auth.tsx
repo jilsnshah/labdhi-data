@@ -31,8 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const me = await api.get<Profile>('/salesperson/me');
-        if (!cancelled) setProfile(me);
+        // Renew on launch: a phone that is opened for work each day stays
+        // signed in, and only a handset left untouched for a month lapses.
+        const renewed = await api.post<LoginResponse>('/auth/refresh');
+        await saveToken(renewed.token.access_token);
+        if (!cancelled) setProfile(await api.get<Profile>('/salesperson/me'));
       } catch (error) {
         // Keep the session on a network error so the app still opens offline.
         if (error instanceof ApiError && !error.offline) {
