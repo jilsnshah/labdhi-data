@@ -1,6 +1,6 @@
 import { Alert, Box, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
 import { IconArrowRight, IconInfoCircle } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
@@ -22,6 +22,18 @@ export function LoginPage() {
   const [password, setPassword] = useState(import.meta.env.DEV ? 'admin123' : '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // The server sleeps when the desk has been quiet and takes about a minute to
+  // wake; without a word the first sign-in of the day looks broken.
+  const [waking, setWaking] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setWaking(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setWaking(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -121,8 +133,13 @@ export function LoginPage() {
                 mt={6}
                 rightSection={<IconArrowRight size={17} />}
               >
-                Sign in
+                {waking ? 'Waking the server…' : 'Sign in'}
               </Button>
+              {waking && (
+                <Text fz="xs" c="ink.5" ta="center">
+                  The server wakes up after a quiet spell. This can take a minute.
+                </Text>
+              )}
             </Stack>
           </form>
           <Text fz="xs" c="ink.4" mt="xl">
