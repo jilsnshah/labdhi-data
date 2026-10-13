@@ -150,8 +150,8 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       ? [
           {
             key: 'move',
-            label: '',
-            width: 52,
+            label: 'Move',
+            width: 62,
             render: (row: PartyListItem) => (
               <Tooltip label={`Move to ${moveTarget.label}`} withinPortal>
                 <ActionIcon

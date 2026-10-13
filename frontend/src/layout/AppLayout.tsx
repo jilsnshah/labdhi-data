@@ -77,8 +77,16 @@ const NAV: NavSection[] = [
   {
     label: 'Inquiries',
     items: [
-      { label: 'Customer inquiries', to: '/inquiries/customer', icon: <IconClipboardList size={16} /> },
-      { label: 'Supplier inquiries', to: '/inquiries/supplier', icon: <IconBuildingWarehouse size={16} /> },
+      {
+        label: 'Customer inquiries',
+        to: '/inquiries/customer',
+        icon: <IconClipboardList size={16} />,
+      },
+      {
+        label: 'Supplier inquiries',
+        to: '/inquiries/supplier',
+        icon: <IconBuildingWarehouse size={16} />,
+      },
       { label: 'Transport', to: '/inquiries/transport', icon: <IconTruck size={16} /> },
     ],
   },
@@ -98,7 +106,11 @@ const NAV: NavSection[] = [
       { label: 'Products', to: '/masters/products', icon: <IconBox size={16} /> },
       { label: 'Materials', to: '/masters/materials', icon: <IconFlask size={16} /> },
       { label: 'Grades', to: '/masters/grades', icon: <IconLayoutGrid size={16} /> },
-      { label: 'Manufacturers', to: '/masters/manufacturers', icon: <IconBuildingFactory2 size={16} /> },
+      {
+        label: 'Manufacturers',
+        to: '/masters/manufacturers',
+        icon: <IconBuildingFactory2 size={16} />,
+      },
       { label: 'Applications', to: '/masters/applications', icon: <IconSparkles size={16} /> },
       { label: 'Locations', to: '/masters/locations', icon: <IconMapPin size={16} /> },
     ],
@@ -181,13 +193,18 @@ export function AppLayout() {
     <AppShell
       layout="alt"
       header={{ height: 64 }}
-      navbar={{ width: 256, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }}
-      padding="xl"
+      navbar={{ width: 256, breakpoint: 'md', collapsed: { mobile: !mobileOpened } }}
+      padding={{ base: 'sm', sm: 'lg', lg: 'xl' }}
     >
       <AppShell.Header className="shell-top">
-        <Group h="100%" px="xl" justify="space-between" wrap="nowrap">
+        <Group
+          h="100%"
+          px={{ base: 'sm', sm: 'lg', lg: 'xl' }}
+          justify="space-between"
+          wrap="nowrap"
+        >
           <Group gap="md" wrap="nowrap">
-            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
+            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="md" size="sm" />
             <Text fz="sm" fw={600} c="ink.8">
               {sectionFor(location.pathname)}
             </Text>

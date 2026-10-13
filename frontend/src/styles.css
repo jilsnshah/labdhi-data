@@ -905,6 +905,10 @@ a.board-row:hover {
 .week-board {
   display: grid;
   gap: 1px;
+  /* Without this the grid refuses to shrink inside its flex parent and the
+     whole page widens instead of the board scrolling. */
+  min-width: 0;
+  max-width: 100%;
   background: var(--hairline);
   border: 1px solid var(--hairline);
   border-radius: 14px;
@@ -1103,4 +1107,222 @@ a.board-row:hover {
   display: grid;
   place-items: center;
   padding: 3rem 2rem;
+}
+
+@media (max-width: 760px) {
+  .login-form-side {
+    /* Centring keeps the form at its natural 380px, which is wider than the
+       phone; let it take the column instead. */
+    justify-items: stretch;
+    padding: 2rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The form box carries an inline width; the phone overrides it. */
+  .login-form-side > * {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
+/* ======================================== phones: rows become cards ======= */
+/*
+ * A trading table has eight columns; a phone has room for two. Below this
+ * width each row is drawn as a card - the name on top, the rest as labelled
+ * lines - so the screen reads top to bottom instead of sideways. The markup
+ * does not change: DataTable tags every cell with its column label.
+ */
+@media (max-width: 760px) {
+  /* The scroll container exists to force a minimum width. Cards do not need it. */
+  .mantine-TableScrollContainer-scrollContainerInner {
+    min-width: 0 !important;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table tbody tr {
+    position: relative;
+    margin: 0.6rem 0.75rem;
+    padding: 0.25rem 0.9rem 0.6rem;
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgba(12, 21, 40, 0.04);
+  }
+
+  .data-table tbody tr[data-clickable='true']:active {
+    background: var(--row-hover);
+  }
+
+  /* The hover tick belongs to a pointer, not a finger. */
+  .data-table tbody tr[data-clickable='true']:hover td:first-child::before {
+    display: none;
+  }
+
+  .data-table tbody td {
+    border-bottom: none !important;
+    padding: 0.3rem 0 !important;
+    text-align: left !important;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  /* The label comes from the column header. */
+  .data-table tbody td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--mantine-color-ink-5);
+  }
+
+  .data-table tbody td > * {
+    text-align: right;
+    margin-left: auto;
+  }
+
+  /* Headline: the party, the product, the inquiry. No label, full width. */
+  .data-table tbody td[data-card='title'] {
+    display: block;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid var(--hairline-soft) !important;
+    margin-bottom: 0.35rem;
+  }
+
+  .data-table tbody td[data-card='meta'] {
+    display: block;
+  }
+
+  .data-table tbody td[data-card='title']::before,
+  .data-table tbody td[data-card='meta']::before {
+    content: none;
+  }
+
+  .data-table tbody td[data-card='title'] > *,
+  .data-table tbody td[data-card='meta'] > * {
+    text-align: left;
+    margin-left: 0;
+  }
+
+  .data-table tbody td[data-card='hidden'] {
+    display: none;
+  }
+
+  /* The empty state spans the table and keeps its own layout. */
+  .data-table tbody td[colspan] {
+    display: block;
+    padding: 1rem !important;
+  }
+
+  .data-table tbody td[colspan]::before {
+    content: none;
+  }
+
+  .data-table tbody tr:has(td[colspan]) {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  /* Pagination: the count on one line, the pager on the next. */
+  .table-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+  }
+
+  .table-footer > * {
+    justify-content: space-between;
+  }
+}
+
+/* A row of controls that is allowed to scroll sideways instead of growing. */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.scroll-x > * {
+  min-width: max-content;
+}
+
+/* =============================== small screens: nothing may widen the page = */
+/*
+ * One rule the whole app relies on: a page may scroll inside a pane, but it
+ * must never make the document wider than the phone. Anything that insists on
+ * a width - a toolbar, a board, a chart - scrolls within its own box instead.
+ */
+@media (max-width: 992px) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .page,
+  .page-fill {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Toolbars wrap rather than push the layout wider. */
+  .page-head {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Headline type that fits the hand. */
+  .page-title {
+    font-size: clamp(1.9rem, 9vw, 2.6rem);
+  }
+
+  .page-subtitle {
+    font-size: 0.875rem;
+  }
+
+  /* Summary tiles: two up, never one long column of numbers. */
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.6rem;
+  }
+
+  /* Dialogs use the whole screen; a centred box wastes a phone. */
+  .mantine-Modal-content {
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .mantine-Modal-inner {
+    padding: 0;
+  }
+
+  /* Side drawers too. */
+  .mantine-Drawer-content {
+    width: 100% !important;
+  }
+
+  /* Comfortable targets for a finger. */
+  .mantine-Button-root,
+  .mantine-ActionIcon-root {
+    min-height: 38px;
+  }
 }

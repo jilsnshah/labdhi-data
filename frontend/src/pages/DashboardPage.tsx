@@ -89,13 +89,7 @@ export function DashboardPage() {
       <section className="hero">
         <Group justify="space-between" align="flex-start" wrap="wrap" gap="lg">
           <Box>
-            <Text
-              fz={11}
-              fw={600}
-              c="#c9b07a"
-              tt="uppercase"
-              style={{ letterSpacing: '0.18em' }}
-            >
+            <Text fz={11} fw={600} c="#c9b07a" tt="uppercase" style={{ letterSpacing: '0.18em' }}>
               {dayjs().format('dddd, D MMMM YYYY')}
             </Text>
             <div className="hero-greeting" style={{ marginTop: 8 }}>
@@ -203,7 +197,9 @@ export function DashboardPage() {
                   </span>
                 </Group>
               </div>
-              <Box px="lg" pt="md">
+              {/* Product names are long; on a narrow screen the switcher
+                  scrolls rather than stretching the card. */}
+              <Box px="lg" pt="md" className="scroll-x">
                 <SegmentedControl
                   size="xs"
                   value={activeTrend ?? undefined}

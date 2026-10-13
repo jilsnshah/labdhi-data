@@ -22,6 +22,16 @@ export interface Column<T> {
   sortable?: boolean;
   width?: number | string;
   align?: 'left' | 'right' | 'center';
+  /**
+   * On a phone each row is drawn as a card instead of a table row (see
+   * `.data-table` in styles.css). These control how a column behaves there.
+   */
+  //: Headline of the card. Defaults to the first column.
+  cardTitle?: boolean;
+  //: Shown under the title with no label of its own.
+  cardMeta?: boolean;
+  //: Left out of the card entirely - noise on a small screen.
+  cardHidden?: boolean;
 }
 
 export interface SortState {
@@ -72,6 +82,8 @@ export function DataTable<T extends { id?: number }>({
   fill = false,
 }: DataTableProps<T>) {
   const pages = total && pageSize ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  //: Does a column claim the card headline, or does the first one get it?
+  const titled = columns.some((column) => column.cardTitle);
 
   const toggleSort = (key: string) => {
     if (!onSortChange) return;
@@ -101,80 +113,93 @@ export function DataTable<T extends { id?: number }>({
       />
 
       <Box style={fill ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
-      <Table.ScrollContainer minWidth={680} type="native">
-        <Table className="data-table" verticalSpacing={12} horizontalSpacing="lg" fz="sm">
-          <Table.Thead>
-            <Table.Tr>
-              {columns.map((column) => {
-                const active = sort?.sortBy === column.key;
-                const label = (
-                  <Text
-                    fz={11}
-                    fw={600}
-                    tt="uppercase"
-                    c={active ? 'ink.8' : 'ink.5'}
-                    ta={column.align}
-                    style={{ letterSpacing: '0.07em' }}
-                  >
-                    {column.label}
-                  </Text>
-                );
-                return (
-                  <Table.Th key={column.key} style={{ width: column.width }}>
-                    {column.sortable && onSortChange ? (
-                      <UnstyledButton onClick={() => toggleSort(column.key)} w="100%">
-                        <Group
-                          gap={4}
-                          wrap="nowrap"
-                          justify={column.align === 'right' ? 'flex-end' : 'flex-start'}
-                        >
-                          {label}
-                          {active ? (
-                            sort.sortDir === 'asc' ? (
-                              <IconChevronUp size={13} stroke={2.4} />
-                            ) : (
-                              <IconChevronDown size={13} stroke={2.4} />
-                            )
-                          ) : (
-                            <IconSelector size={13} opacity={0.35} />
-                          )}
-                        </Group>
-                      </UnstyledButton>
-                    ) : (
-                      label
-                    )}
-                  </Table.Th>
-                );
-              })}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {rows.map((row, index) => (
-              <Table.Tr
-                key={rowKey ? rowKey(row) : (row.id ?? index)}
-                data-clickable={onRowClick ? 'true' : undefined}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                style={onRowClick ? { cursor: 'pointer' } : undefined}
-              >
-                {columns.map((column) => (
-                  <Table.Td key={column.key} align={column.align}>
-                    {column.render(row)}
-                  </Table.Td>
-                ))}
-              </Table.Tr>
-            ))}
-            {!rows.length && !loading && (
+        <Table.ScrollContainer minWidth={680} type="native">
+          <Table className="data-table" verticalSpacing={12} horizontalSpacing="lg" fz="sm">
+            <Table.Thead>
               <Table.Tr>
-                <Table.Td colSpan={columns.length}>
-                  <Center>
-                    <EmptyState title={emptyMessage} hint={emptyHint} compact />
-                  </Center>
-                </Table.Td>
+                {columns.map((column) => {
+                  const active = sort?.sortBy === column.key;
+                  const label = (
+                    <Text
+                      fz={11}
+                      fw={600}
+                      tt="uppercase"
+                      c={active ? 'ink.8' : 'ink.5'}
+                      ta={column.align}
+                      style={{ letterSpacing: '0.07em' }}
+                    >
+                      {column.label}
+                    </Text>
+                  );
+                  return (
+                    <Table.Th key={column.key} style={{ width: column.width }}>
+                      {column.sortable && onSortChange ? (
+                        <UnstyledButton onClick={() => toggleSort(column.key)} w="100%">
+                          <Group
+                            gap={4}
+                            wrap="nowrap"
+                            justify={column.align === 'right' ? 'flex-end' : 'flex-start'}
+                          >
+                            {label}
+                            {active ? (
+                              sort.sortDir === 'asc' ? (
+                                <IconChevronUp size={13} stroke={2.4} />
+                              ) : (
+                                <IconChevronDown size={13} stroke={2.4} />
+                              )
+                            ) : (
+                              <IconSelector size={13} opacity={0.35} />
+                            )}
+                          </Group>
+                        </UnstyledButton>
+                      ) : (
+                        label
+                      )}
+                    </Table.Th>
+                  );
+                })}
               </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows.map((row, index) => (
+                <Table.Tr
+                  key={rowKey ? rowKey(row) : (row.id ?? index)}
+                  data-clickable={onRowClick ? 'true' : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  style={onRowClick ? { cursor: 'pointer' } : undefined}
+                >
+                  {columns.map((column, columnIndex) => (
+                    <Table.Td
+                      key={column.key}
+                      align={column.align}
+                      data-label={column.label || undefined}
+                      data-card={
+                        column.cardHidden
+                          ? 'hidden'
+                          : column.cardTitle || (columnIndex === 0 && !titled)
+                            ? 'title'
+                            : column.cardMeta
+                              ? 'meta'
+                              : undefined
+                      }
+                    >
+                      {column.render(row)}
+                    </Table.Td>
+                  ))}
+                </Table.Tr>
+              ))}
+              {!rows.length && !loading && (
+                <Table.Tr>
+                  <Table.Td colSpan={columns.length}>
+                    <Center>
+                      <EmptyState title={emptyMessage} hint={emptyHint} compact />
+                    </Center>
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
       </Box>
 
       {showFooter && (
@@ -182,6 +207,8 @@ export function DataTable<T extends { id?: number }>({
           justify="space-between"
           px="lg"
           py="sm"
+          gap="sm"
+          className="table-footer"
           style={{ borderTop: '1px solid var(--hairline)' }}
         >
           <Group gap="sm">

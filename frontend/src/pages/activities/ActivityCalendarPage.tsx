@@ -18,7 +18,10 @@ type Span = '1' | '7';
 
 export function ActivityCalendarPage() {
   const [anchor, setAnchor] = useState<string | null>(dayjs().format('YYYY-MM-DD'));
-  const [span, setSpan] = useState<Span>('7');
+  // A seven-column week is unreadable on a phone; start on the day instead.
+  const [span, setSpan] = useState<Span>(() =>
+    typeof window !== 'undefined' && window.innerWidth <= 760 ? '1' : '7',
+  );
   const [salespersonId, setSalespersonId] = useState<number | null>(null);
   const [viewing, setViewing] = useState<number | null>(null);
 
@@ -43,7 +46,11 @@ export function ActivityCalendarPage() {
   }, [data, from, days]);
 
   const shift = (direction: 1 | -1) =>
-    setAnchor(dayjs(from).add(direction * days, 'day').format('YYYY-MM-DD'));
+    setAnchor(
+      dayjs(from)
+        .add(direction * days, 'day')
+        .format('YYYY-MM-DD'),
+    );
 
   return (
     <div className="page-fill">
@@ -52,7 +59,7 @@ export function ActivityCalendarPage() {
         title="Schedule"
         subtitle="Spot a double booking before you assign the next visit."
         actions={
-          <Group gap="xs" wrap="nowrap">
+          <Group gap="xs" wrap="wrap">
             <ActionIcon variant="default" size={34} onClick={() => shift(-1)} aria-label="Previous">
               <IconChevronLeft size={16} />
             </ActionIcon>
@@ -62,7 +69,12 @@ export function ActivityCalendarPage() {
             <ActionIcon variant="default" size={34} onClick={() => shift(1)} aria-label="Next">
               <IconChevronRight size={16} />
             </ActionIcon>
-            <DatePickerInput w={150} valueFormat="DD MMM YYYY" value={anchor} onChange={setAnchor} />
+            <DatePickerInput
+              w={150}
+              valueFormat="DD MMM YYYY"
+              value={anchor}
+              onChange={setAnchor}
+            />
             <SegmentedControl
               value={span}
               onChange={(value) => setSpan(value as Span)}
@@ -71,7 +83,7 @@ export function ActivityCalendarPage() {
                 { value: '7', label: 'Week' },
               ]}
             />
-            <Box w={190}>
+            <Box w={190} maw="100%">
               <EntitySelect
                 kind="user"
                 placeholder="All salespeople"
