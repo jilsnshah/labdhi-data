@@ -80,6 +80,12 @@ def list_parties(
     area: str | None = Query(None, description="Locality, e.g. Odhav or Aslali"),
     location_id: int | None = None,
     product_id: int | None = Query(None, description="Parties linked to this product"),
+    material_id: int | None = Query(None, description="Through the products they deal in"),
+    grade_id: int | None = None,
+    manufacturer_id: int | None = Query(None, description="Brand they deal in"),
+    application_id: int | None = Query(
+        None, description="End use: declared on the party, or implied by their products"
+    ),
     sort_by: str | None = Query(None, pattern="^(name|created_at|updated_at|id)$"),
     sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
 ) -> Page[PartyListItem]:
@@ -96,6 +102,10 @@ def list_parties(
         area=area,
         location_id=location_id,
         product_id=product_id,
+        material_id=material_id,
+        grade_id=grade_id,
+        manufacturer_id=manufacturer_id,
+        application_id=application_id,
         sort_by=sort_by,
         sort_dir=sort_dir,
     )

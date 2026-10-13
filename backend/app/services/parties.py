@@ -27,7 +27,7 @@ from app.models.inquiry import (
     SupplierInquiry,
     TransportInquiry,
 )
-from app.models.masters import Application, Product
+from app.models.masters import Application, Product, product_applications
 from app.models.note import Note
 from app.models.party import (
     Location,
@@ -241,6 +241,10 @@ def list_parties(
     area: str | None = None,
     location_id: int | None = None,
     product_id: int | None = None,
+    material_id: int | None = None,
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = None,
     sort_by: str | None = None,
     sort_dir: str = "asc",
 ) -> tuple[Sequence[Party], int, dict[str, dict[int, object]]]:
@@ -307,6 +311,39 @@ def list_parties(
                 )
             )
         )
+    if any(value is not None for value in (material_id, grade_id, manufacturer_id)):
+        # "Who deals in PVC?" - asked of the products a party is linked to.
+        products = select(Product.id)
+        if material_id is not None:
+            products = products.where(Product.material_id == material_id)
+        if grade_id is not None:
+            products = products.where(Product.grade_id == grade_id)
+        if manufacturer_id is not None:
+            products = products.where(Product.manufacturer_id == manufacturer_id)
+        stmt = stmt.where(
+            Party.id.in_(
+                select(PartyProduct.party_id).where(
+                    and_(PartyProduct.product_id.in_(products), PartyProduct.active.is_(True))
+                )
+            )
+        )
+    if application_id is not None:
+        # An end use a party works in: either declared on the party itself, or
+        # implied by a product they deal in. Both answer "who makes pipes?".
+        by_declaration = select(PartyApplication.party_id).where(
+            PartyApplication.application_id == application_id
+        )
+        by_product = select(PartyProduct.party_id).where(
+            and_(
+                PartyProduct.active.is_(True),
+                PartyProduct.product_id.in_(
+                    select(product_applications.c.product_id).where(
+                        product_applications.c.application_id == application_id
+                    )
+                ),
+            )
+        )
+        stmt = stmt.where(or_(Party.id.in_(by_declaration), Party.id.in_(by_product)))
     stmt = apply_sort(
         stmt,
         sort_by,

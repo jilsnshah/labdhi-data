@@ -4,6 +4,7 @@ import {
   Button,
   Group,
   Modal,
+  Select,
   SegmentedControl,
   Stack,
   Switch,
@@ -11,11 +12,17 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { IconArrowsExchange, IconPlus } from '@tabler/icons-react';
+import { IconAdjustmentsHorizontal, IconArrowsExchange, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { partyApi, useApiMutation, usePartyBookSummary, useParties } from '@/api/hooks';
+import {
+  partyApi,
+  useApiMutation,
+  useLocationAreas,
+  usePartyBookSummary,
+  useParties,
+} from '@/api/hooks';
 import type { PartyListItem, PartyType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -48,7 +55,12 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
   const list = useListState<{
     status?: string;
     city?: string;
+    area?: string;
     product_id?: number;
+    material_id?: number;
+    grade_id?: number;
+    manufacturer_id?: number;
+    application_id?: number;
     stage?: string;
     stale_days?: number;
   }>({}, { sortBy: 'name', sortDir: 'asc' });
@@ -63,6 +75,13 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         ? { type: 'CUSTOMER', label: 'customers', noun: 'customer' }
         : null;
   const [moving, setMoving] = useState<PartyListItem | null>(null);
+  const [productOpen, setProductOpen] = useState(false);
+  const { data: areas } = useLocationAreas();
+
+  // How many of the product filters are set, so the button can say so.
+  const productFilterCount = (
+    ['product_id', 'material_id', 'grade_id', 'manufacturer_id', 'application_id'] as const
+  ).filter((key) => list.filters[key] !== undefined).length;
   const move = useApiMutation((partyId: number) => partyApi.move(partyId, moveTarget!.type), {
     successMessage: `Moved to ${moveTarget?.label ?? 'the other book'}`,
   });
@@ -245,20 +264,94 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
           value={(list.filters.city as string) ?? ''}
           onChange={(event) => list.setFilter('city', event.currentTarget.value || undefined)}
         />
+        <Select
+          w={150}
+          placeholder="Any area"
+          data={areas ?? []}
+          value={list.filters.area ?? null}
+          onChange={(value) => list.setFilter('area', value ?? undefined)}
+          searchable
+          clearable
+        />
         {partyType !== 'TRANSPORTER' && (
-          <div style={{ width: 200 }}>
-            <EntitySelect
-              kind="product"
-              placeholder="Linked to product"
-              value={list.filters.product_id ?? null}
-              onChange={(value) => list.setFilter('product_id', value ?? undefined)}
-            />
-          </div>
+          <Button
+            variant={productFilterCount ? 'light' : 'default'}
+            color={productFilterCount ? 'brass' : undefined}
+            leftSection={<IconAdjustmentsHorizontal size={15} />}
+            rightSection={
+              productFilterCount ? (
+                <Badge size="xs" circle color="brass" variant="filled">
+                  {productFilterCount}
+                </Badge>
+              ) : undefined
+            }
+            onClick={() => setProductOpen((open) => !open)}
+          >
+            Product filters
+          </Button>
         )}
         <StatusFilter
           value={list.filters.status}
           onChange={(value) => list.setFilter('status', value)}
         />
+        {partyType !== 'TRANSPORTER' && productOpen && (
+          // What they deal in, read off the products linked to the party. A
+          // transporter carries no products, so these do not apply there.
+          <>
+            <div style={{ width: 190 }}>
+              <EntitySelect
+                kind="product"
+                placeholder="Any product"
+                includeInactive
+                value={list.filters.product_id ?? null}
+                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 150 }}>
+              <EntitySelect
+                kind="material"
+                placeholder="Any material"
+                includeInactive
+                value={list.filters.material_id ?? null}
+                onChange={(value) => {
+                  list.setFilter('material_id', value ?? undefined);
+                  // A grade belongs to one material; drop one that no longer fits.
+                  list.setFilter('grade_id', undefined);
+                }}
+              />
+            </div>
+            <div style={{ width: 140 }}>
+              <EntitySelect
+                kind="grade"
+                placeholder="Any grade"
+                includeInactive
+                filters={
+                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
+                }
+                value={list.filters.grade_id ?? null}
+                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 150 }}>
+              <EntitySelect
+                kind="manufacturer"
+                placeholder="Any brand"
+                includeInactive
+                value={list.filters.manufacturer_id ?? null}
+                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 170 }}>
+              <EntitySelect
+                kind="application"
+                placeholder="Any application"
+                includeInactive
+                value={list.filters.application_id ?? null}
+                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
+              />
+            </div>
+          </>
+        )}
       </FilterBar>
       <DataTable
         columns={columns}

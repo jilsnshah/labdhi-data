@@ -261,3 +261,46 @@ def test_book_summary_is_staff_only(client, sales_auth):
         "/api/v1/parties/summary", params={"party_type": "CUSTOMER"}, headers=sales_auth
     )
     assert response.status_code == 403
+
+
+def test_parties_are_found_by_what_they_deal_in(client, auth, masters, parties):
+    """ "Who deals in PVC?" - asked of the products linked to a party."""
+    client.post(
+        f"/api/v1/parties/{parties['customer']}/products",
+        json={"product_id": masters["product_id"], "relationship_type": "PURCHASES"},
+        headers=auth,
+    )
+
+    def found(**params) -> list[str]:
+        params.setdefault("party_type", "CUSTOMER")
+        rows = client.get("/api/v1/parties", params=params, headers=auth).json()["items"]
+        return [row["name"] for row in rows]
+
+    assert found(material_id=masters["material_id"]) == ["ABC Pipes"]
+    assert found(grade_id=masters["grade_id"]) == ["ABC Pipes"]
+    assert found(manufacturer_id=masters["manufacturer_id"]) == ["ABC Pipes"]
+    assert found(product_id=masters["product_id"]) == ["ABC Pipes"]
+    # A material they do not deal in finds nobody.
+    assert found(material_id=masters["other_material_id"]) == []
+
+
+def test_an_end_use_counts_whether_declared_or_implied(client, auth, masters, parties):
+    """A party may say "I make pipes", or simply deal in a pipe-grade product."""
+    implied, declared = parties["customer"], parties["other_customer"]
+    client.post(
+        f"/api/v1/parties/{implied}/products",
+        json={"product_id": masters["product_id"], "relationship_type": "PURCHASES"},
+        headers=auth,
+    )
+    client.post(
+        f"/api/v1/parties/{declared}/applications",
+        json={"application_id": masters["application_id"]},
+        headers=auth,
+    )
+
+    rows = client.get(
+        "/api/v1/parties",
+        params={"party_type": "CUSTOMER", "application_id": masters["application_id"]},
+        headers=auth,
+    ).json()
+    assert {row["id"] for row in rows["items"]} == {implied, declared}
