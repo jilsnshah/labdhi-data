@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { ApiError } from '@/api/client';
+import { ApiError, onServerWaking } from '@/api/client';
 import { Icon } from '@/components/Icon';
 import { WrongAppError, useAuth } from '@/lib/auth';
 
@@ -11,6 +11,10 @@ export function LoginPage() {
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waking, setWaking] = useState(false);
+
+  // The office server sleeps when idle; say so rather than leave them waiting.
+  useEffect(() => onServerWaking(setWaking), []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -97,14 +101,22 @@ export function LoginPage() {
         </label>
         <button className="btn brass" type="submit" disabled={busy || !email || !password}>
           {busy ? (
-            'Signing in…'
+            waking ? (
+              'Waking the office server…'
+            ) : (
+              'Signing in…'
+            )
           ) : (
             <>
               Sign in <Icon name="arrow" size={17} />
             </>
           )}
         </button>
-        <div className="tiny login-foot">Field accounts only · office staff use the web desk</div>
+        <div className="tiny login-foot">
+          {waking
+            ? 'The server wakes up on the first sign-in of the day. This can take a minute.'
+            : 'Field accounts only · office staff use the web desk'}
+        </div>
       </form>
     </div>
   );
