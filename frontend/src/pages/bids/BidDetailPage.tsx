@@ -33,7 +33,7 @@ import {
   IconTrophy,
   IconUserPlus,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { bidApi, useApiMutation, useBid, useBidHistory } from '@/api/hooks';
@@ -51,8 +51,8 @@ import { priceUnit } from './BidsPage';
 export function BidDetailPage() {
   const { bidId } = useParams();
   const id = Number(bidId);
-  const { data: bid, isLoading } = useBid(id);
-  const { data: history } = useBidHistory(id);
+  const { data: bid, isLoading, dataUpdatedAt } = useBid(id);
+  const { data: history } = useBidHistory(id, bid?.status === 'OPEN');
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [closeMode, setCloseMode] = useState<'keep' | 'none' | null>(null);
@@ -223,6 +223,7 @@ export function BidDetailPage() {
                 {bid.bid_type === 'CUSTOMER' ? ' · highest leads' : ' · lowest leads'}
               </Text>
             </div>
+            {isOpen && <LiveDot updatedAt={dataUpdatedAt} />}
           </Group>
           {quoted ? (
             <Table className="data-table" verticalSpacing={12} horizontalSpacing="lg" fz="sm">
@@ -490,6 +491,24 @@ export function BidDetailPage() {
         </Stack>
       </Modal>
     </>
+  );
+}
+
+/** "This is moving on its own" - with the time of the last change. */
+function LiveDot({ updatedAt }: { updatedAt: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((value) => value + 1), 15_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const seconds = Math.max(0, Math.round((Date.now() - updatedAt) / 1000));
+  return (
+    <Group gap={6} wrap="nowrap">
+      <span className="live-dot" />
+      <Text fz="xs" c="ink.5">
+        Live · checked {seconds < 20 ? 'just now' : `${Math.round(seconds / 60) || 1} min ago`}
+      </Text>
+    </Group>
   );
 }
 

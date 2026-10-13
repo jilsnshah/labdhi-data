@@ -158,23 +158,37 @@ export const useInquiry = (id?: number) =>
   });
 
 /* ---------------------------------- bids -------------------------------- */
+/**
+ * A live auction, so the desk watches it move rather than pressing refresh.
+ * Polling stops once a bid is closed - there is nothing left to change - and
+ * the browser pauses it while the tab is in the background.
+ */
+const LIVE_MS = 10_000;
+
 export const useBids = (params: Params = {}) =>
-  useQuery(listQuery<BidListItem>('bids', '/bids', params));
+  useQuery({
+    ...listQuery<BidListItem>('bids', '/bids', params),
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+  });
 
 export const useBid = (id?: number) =>
   useQuery({
     queryKey: ['bid', id],
     queryFn: () => api.get<BidDetail>(`/bids/${id}`),
     enabled: Boolean(id),
-    // An open bid is a live auction: keep the desk's view close to current.
-    refetchInterval: 15_000,
+    refetchInterval: (query) => (query.state.data?.status === 'OPEN' ? LIVE_MS : false),
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
-export const useBidHistory = (id?: number) =>
+export const useBidHistory = (id?: number, live = false) =>
   useQuery({
     queryKey: ['bid-history', id],
     queryFn: () => api.get<BidEvent[]>(`/bids/${id}/history`),
     enabled: Boolean(id),
+    refetchInterval: live ? LIVE_MS : false,
+    refetchIntervalInBackground: false,
   });
 
 /* ------------------------------- activities ----------------------------- */

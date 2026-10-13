@@ -6,7 +6,7 @@
  * more: their own offer, the standing best price, and how many are in.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { api } from '@/api/client';
@@ -15,6 +15,34 @@ import type { PortalBid, PortalHome } from '@/api/types';
 import { formatDateTime, formatQuantity } from '@/lib/format';
 
 const unitOf = (bid: PortalBid) => (bid.bid_type === 'TRANSPORT' ? '₹' : '₹/kg');
+
+/**
+ * Keep a page current without the person touching it.
+ *
+ * A bidder leaves this open on a phone while they decide, so it has to move on
+ * its own. It stops while the bid is closed (nothing can change), and pauses
+ * whenever the tab is hidden, picking up again - with an immediate refresh -
+ * the moment they come back to it.
+ */
+function useLive(refresh: () => void, active: boolean, intervalMs = 8000) {
+  const latest = useRef(refresh);
+  latest.current = refresh;
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const run = () => {
+      if (document.visibilityState === 'visible') latest.current();
+    };
+    const timer = window.setInterval(run, intervalMs);
+    document.addEventListener('visibilitychange', run);
+    window.addEventListener('focus', run);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', run);
+      window.removeEventListener('focus', run);
+    };
+  }, [active, intervalMs]);
+}
 
 function useDocumentTitle(title: string) {
   useEffect(() => {
@@ -32,12 +60,21 @@ export function PortalHomePage() {
   const [error, setError] = useState<string | null>(null);
   useDocumentTitle('Your bids');
 
+  const load = useCallback(
+    () =>
+      api
+        .get<PortalHome>(`/portal/${code}`)
+        .then(setData)
+        .catch((err) =>
+          setError(err instanceof ApiError ? err.message : 'This link is not valid.'),
+        ),
+    [code],
+  );
+
   useEffect(() => {
-    api
-      .get<PortalHome>(`/portal/${code}`)
-      .then(setData)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'This link is not valid.'));
-  }, [code]);
+    load();
+  }, [load]);
+  useLive(load, Boolean(data?.open_bids.length), 15000);
 
   if (error) return <PortalError message={error} />;
   if (!data) return <PortalLoading />;
@@ -84,35 +121,46 @@ export function PortalBidPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [moved, setMoved] = useState(false);
   useDocumentTitle(bid?.title ?? 'Bid');
 
-  const load = () =>
-    api
-      .get<PortalBid>(`/portal/${code}/bids/${bidId}`)
-      .then((row) => {
-        setBid(row);
-        if (row.my_quote) {
-          setPrice((current) => current || row.my_quote!.price);
-          setQuantity((current) => current || (row.my_quote!.quantity ?? ''));
-          setNotes((current) => current || (row.my_quote!.notes ?? ''));
-        }
-      })
-      .catch((err) =>
-        setError(err instanceof ApiError ? err.message : 'This bid is not available.'),
-      );
-
-  useEffect(() => {
-    load();
-    // A live auction: keep the price to beat current while the page is open.
-    const timer = window.setInterval(() => {
+  // The first load fills the form with whatever they last offered; the live
+  // refreshes afterwards must not overwrite what they are typing.
+  const load = useCallback(
+    (withForm = false) =>
       api
         .get<PortalBid>(`/portal/${code}/bids/${bidId}`)
-        .then(setBid)
-        .catch(() => undefined);
-    }, 20000);
-    return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, bidId]);
+        .then((row) => {
+          setBid(row);
+          if (withForm && row.my_quote) {
+            setPrice(row.my_quote.price);
+            setQuantity(row.my_quote.quantity ?? '');
+            setNotes(row.my_quote.notes ?? '');
+          }
+        })
+        .catch((err) =>
+          setError(err instanceof ApiError ? err.message : 'This bid is not available.'),
+        ),
+    [code, bidId],
+  );
+
+  useEffect(() => {
+    load(true);
+  }, [load]);
+  useLive(load, bid?.status === 'OPEN');
+
+  // When the price to beat moves, say so rather than changing a number silently.
+  const previousBest = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const best = bid?.best_price ?? null;
+    if (previousBest.current !== undefined && previousBest.current !== best) {
+      setMoved(true);
+      const timer = window.setTimeout(() => setMoved(false), 2500);
+      return () => window.clearTimeout(timer);
+    }
+    previousBest.current = best;
+    return undefined;
+  }, [bid?.best_price]);
 
   if (error) return <PortalError message={error} />;
   if (!bid) return <PortalLoading />;
@@ -181,15 +229,20 @@ export function PortalBidPage() {
           {bid.specifications && <p className="portal-spec">{bid.specifications}</p>}
         </div>
 
-        <div className={`portal-board${bid.leading ? ' leading' : ''}`}>
+        <div
+          className={`portal-board${bid.leading ? ' leading' : ''}${moved ? ' moved' : ''}`}
+          aria-live="polite"
+        >
           <div className="portal-board-main">
             <span className="portal-board-label">
               {bid.best_is_highest ? 'Highest offer so far' : 'Lowest offer so far'}
+              {bid.status === 'OPEN' && <span className="portal-live">Live</span>}
             </span>
             <span className="portal-board-value">
               {bid.best_price ? `${unit} ${bid.best_price}` : 'No offers yet'}
             </span>
             <span className="portal-board-hint">
+              {moved && <b>Just changed · </b>}
               {bid.bidders === 0
                 ? 'Be the first to bid.'
                 : `${bid.bidders} ${bid.bidders === 1 ? 'party has' : 'parties have'} bid.`}
