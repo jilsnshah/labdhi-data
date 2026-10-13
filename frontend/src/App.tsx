@@ -10,6 +10,8 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { ActivitiesPage } from '@/pages/activities/ActivitiesPage';
 import { ActivityCalendarPage } from '@/pages/activities/ActivityCalendarPage';
 import { SalespeoplePage } from '@/pages/activities/SalespeoplePage';
+import { BidDetailPage } from '@/pages/bids/BidDetailPage';
+import { BidsPage } from '@/pages/bids/BidsPage';
 import { InquiriesPage } from '@/pages/inquiries/InquiriesPage';
 import { InquiryDetailPage } from '@/pages/inquiries/InquiryDetailPage';
 import { ApplicationsPage } from '@/pages/masters/ApplicationsPage';
@@ -20,6 +22,19 @@ import { MaterialsPage } from '@/pages/masters/MaterialsPage';
 import { ProductsPage } from '@/pages/masters/ProductsPage';
 import { PartiesPage } from '@/pages/parties/PartiesPage';
 import { PartyDetailPage } from '@/pages/parties/PartyDetailPage';
+import { PortalBidPage, PortalHomePage } from '@/pages/portal/PortalPage';
+
+/**
+ * The bidding portal: open to customers, suppliers and transporters who hold a
+ * link. It has no sign-in and no shell, and it is declared before everything
+ * else so a signed-out visitor is never bounced to the login page.
+ */
+const PORTAL_ROUTES = (
+  <>
+    <Route path="/portal/:code" element={<PortalHomePage />} />
+    <Route path="/portal/:code/:bidId" element={<PortalBidPage />} />
+  </>
+);
 
 export function App() {
   const { user, loading } = useAuth();
@@ -35,6 +50,7 @@ export function App() {
   if (!user) {
     return (
       <Routes>
+        {PORTAL_ROUTES}
         <Route path="/login" element={<LoginPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -43,6 +59,7 @@ export function App() {
 
   return (
     <Routes>
+      {PORTAL_ROUTES}
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<DashboardPage />} />
@@ -58,6 +75,11 @@ export function App() {
         <Route path="/parties/suppliers" element={<PartiesPage partyType="SUPPLIER" />} />
         <Route path="/parties/transporters" element={<PartiesPage partyType="TRANSPORTER" />} />
         <Route path="/parties/:partyId" element={<PartyDetailPage />} />
+
+        <Route path="/bids/customer" element={<BidsPage bidType="CUSTOMER" />} />
+        <Route path="/bids/supplier" element={<BidsPage bidType="SUPPLIER" />} />
+        <Route path="/bids/transport" element={<BidsPage bidType="TRANSPORT" />} />
+        <Route path="/bids/:bidId" element={<BidDetailPage />} />
 
         <Route path="/inquiries/customer" element={<InquiriesPage inquiryType="CUSTOMER" />} />
         <Route path="/inquiries/supplier" element={<InquiriesPage inquiryType="SUPPLIER" />} />

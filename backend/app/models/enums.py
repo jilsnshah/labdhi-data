@@ -91,6 +91,28 @@ class InquiryStatus(_Str):
     CLOSED = "CLOSED"
 
 
+class BidType(_Str):
+    """Who is being asked to quote."""
+
+    #: We are selling: customers bid, the highest price wins.
+    CUSTOMER = "CUSTOMER"
+    #: We are buying material: suppliers bid, the lowest price wins.
+    SUPPLIER = "SUPPLIER"
+    #: We are buying a movement: transporters bid, the lowest price wins.
+    TRANSPORT = "TRANSPORT"
+
+
+class BidStatus(_Str):
+    """Three states, and no way back: a bid is written, run, then settled."""
+
+    #: Written but not yet visible to anyone outside the desk.
+    DRAFT = "DRAFT"
+    #: Live: the invited participants can quote and re-quote.
+    OPEN = "OPEN"
+    #: Settled. Quotations are frozen; a winner may be chosen afterwards.
+    CLOSED = "CLOSED"
+
+
 class QuantityUnit(_Str):
     MT = "MT"
     KG = "KG"
@@ -145,6 +167,9 @@ class AuditAction(_Str):
     COMPLETE = "COMPLETE"
     ASSIGN = "ASSIGN"
     MERGE = "MERGE"
+    PUBLISH = "PUBLISH"
+    QUOTE = "QUOTE"
+    AWARD = "AWARD"
     PROMOTE = "PROMOTE"
 
 
@@ -169,6 +194,8 @@ party_product_rel_enum = _enum(PartyProductRelationship, "party_product_relation
 inquiry_type_enum = _enum(InquiryType, "inquiry_type")
 inquiry_status_enum = _enum(InquiryStatus, "inquiry_status")
 quantity_unit_enum = _enum(QuantityUnit, "quantity_unit")
+bid_type_enum = _enum(BidType, "bid_type")
+bid_status_enum = _enum(BidStatus, "bid_status")
 activity_type_enum = _enum(ActivityType, "activity_type")
 activity_status_enum = _enum(ActivityStatus, "activity_status")
 activity_outcome_enum = _enum(ActivityOutcome, "activity_outcome")

@@ -1326,3 +1326,353 @@ a.board-row:hover {
     min-height: 38px;
   }
 }
+
+/* ================================================= the bidding portal ===== */
+/*
+ * The one page people outside the company see. It is opened from a forwarded
+ * message, usually on a phone, by someone who has never seen this software: one
+ * column, large type, one number that matters, and no navigation to get lost in.
+ * It does not use the desk's shell, so it carries its own styles.
+ */
+.portal {
+  min-height: 100vh;
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-centre {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.portal-head {
+  background: linear-gradient(135deg, #0c1528 0%, #16254a 100%);
+  color: #fff;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.portal-head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.portal-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  text-decoration: none;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  flex: none;
+}
+
+.portal-brand {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.portal-who {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.portal-main {
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.portal-section {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mantine-color-ink-5);
+  margin: 1.5rem 0 0.75rem;
+}
+
+.portal-section:first-child {
+  margin-top: 0;
+}
+
+.portal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.portal-card {
+  display: block;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--mantine-shadow-xs);
+}
+
+.portal-card-top {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.portal-card-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--mantine-color-ink-9);
+}
+
+.portal-card-meta {
+  font-size: 0.8125rem;
+  color: var(--mantine-color-ink-5);
+  margin-top: 0.15rem;
+}
+
+.portal-card-foot {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--hairline-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mantine-color-ink-7);
+}
+
+.portal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--mantine-color-gray-2);
+  color: var(--mantine-color-ink-6);
+}
+
+.portal-pill.live {
+  background: var(--supply-soft);
+  color: var(--supply);
+}
+
+.portal-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--brass);
+}
+
+.portal-bid-head h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 0.6rem 0 0;
+  color: var(--mantine-color-ink-9);
+}
+
+.portal-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 0;
+}
+
+.portal-facts dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mantine-color-ink-5);
+}
+
+.portal-facts dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--mantine-color-ink-8);
+}
+
+.portal-spec {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  font-size: 0.875rem;
+  color: var(--mantine-color-ink-7);
+  white-space: pre-wrap;
+}
+
+/* The number everything turns on. */
+.portal-board {
+  margin: 1.25rem 0;
+  padding: 1.25rem;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #16254a 0%, #0c1528 100%);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.portal-board.leading {
+  background: linear-gradient(135deg, #1d4d3f 0%, #0d2a22 100%);
+}
+
+.portal-board-label {
+  display: block;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.portal-board-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 0.35rem;
+}
+
+.portal-board-hint {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.portal-form {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+
+.portal-form h2 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 1.375rem;
+  margin: 0 0 1rem;
+}
+
+.portal-form label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.portal-form label > span {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mantine-color-ink-7);
+  margin-bottom: 0.35rem;
+}
+
+.portal-form input,
+.portal-form textarea {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+  color: var(--mantine-color-ink-9);
+}
+
+.portal-form input:focus,
+.portal-form textarea:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 3px rgba(199, 149, 42, 0.18);
+}
+
+.portal-form button {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(180deg, #1d2840 0%, #0c1528 100%);
+  cursor: pointer;
+}
+
+.portal-form button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.portal-note {
+  margin: 0.9rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--mantine-color-ink-5);
+}
+
+.portal-error,
+.portal-ok {
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.portal-error {
+  background: var(--mantine-color-rust-0, #fbece8);
+  color: var(--mantine-color-rust-8, #8a2f1d);
+}
+
+.portal-ok {
+  background: var(--supply-soft);
+  color: var(--supply);
+}
+
+.portal-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--mantine-color-ink-5);
+}
+
+.portal-foot {
+  padding: 1.5rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--mantine-color-ink-4);
+}
+
+.portal-message {
+  text-align: center;
+  max-width: 340px;
+}
+
+.portal-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--hairline);
+  border-top-color: var(--brass);
+  animation: portal-spin 0.8s linear infinite;
+}
+
+@keyframes portal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -24,6 +24,9 @@ import type {
   Note,
   Page,
   Party360,
+  BidDetail,
+  BidEvent,
+  BidListItem,
   PartyBookSummary,
   PartyDetail,
   PartyListItem,
@@ -151,6 +154,26 @@ export const useInquiry = (id?: number) =>
   useQuery({
     queryKey: ['inquiry', id],
     queryFn: () => api.get<InquiryDetail>(`/inquiries/${id}`),
+    enabled: Boolean(id),
+  });
+
+/* ---------------------------------- bids -------------------------------- */
+export const useBids = (params: Params = {}) =>
+  useQuery(listQuery<BidListItem>('bids', '/bids', params));
+
+export const useBid = (id?: number) =>
+  useQuery({
+    queryKey: ['bid', id],
+    queryFn: () => api.get<BidDetail>(`/bids/${id}`),
+    enabled: Boolean(id),
+    // An open bid is a live auction: keep the desk's view close to current.
+    refetchInterval: 15_000,
+  });
+
+export const useBidHistory = (id?: number) =>
+  useQuery({
+    queryKey: ['bid-history', id],
+    queryFn: () => api.get<BidEvent[]>(`/bids/${id}/history`),
     enabled: Boolean(id),
   });
 
@@ -297,6 +320,20 @@ export function useApiMutation<TInput, TResult>(
 /* Convenience writers used across the app. */
 export const createEntity = <T>(path: string, body: unknown) => api.post<T>(path, body);
 export const patchEntity = <T>(path: string, body: unknown) => api.patch<T>(path, body);
+
+export const bidApi = {
+  create: (body: unknown) => api.post<BidDetail>('/bids', body),
+  patch: (id: number, body: unknown) => api.patch<BidDetail>(`/bids/${id}`, body),
+  addParticipants: (id: number, partyIds: number[]) =>
+    api.post<BidDetail>(`/bids/${id}/participants`, { party_ids: partyIds }),
+  removeParticipant: (id: number, participantId: number) =>
+    api.delete<BidDetail>(`/bids/${id}/participants/${participantId}`),
+  publish: (id: number) => api.post<BidDetail>(`/bids/${id}/publish`),
+  close: (id: number, withoutWinner = false) =>
+    api.post<BidDetail>(`/bids/${id}/close?without_winner=${withoutWinner}`),
+  award: (id: number, quoteId: number) =>
+    api.post<BidDetail>(`/bids/${id}/award`, { quote_id: quoteId }),
+};
 
 export const inquiryApi = {
   create: (body: unknown) => api.post<InquiryDetail>('/inquiries', body),

@@ -93,6 +93,10 @@ class Party(Base, TimestampMixin, StatusMixin):
     )
     #: Digits-only phone, maintained by the service layer for duplicate detection.
     phone_normalized: Mapped[str | None] = mapped_column(String(20))
+    #: Opaque, permanent key for this party's bidding portal. It stands in for
+    #: the party in a public URL, so the row id is never exposed and a link
+    #: cannot be guessed by counting. Issued the first time they are invited.
+    portal_code: Mapped[str | None] = mapped_column(String(32), unique=True)
     #: Set when this row was folded into another party.
     merged_into_id: Mapped[int | None] = mapped_column(
         ForeignKey("parties.id", ondelete="SET NULL")

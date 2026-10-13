@@ -276,6 +276,129 @@ export interface InquiryListItem {
   closed_at: string | null;
 }
 
+/* ---------------------------------- bids -------------------------------- */
+export type BidType = 'CUSTOMER' | 'SUPPLIER' | 'TRANSPORT';
+export type BidStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
+
+export interface BidListItem {
+  id: number;
+  bid_type: BidType;
+  status: BidStatus;
+  title: string | null;
+  product_id: number | null;
+  product_name: string | null;
+  quantity: string;
+  unit: QuantityUnit;
+  pickup_name: string | null;
+  delivery_name: string | null;
+  closes_at: string | null;
+  participant_count: number;
+  quote_count: number;
+  /** Highest on a customer bid, lowest on the others. */
+  best_price: string | null;
+  winner_party_name: string | null;
+  no_winner: boolean;
+  created_by: number;
+  created_by_name: string | null;
+  created_at: string;
+  published_at: string | null;
+  closed_at: string | null;
+}
+
+export interface BidQuote {
+  id: number;
+  participant_id: number;
+  price: string;
+  quantity: string | null;
+  notes: string | null;
+  submitted_at: string;
+  revision: number;
+  party: PartyRef;
+  is_winner: boolean;
+}
+
+export interface BidParticipant {
+  id: number;
+  party: PartyRef;
+  first_opened_at: string | null;
+  last_opened_at: string | null;
+  quote: BidQuote | null;
+  /** Copy-ready link to this party's view of this bid. */
+  bid_link: string;
+  /** Their permanent portal, listing every bid they are in. */
+  portal_link: string;
+}
+
+export interface BidDetail {
+  id: number;
+  bid_type: BidType;
+  status: BidStatus;
+  title: string | null;
+  quantity: string;
+  unit: QuantityUnit;
+  specifications: string | null;
+  closes_at: string | null;
+  product: ProductRef | null;
+  pickup_location: LocationRef | null;
+  delivery_location: LocationRef | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  closed_at: string | null;
+  no_winner: boolean;
+  awarded_at: string | null;
+  creator: IdName | null;
+  closer: IdName | null;
+  participants: BidParticipant[];
+  quotes: BidQuote[];
+  winner: BidQuote | null;
+  best_price: string | null;
+}
+
+export interface BidEvent {
+  at: string;
+  action: string;
+  summary: string;
+  actor: string | null;
+}
+
+/* The participant's side, served without a login. */
+export interface PortalQuote {
+  price: string;
+  quantity: string | null;
+  notes: string | null;
+  submitted_at: string;
+  revision: number;
+}
+
+export interface PortalBid {
+  id: number;
+  bid_type: BidType;
+  status: BidStatus;
+  title: string;
+  product_name: string | null;
+  quantity: string;
+  unit: QuantityUnit;
+  pickup_name: string | null;
+  delivery_name: string | null;
+  specifications: string | null;
+  closes_at: string | null;
+  best_is_highest: boolean;
+  best_price: string | null;
+  bidders: number;
+  leading: boolean;
+  my_quote: PortalQuote | null;
+  can_quote: boolean;
+}
+
+export interface PortalHome {
+  participant_name: string;
+  party_type: string;
+  open_bids: PortalBid[];
+  closed_bids: PortalBid[];
+}
+
 export interface PartyRef {
   id: number;
   name: string;

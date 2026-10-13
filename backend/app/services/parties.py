@@ -238,6 +238,7 @@ def list_parties(
     include_merged: bool = False,
     stale_days: int | None = None,
     city: str | None = None,
+    area: str | None = None,
     location_id: int | None = None,
     product_id: int | None = None,
     sort_by: str | None = None,
@@ -281,6 +282,15 @@ def list_parties(
                 select(PartyLocation.party_id)
                 .join(Location, Location.id == PartyLocation.location_id)
                 .where(Location.city.ilike(f"%{city}%"))
+            )
+        )
+    if area:
+        # The locality a trader actually works in: "everyone in Odhav".
+        stmt = stmt.where(
+            Party.id.in_(
+                select(PartyLocation.party_id)
+                .join(Location, Location.id == PartyLocation.location_id)
+                .where(func.lower(Location.area) == area.strip().lower())
             )
         )
     if location_id is not None:

@@ -3,6 +3,7 @@
 from app.db.base import Base
 from app.models.activity import Activity
 from app.models.audit import AuditLog
+from app.models.bid import Bid, BidParticipant, BidQuote
 from app.models.inquiry import (
     CustomerInquiry,
     Inquiry,
@@ -32,6 +33,9 @@ __all__ = [
     "Activity",
     "Application",
     "AuditLog",
+    "Bid",
+    "BidParticipant",
+    "BidQuote",
     "CustomerInquiry",
     "Grade",
     "Inquiry",

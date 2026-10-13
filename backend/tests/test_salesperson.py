@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.services.activities import business_today, day_bounds
+from app.services.activities import business_today, business_tz, day_bounds
 
 CRM_ENDPOINTS = [
     "/api/v1/parties",
@@ -562,7 +562,10 @@ def test_workload_and_conflict_warning(client, auth, assigned_visit, salesperson
 
 
 def test_admin_sees_assignment_in_the_calendar(client, auth, assigned_visit, salesperson):
-    day = assigned_visit["scheduled_at"][:10]
+    # The calendar buckets by business day, so the day has to be read in the
+    # business timezone - slicing the UTC string disagrees with it after 18:30Z.
+    scheduled = datetime.fromisoformat(assigned_visit["scheduled_at"])
+    day = scheduled.astimezone(business_tz()).date().isoformat()
     rows = client.get(
         f"/api/v1/activities/calendar?date_from={day}&date_to={day}", headers=auth
     ).json()

@@ -5,11 +5,13 @@ from fastapi import APIRouter, Depends
 from app.api.v1 import (
     activities,
     auth,
+    bids,
     inquiries,
     locations,
     masters,
     notes,
     parties,
+    portal,
     products,
     salesperson,
     system,
@@ -30,6 +32,7 @@ for crm_router in (
     locations.router,
     parties.router,
     inquiries.router,
+    bids.router,
     activities.router,
     notes.router,
     system.router,
@@ -38,5 +41,10 @@ for crm_router in (
 
 # Field app: salesperson accounts only, always scoped to the caller.
 api_router.include_router(salesperson.router)
+
+# The one public surface: a customer, supplier or transporter answering a bid.
+# No authentication, so every route checks the portal code against the bid it
+# names and returns nothing about anybody else.
+api_router.include_router(portal.router)
 
 __all__ = ["api_router"]

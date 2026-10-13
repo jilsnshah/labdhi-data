@@ -24,6 +24,7 @@ import {
   IconChartBar,
   IconClipboardList,
   IconFlask,
+  IconGavel,
   IconHistory,
   IconLayoutGrid,
   IconLogout,
@@ -91,6 +92,14 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    label: 'Bids',
+    items: [
+      { label: 'Customer bids', to: '/bids/customer', icon: <IconGavel size={16} /> },
+      { label: 'Supplier bids', to: '/bids/supplier', icon: <IconBuildingWarehouse size={16} /> },
+      { label: 'Transport bids', to: '/bids/transport', icon: <IconTruck size={16} /> },
+    ],
+  },
+  {
     label: 'Field work',
     items: [
       { label: 'Today', to: '/activities/today', icon: <IconCalendarTime size={16} /> },
@@ -134,6 +143,7 @@ function sectionFor(pathname: string): string {
       if (item.to !== '/' && pathname.startsWith(item.to)) return section.label;
     }
   }
+  if (pathname.startsWith('/bids')) return 'Bids';
   if (pathname.startsWith('/inquiries/')) return 'Inquiries';
   if (pathname.startsWith('/parties/')) return 'Relationships';
   if (pathname.startsWith('/settings')) return 'Settings';
