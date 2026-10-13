@@ -351,3 +351,55 @@ def test_the_bid_keeps_its_own_history(client, auth, bid, parties):
 def test_bids_do_not_touch_the_inquiry_book(client, auth, bid):
     """The two systems are separate; running a bid creates no inquiry."""
     assert client.get("/api/v1/inquiries", headers=auth).json()["total"] == 0
+
+
+# --- finding a bid again ---------------------------------------------------- #
+def test_bids_narrow_by_what_the_product_is_made_of(client, auth, masters, parties):
+    """The inquiry book's product filters, over bids."""
+    client.post(
+        "/api/v1/bids",
+        json={
+            "bid_type": "CUSTOMER",
+            "product_id": masters["product_id"],
+            "quantity": "10",
+            "party_ids": [parties["customer"]],
+        },
+        headers=auth,
+    )
+
+    def found(**params) -> int:
+        return client.get("/api/v1/bids", params=params, headers=auth).json()["total"]
+
+    assert found(material_id=masters["material_id"]) == 1
+    assert found(grade_id=masters["grade_id"]) == 1
+    assert found(manufacturer_id=masters["manufacturer_id"]) == 1
+    assert found(application_id=masters["application_id"]) == 1
+    assert found(product_id=masters["product_id"]) == 1
+    # A different material is a different product.
+    assert found(material_id=masters["other_material_id"]) == 0
+
+
+def test_a_transport_bid_is_found_by_either_end_of_its_route(client, auth, parties, locations):
+    client.post(
+        "/api/v1/bids",
+        json={
+            "bid_type": "TRANSPORT",
+            "quantity": "20",
+            "pickup_location_id": locations["pickup_id"],
+            "delivery_location_id": locations["delivery_id"],
+            "party_ids": [parties["transporter"]],
+        },
+        headers=auth,
+    )
+    pickup = client.get(f"/api/v1/locations/{locations['pickup_id']}", headers=auth).json()
+    client.patch(
+        f"/api/v1/locations/{locations['pickup_id']}",
+        json={"area": "Odhav", "city": pickup["city"]},
+        headers=auth,
+    )
+
+    listed = client.get("/api/v1/bids", params={"area": "Odhav"}, headers=auth).json()
+    assert listed["total"] == 1
+    assert client.get("/api/v1/bids", params={"area": "Nowhere"}, headers=auth).json()["total"] == 0
+    # Asking what the material is excludes transport, which carries none.
+    assert client.get("/api/v1/bids", params={"material_id": 1}, headers=auth).json()["total"] == 0

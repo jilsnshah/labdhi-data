@@ -1,11 +1,12 @@
 /** Every bid of one type, newest first - the room, the quotes and where it stands. */
 
 import { Badge, Button, Group, Select, Stack, Text } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { DatePickerInput } from '@mantine/dates';
+import { IconAdjustmentsHorizontal, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useBids } from '@/api/hooks';
+import { useBids, useLocationAreas } from '@/api/hooks';
 import type { BidListItem, BidType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -16,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { BidFormModal } from '@/components/modals/BidFormModal';
 import { useListState } from '@/hooks/useListState';
-import { formatDateTime, formatQuantity } from '@/lib/format';
+import { formatDateTime, formatQuantity, toIsoDate } from '@/lib/format';
 
 const COPY: Record<BidType, { title: string; subtitle: string; action: string }> = {
   CUSTOMER: {
@@ -41,13 +42,28 @@ export const priceUnit = (type: BidType) => (type === 'TRANSPORT' ? '₹' : '₹
 
 export function BidsPage({ bidType }: { bidType: BidType }) {
   const navigate = useNavigate();
-  const list = useListState<{ status?: string; product_id?: number }>(
-    {},
-    { sortBy: 'created_at', sortDir: 'desc' },
-  );
+  const list = useListState<{
+    status?: string;
+    product_id?: number;
+    material_id?: number;
+    grade_id?: number;
+    manufacturer_id?: number;
+    application_id?: number;
+    area?: string;
+    created_from?: string;
+    created_to?: string;
+  }>({}, { sortBy: 'created_at', sortDir: 'desc' });
   const { data, isFetching } = useBids({ ...list.params, bid_type: bidType });
+  const { data: areas } = useLocationAreas();
   const [createOpen, setCreateOpen] = useState(false);
+  const [productOpen, setProductOpen] = useState(false);
+  const [range, setRange] = useState<[string | null, string | null]>([null, null]);
   const copy = COPY[bidType];
+
+  // How many of the product filters are set, so the button can say so.
+  const productFilterCount = (
+    ['product_id', 'material_id', 'grade_id', 'manufacturer_id', 'application_id'] as const
+  ).filter((key) => list.filters[key] !== undefined).length;
 
   const rows = data?.items ?? [];
   const live = rows.filter((row) => row.status === 'OPEN').length;
@@ -180,14 +196,105 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
           value={(list.filters.status as string) ?? null}
           onChange={(value) => list.setFilter('status', value ?? undefined)}
         />
-        {bidType !== 'TRANSPORT' && (
-          <EntitySelect
-            kind="product"
-            placeholder="Any product"
-            value={(list.filters.product_id as number) ?? null}
-            onChange={(value) => list.setFilter('product_id', value ?? undefined)}
+        {bidType === 'TRANSPORT' ? (
+          <Select
+            w={170}
+            placeholder="Any area"
+            data={areas ?? []}
+            value={list.filters.area ?? null}
+            onChange={(value) => list.setFilter('area', value ?? undefined)}
+            searchable
+            clearable
           />
+        ) : (
+          <Button
+            variant={productFilterCount ? 'light' : 'default'}
+            color={productFilterCount ? 'brass' : undefined}
+            leftSection={<IconAdjustmentsHorizontal size={15} />}
+            rightSection={
+              productFilterCount ? (
+                <Badge size="xs" circle color="brass" variant="filled">
+                  {productFilterCount}
+                </Badge>
+              ) : undefined
+            }
+            onClick={() => setProductOpen((open) => !open)}
+          >
+            Product filters
+          </Button>
         )}
+        {bidType !== 'TRANSPORT' && productOpen && (
+          // What the lot is made of. These narrow through the bid's product, so
+          // they do not apply to a transport bid, which carries none.
+          <>
+            <div style={{ width: 190 }}>
+              <EntitySelect
+                kind="product"
+                placeholder="Any product"
+                includeInactive
+                value={list.filters.product_id ?? null}
+                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 150 }}>
+              <EntitySelect
+                kind="material"
+                placeholder="Any material"
+                includeInactive
+                value={list.filters.material_id ?? null}
+                onChange={(value) => {
+                  list.setFilter('material_id', value ?? undefined);
+                  // A grade belongs to one material; drop one that no longer fits.
+                  list.setFilter('grade_id', undefined);
+                }}
+              />
+            </div>
+            <div style={{ width: 140 }}>
+              <EntitySelect
+                kind="grade"
+                placeholder="Any grade"
+                includeInactive
+                filters={
+                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
+                }
+                value={list.filters.grade_id ?? null}
+                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 150 }}>
+              <EntitySelect
+                kind="manufacturer"
+                placeholder="Any brand"
+                includeInactive
+                value={list.filters.manufacturer_id ?? null}
+                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
+              />
+            </div>
+            <div style={{ width: 170 }}>
+              <EntitySelect
+                kind="application"
+                placeholder="Any application"
+                includeInactive
+                value={list.filters.application_id ?? null}
+                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
+              />
+            </div>
+          </>
+        )}
+        <DatePickerInput
+          type="range"
+          w={190}
+          placeholder="Raised between"
+          valueFormat="DD MMM"
+          clearable
+          value={range}
+          onChange={(value) => {
+            const next = value as [string | null, string | null];
+            setRange(next);
+            list.setFilter('created_from', toIsoDate(next[0]));
+            list.setFilter('created_to', toIsoDate(next[1]));
+          }}
+        />
       </FilterBar>
 
       <DataTable

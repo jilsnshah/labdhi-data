@@ -12,7 +12,7 @@ Two audiences, two sets of rules, both enforced here rather than in the UI:
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Select, func, or_, select
@@ -30,7 +30,7 @@ from app.models.enums import (
     PartyType,
     RecordStatus,
 )
-from app.models.masters import Product
+from app.models.masters import Product, product_applications
 from app.models.party import Location, Party
 from app.schemas.bid import (
     BidAwardRequest,
@@ -387,7 +387,14 @@ def _apply_filters(
     status: BidStatus | None,
     product_id: int | None,
     party_id: int | None,
-    q: str | None,
+    material_id: int | None = None,
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = None,
+    area: str | None = None,
+    created_from: date | None = None,
+    created_to: date | None = None,
+    q: str | None = None,
 ) -> Select:
     if bid_type is not None:
         stmt = stmt.where(Bid.bid_type == bid_type)
@@ -399,6 +406,35 @@ def _apply_filters(
         stmt = stmt.where(
             Bid.id.in_(select(BidParticipant.bid_id).where(BidParticipant.party_id == party_id))
         )
+    if any(v is not None for v in (material_id, grade_id, manufacturer_id, application_id)):
+        # Narrow through the product the bid is for; transport bids carry none,
+        # so asking what the material is drops them out.
+        products = select(Product.id)
+        if material_id is not None:
+            products = products.where(Product.material_id == material_id)
+        if grade_id is not None:
+            products = products.where(Product.grade_id == grade_id)
+        if manufacturer_id is not None:
+            products = products.where(Product.manufacturer_id == manufacturer_id)
+        if application_id is not None:
+            products = products.where(
+                Product.id.in_(
+                    select(product_applications.c.product_id).where(
+                        product_applications.c.application_id == application_id
+                    )
+                )
+            )
+        stmt = stmt.where(Bid.product_id.in_(products))
+    if area:
+        # Either end of a transport route sits in that locality.
+        in_area = select(Location.id).where(func.lower(Location.area) == area.strip().lower())
+        stmt = stmt.where(
+            or_(Bid.pickup_location_id.in_(in_area), Bid.delivery_location_id.in_(in_area))
+        )
+    if created_from:
+        stmt = stmt.where(func.date(Bid.created_at) >= created_from)
+    if created_to:
+        stmt = stmt.where(func.date(Bid.created_at) <= created_to)
     if q:
         like = f"%{q.strip()}%"
         conditions = [Bid.title.ilike(like), Bid.specifications.ilike(like)]
@@ -426,13 +462,32 @@ def list_bids(
     status: BidStatus | None = None,
     product_id: int | None = None,
     party_id: int | None = None,
+    material_id: int | None = None,
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = None,
+    area: str | None = None,
+    created_from: date | None = None,
+    created_to: date | None = None,
     q: str | None = None,
     sort_by: str | None = None,
     sort_dir: str = "desc",
 ) -> tuple[list[BidListItem], int]:
     stmt = select(Bid).options(*DETAIL_LOADERS)
     stmt = _apply_filters(
-        stmt, bid_type=bid_type, status=status, product_id=product_id, party_id=party_id, q=q
+        stmt,
+        bid_type=bid_type,
+        status=status,
+        product_id=product_id,
+        party_id=party_id,
+        material_id=material_id,
+        grade_id=grade_id,
+        manufacturer_id=manufacturer_id,
+        application_id=application_id,
+        area=area,
+        created_from=created_from,
+        created_to=created_to,
+        q=q,
     )
     column = getattr(Bid, sort_by if sort_by in SORTABLE else "created_at")
     stmt = stmt.order_by(column.desc() if sort_dir.lower() == "desc" else column.asc())

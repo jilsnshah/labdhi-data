@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.deps import SessionDep, StaffUser
@@ -98,6 +100,13 @@ def list_bids(
     status: BidStatus | None = None,
     product_id: int | None = None,
     party_id: int | None = Query(None, description="Bids a given party was invited to"),
+    material_id: int | None = Query(None, description="Through the bid's product"),
+    grade_id: int | None = None,
+    manufacturer_id: int | None = None,
+    application_id: int | None = Query(None, description="End use the product serves"),
+    area: str | None = Query(None, description="Either end of a transport route"),
+    created_from: date | None = None,
+    created_to: date | None = None,
     q: str | None = Query(None, description="Bid id, title, product or participant name"),
     sort_by: str | None = None,
     sort_dir: str = "desc",
@@ -109,6 +118,13 @@ def list_bids(
         status=status,
         product_id=product_id,
         party_id=party_id,
+        material_id=material_id,
+        grade_id=grade_id,
+        manufacturer_id=manufacturer_id,
+        application_id=application_id,
+        area=area,
+        created_from=created_from,
+        created_to=created_to,
         q=q,
         sort_by=sort_by,
         sort_dir=sort_dir,
