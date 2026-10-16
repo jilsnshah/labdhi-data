@@ -2323,28 +2323,25 @@ textarea::placeholder {
 }
 
 .feles-credit span {
-  display: flex;
-  flex-direction: column;
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
 }
 
 .feles-credit b {
-  font-weight: 600;
-}
-
-.feles-credit em {
-  font-style: normal;
-  font-size: 10px;
-  opacity: 0.7;
+  font-weight: 700;
+  color: var(--brass);
 }
 
 .feles-credit.dark {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .feles-credit.light {
-  color: var(--ink-500);
+  color: var(--ink-700);
+}
+
+.feles-credit.light b {
+  color: var(--brass-deep, #8a6612);
 }
 
 .login-credit {

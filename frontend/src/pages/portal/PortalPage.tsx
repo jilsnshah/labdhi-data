@@ -12,7 +12,8 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '@/api/client';
 import { ApiError } from '@/api/client';
 import type { PortalBid, PortalHome } from '@/api/types';
-import { FelesCredit } from '@/components/FelesCredit';
+import felesLogo from '@/assets/felesai.png';
+import { FELES_NAME, FELES_URL, FelesPanel } from '@/components/FelesCredit';
 import { formatDateTime, formatQuantity } from '@/lib/format';
 
 const unitOf = (bid: PortalBid) => (bid.bid_type === 'TRANSPORT' ? '₹' : '₹/kg');
@@ -361,10 +362,22 @@ function PortalHeader({ name, back }: { name: string; back?: string }) {
             ‹
           </Link>
         )}
-        <div>
+        <div className="grow">
           <div className="portal-brand">Labdhi</div>
           {name && <div className="portal-who">{name}</div>}
         </div>
+        <a
+          className="portal-powered"
+          href={FELES_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          title={`Built by ${FELES_NAME}`}
+        >
+          <img src={felesLogo} alt="" width={24} height={24} />
+          <span>
+            Built by<b>{FELES_NAME}</b>
+          </span>
+        </a>
       </div>
     </header>
   );
@@ -374,9 +387,7 @@ function PortalFoot() {
   return (
     <footer className="portal-foot">
       <div>Offers are private. Other bidders never see your name or your price.</div>
-      <div className="portal-credit">
-        <FelesCredit />
-      </div>
+      <FelesPanel />
     </footer>
   );
 }
@@ -398,6 +409,7 @@ function PortalError({ message }: { message: string }) {
         <p className="portal-note">
           If you were sent this link by mistake, or it has expired, please contact us.
         </p>
+        <FelesPanel />
       </div>
     </div>
   );
