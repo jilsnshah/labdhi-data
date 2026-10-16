@@ -13,14 +13,14 @@ import { fmtRate } from '@/lib/market';
 
 /** Deep, desaturated tones - a party's colour is stable, never loud. */
 const AVATAR_TONES = [
-  ['#1d2840', '#36415a'],
-  ['#21836f', '#037160'],
-  ['#314ea1', '#22408e'],
-  ['#9b7318', '#86620c'],
-  ['#6b3f6f', '#4f2c53'],
-  ['#4f5b73', '#36415a'],
+  ['#231f1b', '#3a3630'],
+  ['#96701a', '#6e5511'],
+  ['#555049', '#3a3630'],
+  ['#b4871f', '#8b6c15'],
+  ['#3a3630', '#231f1b'],
+  ['#726e67', '#555049'],
   ['#8b3c35', '#6e2f29'],
-  ['#2f6a8c', '#1f4f6b'],
+  ['#caa441', '#a98319'],
 ];
 
 function hash(text: string): number {
@@ -31,7 +31,10 @@ function hash(text: string): number {
 
 export function initialsOf(name?: string | null): string {
   if (!name) return '?';
-  const words = name.replace(/[^\p{L}\p{N} ]/gu, ' ').split(' ').filter(Boolean);
+  const words = name
+    .replace(/[^\p{L}\p{N} ]/gu, ' ')
+    .split(' ')
+    .filter(Boolean);
   if (!words.length) return name.slice(0, 2);
   if (/^\d/.test(words[0])) return '#';
   return words
@@ -84,11 +87,18 @@ export function Sparkline({
     index * step,
     height - 3 - ((value - min) / span) * (height - 6),
   ]);
-  const line = points.map(([x, y], index) => `${index ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const line = points
+    .map(([x, y], index) => `${index ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(' ');
   const area = `${line} L${width},${height} L0,${height} Z`;
   const [lastX, lastY] = points[points.length - 1];
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      style={{ display: 'block' }}
+    >
       <defs>
         <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.28" />
@@ -96,7 +106,14 @@ export function Sparkline({
         </linearGradient>
       </defs>
       {fill && <path d={area} fill={`url(#${id})`} />}
-      <path d={line} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
       <circle cx={lastX} cy={lastY} r={2.6} fill={color} />
     </svg>
   );
@@ -105,7 +122,7 @@ export function Sparkline({
 /* ----------------------------------------------------------- market meter */
 
 /**
- * Where quotes sit on one price axis: supply ticks in teal, demand in indigo,
+ * Where quotes sit on one price axis: supply in the dark neutral, demand in gold,
  * the highlighted quote as a brass marker. Read at a glance: is this cheap?
  */
 export function MarketMeter({
@@ -133,7 +150,10 @@ export function MarketMeter({
   const demand = quotes.filter((q) => q.side === 'demand');
   const band = (list: Quote[]) =>
     list.length
-      ? { left: pos(Math.min(...list.map((q) => q.rate))), right: pos(Math.max(...list.map((q) => q.rate))) }
+      ? {
+          left: pos(Math.min(...list.map((q) => q.rate))),
+          right: pos(Math.max(...list.map((q) => q.rate))),
+        }
       : null;
   const supplyBand = band(supply);
   const demandBand = band(demand);
@@ -158,7 +178,7 @@ export function MarketMeter({
             left: `${supplyBand.left}%`,
             width: `${Math.max(supplyBand.right - supplyBand.left, 0.8)}%`,
             background: 'var(--supply-soft)',
-            border: '1px solid rgba(33,131,111,0.35)',
+            border: '1px solid rgba(58,54,48,0.35)',
             borderRadius: 4,
           }}
         />
@@ -172,7 +192,7 @@ export function MarketMeter({
             left: `${demandBand.left}%`,
             width: `${Math.max(demandBand.right - demandBand.left, 0.8)}%`,
             background: 'var(--demand-soft)',
-            border: '1px solid rgba(58,88,179,0.35)',
+            border: '1px solid rgba(199,149,42,0.45)',
             borderRadius: 4,
           }}
         />
@@ -190,11 +210,7 @@ export function MarketMeter({
               pos="absolute"
               style={{
                 left: `calc(${pos(quote.rate)}% - ${highlighted ? 7 : 4}px)`,
-                top: highlighted
-                  ? height / 2 - 7
-                  : supplySide
-                    ? height / 2 - 13
-                    : height / 2 + 7,
+                top: highlighted ? height / 2 - 7 : supplySide ? height / 2 - 13 : height / 2 + 7,
                 width: highlighted ? 14 : 8,
                 height: highlighted ? 14 : 8,
                 borderRadius: highlighted ? 4 : 99,
@@ -206,8 +222,8 @@ export function MarketMeter({
                     : 'var(--demand)',
                 border: '2px solid #fff',
                 boxShadow: highlighted
-                  ? '0 0 0 3px rgba(199,149,42,0.25), 0 2px 6px rgba(12,21,40,0.25)'
-                  : '0 1px 3px rgba(12,21,40,0.25)',
+                  ? '0 0 0 3px rgba(199,149,42,0.25), 0 2px 6px rgba(18,16,16,0.25)'
+                  : '0 1px 3px rgba(18,16,16,0.25)',
                 zIndex: highlighted ? 2 : 1,
                 cursor: 'default',
               }}
@@ -216,14 +232,14 @@ export function MarketMeter({
         );
       })}
       {showScale && (
-      <Group justify="space-between" pos="absolute" left={0} right={0} bottom={-4}>
-        <Text fz={11} c="ink.5" className="figure">
-          {fmtRate(lo)}
-        </Text>
-        <Text fz={11} c="ink.5" className="figure">
-          {fmtRate(hi)}
-        </Text>
-      </Group>
+        <Group justify="space-between" pos="absolute" left={0} right={0} bottom={-4}>
+          <Text fz={11} c="ink.5" className="figure">
+            {fmtRate(lo)}
+          </Text>
+          <Text fz={11} c="ink.5" className="figure">
+            {fmtRate(hi)}
+          </Text>
+        </Group>
       )}
     </Box>
   );
@@ -255,7 +271,8 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
     const min = lo - pad;
     const max = hi + pad;
     const x = (t: number) =>
-      padL + (t1 === t0 ? (width - padL - padR) / 2 : ((t - t0) / (t1 - t0)) * (width - padL - padR));
+      padL +
+      (t1 === t0 ? (width - padL - padR) / 2 : ((t - t0) / (t1 - t0)) * (width - padL - padR));
     const y = (r: number) => padT + (1 - (r - min) / (max - min)) * (height - padT - padB);
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => min + f * (max - min));
     const dayTicks = t1 === t0 ? [t0] : [t0, t0 + (t1 - t0) / 2, t1];
@@ -267,15 +284,30 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
   const path = (side: 'supply' | 'demand') =>
     sorted
       .filter((q) => q.side === side)
-      .map((q, i) => `${i ? 'L' : 'M'}${x(new Date(q.createdAt).getTime()).toFixed(1)},${y(q.rate).toFixed(1)}`)
+      .map(
+        (q, i) =>
+          `${i ? 'L' : 'M'}${x(new Date(q.createdAt).getTime()).toFixed(1)},${y(q.rate).toFixed(1)}`,
+      )
       .join(' ');
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ display: 'block' }}>
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      style={{ display: 'block' }}
+    >
       {ticks.map((tick) => (
         <g key={tick}>
-          <line x1={padL} x2={width - padR} y1={y(tick)} y2={y(tick)} stroke="#efece4" />
-          <text x={padL - 10} y={y(tick) + 4} textAnchor="end" fontSize="11" fill="#6b778f" fontFamily="IBM Plex Mono, monospace">
+          <line x1={padL} x2={width - padR} y1={y(tick)} y2={y(tick)} stroke="#eceae6" />
+          <text
+            x={padL - 10}
+            y={y(tick) + 4}
+            textAnchor="end"
+            fontSize="11"
+            fill="#726e67"
+            fontFamily="IBM Plex Mono, monospace"
+          >
             {tick.toFixed(1)}
           </text>
         </g>
@@ -287,21 +319,34 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
           y={height - 8}
           textAnchor="middle"
           fontSize="11"
-          fill="#6b778f"
+          fill="#726e67"
         >
           {new Date(tick).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
         </text>
       ))}
-      <path d={path('supply')} fill="none" stroke="#21836f" strokeWidth={2} strokeLinejoin="round" />
-      <path d={path('demand')} fill="none" stroke="#3a58b3" strokeWidth={2} strokeLinejoin="round" strokeDasharray="5 4" />
+      <path
+        d={path('supply')}
+        fill="none"
+        stroke="#3a3630"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <path
+        d={path('demand')}
+        fill="none"
+        stroke="#c7952a"
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeDasharray="5 4"
+      />
       {sorted.map((q) => (
         <circle
           key={q.id}
           cx={x(new Date(q.createdAt).getTime())}
           cy={y(q.rate)}
           r={q.active ? 4.5 : 3.5}
-          fill={q.active ? (q.side === 'supply' ? '#21836f' : '#3a58b3') : '#fff'}
-          stroke={q.side === 'supply' ? '#21836f' : '#3a58b3'}
+          fill={q.active ? (q.side === 'supply' ? '#3a3630' : '#c7952a') : '#fff'}
+          stroke={q.side === 'supply' ? '#3a3630' : '#c7952a'}
           strokeWidth={2}
         >
           <title>{`${q.partyName} · ₹${q.rate.toFixed(2)}/kg${q.active ? '' : ' (closed)'}`}</title>
@@ -314,7 +359,7 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
 /* ------------------------------------------------------------ spread strip */
 
 /**
- * One row of the board as a picture: every offer (teal) and every bid (indigo)
+ * One row of the board as a picture: every offer (dark) and every bid (gold)
  * on a shared price axis, with the gap between the best of each shaded - green
  * when you can buy below what you can sell, red when you cannot.
  */
@@ -358,8 +403,7 @@ export function SpreadStrip({
           style={{
             left: `${pos(Math.min(bestBuy, bestSell))}%`,
             width: `${Math.abs(pos(bestSell) - pos(bestBuy))}%`,
-            background:
-              bestSell >= bestBuy ? 'rgba(63,161,116,0.22)' : 'rgba(200,90,82,0.22)',
+            background: bestSell >= bestBuy ? 'rgba(199,149,42,0.26)' : 'rgba(200,90,82,0.22)',
             borderRadius: 3,
           }}
         />
@@ -380,7 +424,7 @@ export function SpreadStrip({
               borderRadius: quote.side === 'supply' ? 99 : 2,
               background: quote.side === 'supply' ? 'var(--supply)' : 'var(--demand)',
               border: '2px solid #fff',
-              boxShadow: '0 1px 3px rgba(12,21,40,0.3)',
+              boxShadow: '0 1px 3px rgba(18,16,16,0.3)',
             }}
           />
         </Tooltip>

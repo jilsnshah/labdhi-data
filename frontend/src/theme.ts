@@ -1,43 +1,48 @@
 import { createTheme, type MantineColorsTuple } from '@mantine/core';
 
 /**
- * House style: a commodity trading desk, not a SaaS admin panel.
+ * House style: gold, black and white. A commodity trading desk, not a SaaS
+ * admin panel.
  *
- * A deep navy shell frames a warm ivory working surface. Brass is the house
- * accent - used sparingly, for the thing that matters on a screen. The market
- * itself has two colours: teal for supply (what we can buy) and indigo for
- * demand (what we can sell). Everything else is the navy neutral scale.
+ * A near-black shell frames a warm ivory working surface, and gold is the only
+ * accent - used sparingly, for the thing that matters on a screen. The two
+ * sides of the market are told apart by weight rather than hue: supply sits in
+ * the dark neutral, demand in gold.
+ *
+ * The one colour outside the palette is a muted red, kept strictly for what is
+ * wrong or about to be destroyed. A warning that does not look like a warning
+ * is a hazard, so that exception earns its place.
  *
  * Type: a serif for titles and headline figures, a crisp grotesk for the UI,
  * and a tabular mono for every rate so columns of prices line up like a board.
  */
 
-/** Neutral navy: text, borders, the shell and the primary button. */
+/** Warm black: text, borders, the shell and the primary button. */
 const ink: MantineColorsTuple = [
-  '#f5f6f9',
-  '#e9ecf2',
-  '#d6dbe5',
-  '#b9c1d0',
-  '#8f9ab0',
-  '#6b778f',
-  '#4f5b73',
-  '#36415a',
-  '#1d2840',
-  '#0c1528',
+  '#f7f6f4',
+  '#eceae6',
+  '#dbd8d2',
+  '#bdb9b1',
+  '#97938b',
+  '#726e67',
+  '#555049',
+  '#3a3630',
+  '#231f1b',
+  '#121010',
 ];
 
-/** Links, focus, the demand side of the market. */
+/** Links, focus, the demand side: gold, deepened so it reads on white. */
 const accent: MantineColorsTuple = [
-  '#eef1fb',
-  '#dbe1f5',
-  '#b6c3ea',
-  '#8ea2de',
-  '#6d86d3',
-  '#5874cd',
-  '#4a69cb',
-  '#3a58b3',
-  '#314ea1',
-  '#22408e',
+  '#fbf6ea',
+  '#f4ead1',
+  '#e8d3a1',
+  '#dbbb6e',
+  '#cfa747',
+  '#c6992f',
+  '#b4871f',
+  '#96701a',
+  '#785915',
+  '#5c4310',
 ];
 
 /** Brass: the house accent. Highlights, the active nav marker, key figures. */
@@ -54,18 +59,18 @@ const brass: MantineColorsTuple = [
   '#86620c',
 ];
 
-/** Supply side of the market: supplier offers, things we can buy. */
+/** Supply side of the market: the dark neutral, opposite gold. */
 const teal: MantineColorsTuple = [
-  '#e9f8f5',
-  '#d8eee9',
-  '#b0dcd2',
-  '#85c9ba',
-  '#62b9a6',
-  '#4bae99',
-  '#3da992',
-  '#2d937e',
-  '#21836f',
-  '#037160',
+  '#f2f1ef',
+  '#e3e1dc',
+  '#c8c4bc',
+  '#aaa49a',
+  '#8d8679',
+  '#726b5f',
+  '#5a5349',
+  '#433d35',
+  '#2c2823',
+  '#1a1714',
 ];
 
 /** Attention: waiting, follow-up required, overdue. */
@@ -96,18 +101,18 @@ const rust: MantineColorsTuple = [
   '#6e2f29',
 ];
 
-/** Positive: margin, completed, active. */
+/** Positive: margin, completed, active. Gold, not green. */
 const moss: MantineColorsTuple = [
-  '#ecf6f1',
-  '#d9ede3',
-  '#b1d9c6',
-  '#86c4a7',
-  '#63b28d',
-  '#4ca77d',
-  '#3fa174',
-  '#2f8c62',
-  '#257d56',
-  '#126c47',
+  '#fbf6e9',
+  '#f3e9cf',
+  '#e6d29d',
+  '#d7b969',
+  '#caa441',
+  '#c29629',
+  '#a98319',
+  '#8b6c15',
+  '#6e5511',
+  '#53400c',
 ];
 
 export const FONT_SANS =
@@ -121,7 +126,7 @@ export const theme = createTheme({
   primaryShade: { light: 9, dark: 8 },
   colors: { ink, accent, brass, teal, amber, rust, moss, slate: ink, brand: accent },
   white: '#ffffff',
-  black: '#0c1528',
+  black: '#121010',
   defaultRadius: 'md',
 
   fontFamily: FONT_SANS,
@@ -303,6 +308,14 @@ export const TONE_TEXT: Record<StatusTone, string> = {
 
 /** The two sides of the market, used consistently by every chart and chip. */
 export const MARKET = {
-  supply: { color: 'var(--mantine-color-teal-7)', soft: 'var(--mantine-color-teal-0)', label: 'Supply' },
-  demand: { color: 'var(--mantine-color-accent-6)', soft: 'var(--mantine-color-accent-0)', label: 'Demand' },
+  supply: {
+    color: 'var(--mantine-color-teal-7)',
+    soft: 'var(--mantine-color-teal-0)',
+    label: 'Supply',
+  },
+  demand: {
+    color: 'var(--mantine-color-accent-6)',
+    soft: 'var(--mantine-color-accent-0)',
+    label: 'Demand',
+  },
 } as const;

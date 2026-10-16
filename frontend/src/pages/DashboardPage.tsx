@@ -134,7 +134,7 @@ export function DashboardPage() {
             value={counts?.open_customer_inquiries}
             hint={`${fmtTonnes(demandTonnes)} wanted`}
             spark={dailyCounts((demandRows?.items ?? []).map((r) => r.created_at))}
-            color="#8ea2de"
+            color="#dcbc77"
           />
           <HeroKpi
             to="/inquiries/supplier"
@@ -142,7 +142,7 @@ export function DashboardPage() {
             value={counts?.open_supplier_inquiries}
             hint={`${fmtTonnes(supplyTonnes)} on offer`}
             spark={dailyCounts((supplyRows?.items ?? []).map((r) => r.created_at))}
-            color="#85c9ba"
+            color="#bdb9b1"
           />
           <HeroKpi
             to="/inquiries/supplier"

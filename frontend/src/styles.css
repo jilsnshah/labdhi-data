@@ -22,24 +22,25 @@
   --row-hover: #fbf9f4;
 
   /* Shell */
-  --shell: #0c1528;
-  --shell-2: #132039;
-  --shell-line: rgba(255, 255, 255, 0.07);
-  --shell-text: #c8d0de;
-  --shell-muted: #7d8aa3;
+  --shell: #121010;
+  --shell-2: #1d1a17;
+  --shell-line: rgba(255, 255, 255, 0.08);
+  --shell-text: #d8d4cc;
+  --shell-muted: #8d8679;
 
-  /* House accent and market sides */
+  /* House accent and market sides. Gold is the only colour; the two sides of
+     the market are told apart by weight, not hue. */
   --brass: #c7952a;
   --brass-soft: #f4ebd6;
-  --supply: #21836f;
-  --supply-soft: #e3f4ef;
-  --demand: #3a58b3;
-  --demand-soft: #e9edf9;
+  --supply: #3a3630;
+  --supply-soft: #efedea;
+  --demand: #96701a;
+  --demand-soft: #f7efdc;
 
   --font-serif: 'Instrument Serif', 'Times New Roman', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-  --mantine-color-dimmed: #5b6680;
+  --mantine-color-dimmed: #6d675f;
   --topbar-h: 64px;
 }
 
@@ -113,7 +114,7 @@ body::before {
 .shell-nav {
   background:
     radial-gradient(120% 60% at 0% 0%, rgba(199, 149, 42, 0.10), transparent 60%),
-    linear-gradient(180deg, var(--shell) 0%, #0a1122 100%) !important;
+    linear-gradient(180deg, var(--shell) 0%, #0b0a09 100%) !important;
   border-right: none !important;
   color: var(--shell-text);
 }
@@ -249,13 +250,13 @@ body::before {
   border: 1px solid var(--hairline);
   border-radius: 999px;
   background: var(--surface);
-  box-shadow: 0 1px 2px rgba(12, 21, 40, 0.04);
+  box-shadow: 0 1px 2px rgba(18, 16, 16, 0.04);
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .search-pill:hover {
   border-color: var(--mantine-color-ink-3);
-  box-shadow: 0 4px 14px -6px rgba(12, 21, 40, 0.18);
+  box-shadow: 0 4px 14px -6px rgba(18, 16, 16, 0.18);
 }
 
 .ticker-time {
@@ -559,8 +560,8 @@ th.wrap,
   color: #eef1f7;
   background:
     radial-gradient(80% 140% at 100% 0%, rgba(199, 149, 42, 0.22), transparent 55%),
-    radial-gradient(60% 120% at 0% 100%, rgba(58, 88, 179, 0.35), transparent 60%),
-    linear-gradient(135deg, #0c1528 0%, #16254a 100%);
+    radial-gradient(60% 120% at 0% 100%, rgba(199, 149, 42, 0.18), transparent 60%),
+    linear-gradient(135deg, #121010 0%, #241f19 100%);
   box-shadow: var(--mantine-shadow-lg);
 }
 
@@ -1008,8 +1009,8 @@ a.board-row:hover {
   color: #eef1f7;
   background:
     radial-gradient(70% 60% at 100% 0%, rgba(199, 149, 42, 0.25), transparent 60%),
-    radial-gradient(60% 70% at 0% 100%, rgba(58, 88, 179, 0.40), transparent 60%),
-    linear-gradient(150deg, #0c1528 0%, #17284f 100%);
+    radial-gradient(60% 70% at 0% 100%, rgba(199, 149, 42, 0.20), transparent 60%),
+    linear-gradient(150deg, #121010 0%, #241f19 100%);
 }
 
 .login-brand::after {
@@ -1156,7 +1157,7 @@ a.board-row:hover {
     border: 1px solid var(--hairline);
     border-radius: 14px;
     background: var(--surface);
-    box-shadow: 0 1px 2px rgba(12, 21, 40, 0.04);
+    box-shadow: 0 1px 2px rgba(18, 16, 16, 0.04);
   }
 
   .data-table tbody tr[data-clickable='true']:active {
@@ -1348,7 +1349,7 @@ a.board-row:hover {
 }
 
 .portal-head {
-  background: linear-gradient(135deg, #0c1528 0%, #16254a 100%);
+  background: linear-gradient(135deg, #121010 0%, #241f19 100%);
   color: #fff;
   padding: 1.25rem 1.25rem 1.5rem;
 }
@@ -1525,12 +1526,12 @@ a.board-row:hover {
   padding: 1.25rem;
   border-radius: 18px;
   color: #fff;
-  background: linear-gradient(135deg, #16254a 0%, #0c1528 100%);
+  background: linear-gradient(135deg, #241f19 0%, #121010 100%);
   box-shadow: var(--mantine-shadow-sm);
 }
 
 .portal-board.leading {
-  background: linear-gradient(135deg, #1d4d3f 0%, #0d2a22 100%);
+  background: linear-gradient(135deg, #3c3018 0%, #1a1510 100%);
 }
 
 .portal-board-label {
@@ -1611,7 +1612,7 @@ a.board-row:hover {
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(180deg, #1d2840 0%, #0c1528 100%);
+  background: linear-gradient(180deg, #231f1b 0%, #121010 100%);
   cursor: pointer;
 }
 
@@ -1683,16 +1684,16 @@ a.board-row:hover {
   height: 7px;
   border-radius: 50%;
   background: var(--supply);
-  box-shadow: 0 0 0 0 rgba(33, 131, 111, 0.45);
+  box-shadow: 0 0 0 0 rgba(199, 149, 42, 0.45);
   animation: live-pulse 2.4s ease-out infinite;
 }
 
 @keyframes live-pulse {
   70% {
-    box-shadow: 0 0 0 7px rgba(33, 131, 111, 0);
+    box-shadow: 0 0 0 7px rgba(199, 149, 42, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(33, 131, 111, 0);
+    box-shadow: 0 0 0 0 rgba(199, 149, 42, 0);
   }
 }
 
@@ -1713,7 +1714,7 @@ a.board-row:hover {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #7fd3bf;
+  background: #e6c47c;
   animation: live-pulse 2.4s ease-out infinite;
 }
 

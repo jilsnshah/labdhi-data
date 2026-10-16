@@ -2,8 +2,9 @@
  * Labdhi Field - the trade desk, in your pocket.
  *
  * Same house style as the office desk: a deep navy masthead over a warm ivory
- * work surface, brass for the one thing that matters on a screen, teal for
- * done/supply, indigo for calls/demand. Serif for titles and headline figures,
+ * work surface, and gold for the one thing that matters on a screen. The
+ * palette is gold, black and white; a muted red is kept only for what is
+ * wrong. Serif for titles and headline figures,
  * a crisp grotesk for everything you tap, mono for times.
  *
  * Fonts are bundled (not fetched) so the APK looks right with no signal.
@@ -36,17 +37,17 @@
 }
 
 :root {
-  --shell: #0c1528;
-  --shell-2: #132039;
-  --ink-900: #0c1528;
-  --ink-800: #1d2840;
-  --ink-700: #36415a;
-  --ink-600: #4f5b73;
-  --ink-500: #6b778f;
-  --ink-400: #8f9ab0;
-  --ink-300: #b9c1d0;
-  --ink-200: #d6dbe5;
-  --ink-100: #e9ecf2;
+  --shell: #121010;
+  --shell-2: #1d1a17;
+  --ink-900: #121010;
+  --ink-800: #231f1b;
+  --ink-700: #3a3630;
+  --ink-600: #555049;
+  --ink-500: #726e67;
+  --ink-400: #97938b;
+  --ink-300: #bdb9b1;
+  --ink-200: #dbd8d2;
+  --ink-100: #eceae6;
 
   --canvas: #f6f4ef;
   --canvas-deep: #efece4;
@@ -59,10 +60,11 @@
   --brass-light: #dcbc77;
   --brass-deep: #8a6612;
   --brass-soft: #f6eedb;
-  --teal: #21836f;
-  --teal-soft: #e3f4ef;
-  --indigo: #3a58b3;
-  --indigo-soft: #e9edf9;
+  /* The two "colours" are weight, not hue: a deep neutral and the gold. */
+  --teal: #3a3630;
+  --teal-soft: #efedea;
+  --indigo: #96701a;
+  --indigo-soft: #f7efdc;
   --rust: #b5452f;
   --rust-soft: #fbece8;
   --amber: #c98c28;
@@ -75,8 +77,8 @@
   --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
   --radius: 18px;
-  --shadow-card: 0 1px 2px rgba(12, 21, 40, 0.04), 0 10px 28px -16px rgba(12, 21, 40, 0.18);
-  --shadow-float: 0 18px 40px -18px rgba(12, 21, 40, 0.55);
+  --shadow-card: 0 1px 2px rgba(18, 16, 16, 0.04), 0 10px 28px -16px rgba(18, 16, 16, 0.18);
+  --shadow-float: 0 18px 40px -18px rgba(18, 16, 16, 0.55);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --app-max: 520px;
@@ -106,7 +108,7 @@ body {
   margin: 0 auto;
   min-height: 100vh;
   background: var(--canvas);
-  box-shadow: 0 0 0 1px rgba(12, 21, 40, 0.04);
+  box-shadow: 0 0 0 1px rgba(18, 16, 16, 0.04);
 }
 
 button,
@@ -183,7 +185,7 @@ a {
   padding: calc(var(--safe-top) + 18px) 18px 24px;
   background:
     radial-gradient(120% 90% at 100% 0%, rgba(199, 149, 42, 0.2), transparent 55%),
-    radial-gradient(90% 70% at 0% 100%, rgba(58, 88, 179, 0.22), transparent 60%),
+    radial-gradient(90% 70% at 0% 100%, rgba(199, 149, 42, 0.16), transparent 60%),
     linear-gradient(180deg, var(--shell) 0%, var(--shell-2) 100%);
   border-radius: 0 0 28px 28px;
   overflow: hidden;
@@ -345,9 +347,9 @@ a {
   cursor: default;
 }
 .btn.primary {
-  background: linear-gradient(180deg, #1d2840 0%, #0c1528 100%);
+  background: linear-gradient(180deg, #231f1b 0%, #121010 100%);
   color: #fff;
-  box-shadow: 0 10px 22px -12px rgba(12, 21, 40, 0.7);
+  box-shadow: 0 10px 22px -12px rgba(18, 16, 16, 0.7);
 }
 .btn.brass {
   background: linear-gradient(180deg, #ddb562 0%, #c7952a 100%);
@@ -709,7 +711,7 @@ a {
   color: #fff;
   background:
     radial-gradient(100% 120% at 100% 0%, rgba(199, 149, 42, 0.28), transparent 50%),
-    linear-gradient(150deg, #1b2a4b 0%, #0c1528 70%);
+    linear-gradient(150deg, #241f19 0%, #121010 70%);
   border: 1px solid rgba(220, 188, 119, 0.28);
   box-shadow: var(--shadow-float);
   cursor: pointer;
@@ -1372,8 +1374,8 @@ a {
   position: relative;
   height: 112px;
   background:
-    linear-gradient(rgba(12, 21, 40, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
-    linear-gradient(90deg, rgba(12, 21, 40, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(rgba(18, 16, 16, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, rgba(18, 16, 16, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
     #ecebe3;
 }
 .where-map svg {
@@ -1404,8 +1406,8 @@ a {
   align-items: center;
   justify-content: center;
   box-shadow:
-    0 0 0 6px rgba(12, 21, 40, 0.1),
-    0 10px 20px -8px rgba(12, 21, 40, 0.6);
+    0 0 0 6px rgba(18, 16, 16, 0.1),
+    0 10px 20px -8px rgba(18, 16, 16, 0.6);
 }
 .where-body {
   padding: 14px 16px 16px;
@@ -1531,7 +1533,7 @@ textarea::placeholder {
   border-color: var(--ink-900);
   background: var(--surface-warm);
   color: var(--ink-900);
-  box-shadow: 0 0 0 3px rgba(12, 21, 40, 0.06);
+  box-shadow: 0 0 0 3px rgba(18, 16, 16, 0.06);
 }
 
 .segmented {
@@ -1563,8 +1565,8 @@ textarea::placeholder {
   background: var(--surface);
   color: var(--ink-900);
   box-shadow:
-    0 1px 2px rgba(12, 21, 40, 0.08),
-    0 4px 10px -4px rgba(12, 21, 40, 0.12);
+    0 1px 2px rgba(18, 16, 16, 0.08),
+    0 4px 10px -4px rgba(18, 16, 16, 0.12);
 }
 .segmented.small button {
   min-height: 34px;
@@ -1769,7 +1771,7 @@ textarea::placeholder {
   height: 22px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(12, 21, 40, 0.25);
+  box-shadow: 0 1px 3px rgba(18, 16, 16, 0.25);
   transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.3, 1.2);
 }
 .switch.on {
@@ -1790,11 +1792,11 @@ textarea::placeholder {
   align-items: stretch;
   padding: 0 6px;
   border-radius: 24px;
-  background: rgba(12, 21, 40, 0.94);
+  background: rgba(18, 16, 16, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px -16px rgba(12, 21, 40, 0.6);
+  box-shadow: 0 20px 40px -16px rgba(18, 16, 16, 0.6);
   z-index: 30;
 }
 .bottom-nav a,
@@ -1972,7 +1974,7 @@ textarea::placeholder {
   animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .toast.ok svg {
-  color: #7fd3bf;
+  color: #e6c47c;
 }
 .toast.warn svg {
   color: var(--brass-light);
@@ -1984,7 +1986,7 @@ textarea::placeholder {
 .sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(12, 21, 40, 0.52);
+  background: rgba(18, 16, 16, 0.52);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   display: flex;
@@ -2110,7 +2112,7 @@ textarea::placeholder {
   position: relative;
   overflow: hidden;
   color: #fff;
-  background: linear-gradient(180deg, var(--shell) 0%, #101c35 100%);
+  background: linear-gradient(180deg, var(--shell) 0%, #1a1714 100%);
 }
 .boot {
   display: flex;
