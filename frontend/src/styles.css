@@ -1848,8 +1848,10 @@ a.board-row:hover {
 
 .feles-panel-name {
   font-family: var(--font-serif);
-  font-size: 1.625rem;
-  line-height: 1.15;
+  /* One line, as large as the card allows - it is the whole point of the panel. */
+  font-size: clamp(1.5rem, 7.5vw, 2.125rem);
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .feles-panel-name b {
@@ -1886,6 +1888,7 @@ a.board-row:hover {
   .feles-panel {
     flex-direction: column;
     gap: 0.75rem;
+    padding: 1.1rem;
   }
 }
 
