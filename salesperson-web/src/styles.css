@@ -2325,6 +2325,7 @@ textarea::placeholder {
 .feles-credit span {
   font-size: 13.5px;
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .feles-credit b {
