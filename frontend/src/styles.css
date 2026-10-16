@@ -32,8 +32,8 @@
      the market are told apart by weight, not hue. */
   --brass: #c7952a;
   --brass-soft: #f4ebd6;
-  --supply: #3a3630;
-  --supply-soft: #efedea;
+  --supply: #416e59;
+  --supply-soft: #e9f1ec;
   --demand: #96701a;
   --demand-soft: #f7efdc;
 
@@ -1744,4 +1744,73 @@ a.board-row:hover {
   .portal-board.moved {
     animation: none;
   }
+}
+
+/* ============================================= who built this ============= */
+/*
+ * The maker's mark. On every surface, including the portal a customer opens,
+ * but quiet enough that it never competes with the desk's own work.
+ */
+.feles-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: opacity 140ms ease;
+}
+
+.feles-credit:hover {
+  opacity: 1;
+}
+
+.feles-credit img {
+  border-radius: 5px;
+  flex: none;
+}
+
+.feles-credit span {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}
+
+.feles-credit b {
+  font-weight: 600;
+}
+
+.feles-credit em {
+  font-style: normal;
+  font-size: 0.625rem;
+  opacity: 0.72;
+}
+
+.feles-credit.size-md span {
+  font-size: 0.75rem;
+}
+
+.feles-credit.tone-dark {
+  color: var(--shell-text);
+  opacity: 0.75;
+}
+
+.feles-credit.tone-light {
+  color: var(--mantine-color-ink-5);
+  opacity: 0.9;
+}
+
+/* In the sidebar it sits under the account, separated by the same hairline. */
+.shell-credit {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--shell-line);
+  display: flex;
+  justify-content: center;
+}
+
+.portal-credit {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: center;
 }

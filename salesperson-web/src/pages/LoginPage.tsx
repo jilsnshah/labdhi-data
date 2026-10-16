@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError, onServerWaking } from '@/api/client';
+import { FelesCredit } from '@/components/FelesCredit';
 import { Icon } from '@/components/Icon';
 import { WrongAppError, useAuth } from '@/lib/auth';
 
@@ -112,6 +113,9 @@ export function LoginPage() {
             </>
           )}
         </button>
+        <div className="login-credit">
+          <FelesCredit tone="light" />
+        </div>
         <div className="tiny login-foot">
           {waking
             ? 'The server wakes up on the first sign-in of the day. This can take a minute.'

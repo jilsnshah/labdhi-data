@@ -60,9 +60,9 @@
   --brass-light: #dcbc77;
   --brass-deep: #8a6612;
   --brass-soft: #f6eedb;
-  /* The two "colours" are weight, not hue: a deep neutral and the gold. */
-  --teal: #3a3630;
-  --teal-soft: #efedea;
+  /* Gold leads; a muted forest green marks what is done or good. */
+  --teal: #416e59;
+  --teal-soft: #e9f1ec;
   --indigo: #96701a;
   --indigo-soft: #f7efdc;
   --rust: #b5452f;
@@ -530,7 +530,7 @@ a {
   letter-spacing: 0.02em;
 }
 .avatar.tone-brass {
-  background: linear-gradient(145deg, #e6c47c, #b88620);
+  background: linear-gradient(145deg, #8fcdb1, #b88620);
   color: var(--ink-900);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
@@ -1015,7 +1015,7 @@ a {
 }
 .week-bar span {
   width: 100%;
-  background: linear-gradient(180deg, #e6c47c, var(--brass));
+  background: linear-gradient(180deg, #8fcdb1, var(--brass));
   border-radius: 4px;
 }
 .week-num {
@@ -1974,7 +1974,7 @@ textarea::placeholder {
   animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .toast.ok svg {
-  color: #e6c47c;
+  color: #8fcdb1;
 }
 .toast.warn svg {
   color: var(--brass-light);
@@ -2306,4 +2306,55 @@ textarea::placeholder {
   .logged-check {
     stroke-dashoffset: 0;
   }
+}
+
+/* ============================================= who built this ============= */
+.feles-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.feles-credit img {
+  border-radius: 5px;
+  flex: none;
+}
+
+.feles-credit span {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.feles-credit b {
+  font-weight: 600;
+}
+
+.feles-credit em {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.feles-credit.dark {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.feles-credit.light {
+  color: var(--ink-500);
+}
+
+.login-credit {
+  display: flex;
+  justify-content: center;
+  margin: 1.1rem 0 0.4rem;
+}
+
+.profile-credit {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
 }

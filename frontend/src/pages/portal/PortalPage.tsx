@@ -12,6 +12,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '@/api/client';
 import { ApiError } from '@/api/client';
 import type { PortalBid, PortalHome } from '@/api/types';
+import { FelesCredit } from '@/components/FelesCredit';
 import { formatDateTime, formatQuantity } from '@/lib/format';
 
 const unitOf = (bid: PortalBid) => (bid.bid_type === 'TRANSPORT' ? '₹' : '₹/kg');
@@ -372,7 +373,10 @@ function PortalHeader({ name, back }: { name: string; back?: string }) {
 function PortalFoot() {
   return (
     <footer className="portal-foot">
-      Offers are private. Other bidders never see your name or your price.
+      <div>Offers are private. Other bidders never see your name or your price.</div>
+      <div className="portal-credit">
+        <FelesCredit />
+      </div>
     </footer>
   );
 }

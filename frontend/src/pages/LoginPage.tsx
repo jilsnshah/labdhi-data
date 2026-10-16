@@ -1,9 +1,10 @@
-import { Alert, Box, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Box, Button, Group, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
 import { IconArrowRight, IconInfoCircle } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
+import { FelesCredit } from '@/components/FelesCredit';
 import { useAuth } from '@/lib/auth';
 
 /** Decorative board for the brand panel - illustrative rows, not live data. */
@@ -142,7 +143,10 @@ export function LoginPage() {
               )}
             </Stack>
           </form>
-          <Text fz="xs" c="ink.4" mt="xl">
+          <Group justify="center" mt="xl" mb="xs">
+            <FelesCredit size="md" />
+          </Group>
+          <Text fz="xs" c="ink.4" mt="sm">
             {import.meta.env.DEV && 'Demo: admin@tradercrm.in / admin123 · '}
             Field staff sign in on the phone app.
           </Text>

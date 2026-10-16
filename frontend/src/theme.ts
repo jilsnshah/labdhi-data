@@ -1,17 +1,18 @@
 import { createTheme, type MantineColorsTuple } from '@mantine/core';
 
 /**
- * House style: gold, black and white. A commodity trading desk, not a SaaS
- * admin panel.
+ * House style: gold on warm black, over ivory. A commodity trading desk, not a
+ * SaaS admin panel.
  *
- * A near-black shell frames a warm ivory working surface, and gold is the only
- * accent - used sparingly, for the thing that matters on a screen. The two
- * sides of the market are told apart by weight rather than hue: supply sits in
- * the dark neutral, demand in gold.
+ * Gold is the house accent and carries the brand - the shell, the headings,
+ * the thing that matters on a screen. Two muted colours earn their place
+ * beside it rather than competing with it: a deep forest green for what is
+ * good (a live account, a won bid, the supply side of the market) and a dull
+ * red for what is wrong. Both are desaturated enough to sit under gold, which
+ * stays the loudest thing in the room.
  *
- * The one colour outside the palette is a muted red, kept strictly for what is
- * wrong or about to be destroyed. A warning that does not look like a warning
- * is a hazard, so that exception earns its place.
+ * Making everything gold was tried and does not work: when every state is the
+ * accent colour, no state reads at all.
  *
  * Type: a serif for titles and headline figures, a crisp grotesk for the UI,
  * and a tabular mono for every rate so columns of prices line up like a board.
@@ -59,18 +60,18 @@ const brass: MantineColorsTuple = [
   '#86620c',
 ];
 
-/** Supply side of the market: the dark neutral, opposite gold. */
+/** Supply side of the market: a deep, muted forest beside the gold. */
 const teal: MantineColorsTuple = [
-  '#f2f1ef',
-  '#e3e1dc',
-  '#c8c4bc',
-  '#aaa49a',
-  '#8d8679',
-  '#726b5f',
-  '#5a5349',
-  '#433d35',
-  '#2c2823',
-  '#1a1714',
+  '#eef3f0',
+  '#dbe6e0',
+  '#b7cdc1',
+  '#92b2a1',
+  '#749c88',
+  '#5f8e77',
+  '#52856d',
+  '#416e59',
+  '#38614e',
+  '#2a4b3c',
 ];
 
 /** Attention: waiting, follow-up required, overdue. */
@@ -101,18 +102,18 @@ const rust: MantineColorsTuple = [
   '#6e2f29',
 ];
 
-/** Positive: margin, completed, active. Gold, not green. */
+/** Positive: margin, completed, active. Muted enough to sit under gold. */
 const moss: MantineColorsTuple = [
-  '#fbf6e9',
-  '#f3e9cf',
-  '#e6d29d',
-  '#d7b969',
-  '#caa441',
-  '#c29629',
-  '#a98319',
-  '#8b6c15',
-  '#6e5511',
-  '#53400c',
+  '#eff4f0',
+  '#dde8e1',
+  '#bbd2c3',
+  '#97b9a4',
+  '#7aa48b',
+  '#67977c',
+  '#5b9072',
+  '#49785d',
+  '#3f6a52',
+  '#315544',
 ];
 
 export const FONT_SANS =

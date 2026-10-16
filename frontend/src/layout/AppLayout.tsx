@@ -42,6 +42,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 
+import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
@@ -330,6 +331,9 @@ export function AppLayout() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <div className="shell-credit">
+            <FelesCredit tone="dark" />
+          </div>
         </AppShell.Section>
       </AppShell.Navbar>
 

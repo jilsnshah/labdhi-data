@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ApiError } from '@/api/client';
 import { useChangePassword, useRefreshAll, useStats } from '@/api/hooks';
 import type { FieldStats } from '@/api/types';
+import { FelesCredit } from '@/components/FelesCredit';
 import { Icon, type IconName } from '@/components/Icon';
 import { Avatar, Banner, Screen, SectionTitle, Sheet } from '@/components/Shell';
 import { useAuth } from '@/lib/auth';
@@ -112,6 +113,9 @@ export function ProfilePage() {
           </span>
           <span className="grow">Log out</span>
         </button>
+      </div>
+      <div className="profile-credit">
+        <FelesCredit tone="light" />
       </div>
       <div className="tiny muted" style={{ textAlign: 'center', margin: '18px 0 6px' }}>
         {isNative

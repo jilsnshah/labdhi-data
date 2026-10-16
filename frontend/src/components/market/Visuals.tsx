@@ -13,11 +13,11 @@ import { fmtRate } from '@/lib/market';
 
 /** Deep, desaturated tones - a party's colour is stable, never loud. */
 const AVATAR_TONES = [
-  ['#231f1b', '#3a3630'],
+  ['#231f1b', '#416e59'],
   ['#96701a', '#6e5511'],
-  ['#555049', '#3a3630'],
+  ['#555049', '#416e59'],
   ['#b4871f', '#8b6c15'],
-  ['#3a3630', '#231f1b'],
+  ['#416e59', '#231f1b'],
   ['#726e67', '#555049'],
   ['#8b3c35', '#6e2f29'],
   ['#caa441', '#a98319'],
@@ -122,7 +122,7 @@ export function Sparkline({
 /* ----------------------------------------------------------- market meter */
 
 /**
- * Where quotes sit on one price axis: supply in the dark neutral, demand in gold,
+ * Where quotes sit on one price axis: supply in forest green, demand in gold,
  * the highlighted quote as a brass marker. Read at a glance: is this cheap?
  */
 export function MarketMeter({
@@ -178,7 +178,7 @@ export function MarketMeter({
             left: `${supplyBand.left}%`,
             width: `${Math.max(supplyBand.right - supplyBand.left, 0.8)}%`,
             background: 'var(--supply-soft)',
-            border: '1px solid rgba(58,54,48,0.35)',
+            border: '1px solid rgba(65,110,89,0.35)',
             borderRadius: 4,
           }}
         />
@@ -327,7 +327,7 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
       <path
         d={path('supply')}
         fill="none"
-        stroke="#3a3630"
+        stroke="#416e59"
         strokeWidth={2}
         strokeLinejoin="round"
       />
@@ -345,8 +345,8 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
           cx={x(new Date(q.createdAt).getTime())}
           cy={y(q.rate)}
           r={q.active ? 4.5 : 3.5}
-          fill={q.active ? (q.side === 'supply' ? '#3a3630' : '#c7952a') : '#fff'}
-          stroke={q.side === 'supply' ? '#3a3630' : '#c7952a'}
+          fill={q.active ? (q.side === 'supply' ? '#416e59' : '#c7952a') : '#fff'}
+          stroke={q.side === 'supply' ? '#416e59' : '#c7952a'}
           strokeWidth={2}
         >
           <title>{`${q.partyName} · ₹${q.rate.toFixed(2)}/kg${q.active ? '' : ' (closed)'}`}</title>
@@ -359,7 +359,7 @@ export function TrendChart({ quotes, height = 220 }: { quotes: Quote[]; height?:
 /* ------------------------------------------------------------ spread strip */
 
 /**
- * One row of the board as a picture: every offer (dark) and every bid (gold)
+ * One row of the board as a picture: every offer (green) and every bid (gold)
  * on a shared price axis, with the gap between the best of each shaded - green
  * when you can buy below what you can sell, red when you cannot.
  */
@@ -403,7 +403,7 @@ export function SpreadStrip({
           style={{
             left: `${pos(Math.min(bestBuy, bestSell))}%`,
             width: `${Math.abs(pos(bestSell) - pos(bestBuy))}%`,
-            background: bestSell >= bestBuy ? 'rgba(199,149,42,0.26)' : 'rgba(200,90,82,0.22)',
+            background: bestSell >= bestBuy ? 'rgba(73,120,93,0.22)' : 'rgba(200,90,82,0.22)',
             borderRadius: 3,
           }}
         />

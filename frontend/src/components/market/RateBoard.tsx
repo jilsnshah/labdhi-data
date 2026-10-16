@@ -27,7 +27,7 @@ function Side({ quote, side }: { quote: Quote | null; side: 'supply' | 'demand' 
         fz={17}
         fw={600}
         className="figure"
-        c={side === 'supply' ? 'ink.8' : 'accent.7'}
+        c={side === 'supply' ? 'teal.8' : 'accent.7'}
         style={{ lineHeight: 1.2 }}
       >
         {fmtRate(quote.rate)}

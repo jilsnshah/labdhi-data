@@ -142,7 +142,7 @@ export function DashboardPage() {
             value={counts?.open_supplier_inquiries}
             hint={`${fmtTonnes(supplyTonnes)} on offer`}
             spark={dailyCounts((supplyRows?.items ?? []).map((r) => r.created_at))}
-            color="#bdb9b1"
+            color="#92b2a1"
           />
           <HeroKpi
             to="/inquiries/supplier"
