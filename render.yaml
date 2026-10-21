@@ -43,6 +43,17 @@ services:
       # The two web apps, plus the origins the APK's WebView uses.
       - key: CORS_ORIGINS
         value: https://labdhi-crm.onrender.com,https://labdhi-field.onrender.com,https://localhost,capacitor://localhost
+      # Bid links are opened on someone else's phone, so they are built from
+      # this and not from whatever host the desk happens to be on.
+      - key: PORTAL_BASE_URL
+        value: https://labdhi-crm.onrender.com
+      # WhatsApp, for sending a bidder their own link when a bid opens. Set in
+      # the dashboard, never here. Until both are set nothing is sent: every
+      # participant is recorded SKIPPED and the desk copies links by hand.
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
 
   - type: web
     name: labdhi-crm
