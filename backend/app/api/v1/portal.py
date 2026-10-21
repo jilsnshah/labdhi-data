@@ -18,8 +18,9 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Path, Request
 
+from app.core.config import settings
 from app.core.deps import SessionDep
-from app.core.errors import ValidationError
+from app.core.errors import RateLimitError
 from app.schemas.bid import PortalBid, PortalHome, PortalQuoteRequest
 from app.services import bids as service
 
@@ -31,8 +32,12 @@ CODE = Path(min_length=16, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
 #: Crude in-process throttle. The portal is the one public surface, so guessing
 #: codes must be slow even though a code has 128 bits of entropy behind it.
 _WINDOW_SECONDS = 60
-_MAX_PER_WINDOW = 60
 _hits: dict[str, list[float]] = defaultdict(list)
+
+
+def reset_throttle() -> None:
+    """Forget every caller. For tests, and for a process that has been idle."""
+    _hits.clear()
 
 
 def _throttle(request: Request) -> None:
@@ -41,8 +46,8 @@ def _throttle(request: Request) -> None:
     recent = [stamp for stamp in _hits[caller] if now - stamp < _WINDOW_SECONDS]
     recent.append(now)
     _hits[caller] = recent
-    if len(recent) > _MAX_PER_WINDOW:
-        raise ValidationError("Too many requests. Please wait a moment and try again.")
+    if len(recent) > settings.portal_rate_limit_per_minute:
+        raise RateLimitError("Too many requests. Please wait a moment and try again.")
 
 
 @router.get("/{code}", response_model=PortalHome)

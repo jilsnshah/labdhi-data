@@ -44,50 +44,30 @@ def _public_base(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
+def _quote_out(quote, winner_id: int | None) -> BidQuoteOut:
+    return BidQuoteOut(
+        id=quote.id,
+        participant_id=quote.participant_id,
+        price=quote.price,
+        quantity=quote.quantity,
+        notes=quote.notes,
+        submitted_at=quote.submitted_at,
+        revision=quote.revision,
+        party=quote.participant.party,
+        is_winner=quote.id == winner_id,
+    )
+
+
 def _detail(session, bid, base_url: str) -> BidDetailOut:
-    links = service.participant_links(session, bid, base_url)
-    quotes = service.quotes_of(bid)
-    winner_id = bid.winner_quote_id
-
-    quote_out = [
-        BidQuoteOut(
-            id=quote.id,
-            participant_id=quote.participant_id,
-            price=quote.price,
-            quantity=quote.quantity,
-            notes=quote.notes,
-            submitted_at=quote.submitted_at,
-            revision=quote.revision,
-            party=quote.participant.party,
-            is_winner=quote.id == winner_id,
-        )
-        for quote in quotes
-    ]
-    by_participant = {quote.participant_id: quote for quote in quote_out}
-
-    participants = [
-        BidParticipantOut(
-            id=participant.id,
-            party=participant.party,
-            first_opened_at=participant.first_opened_at,
-            last_opened_at=participant.last_opened_at,
-            quote=by_participant.get(participant.id),
-            bid_link=links[participant.id][0],
-            portal_link=links[participant.id][1],
-        )
-        for participant in sorted(bid.participants, key=lambda p: p.party.name.lower())
-    ]
-
-    # Built explicitly: the participant rows carry links that exist only here,
-    # so the ORM object cannot be validated straight into the detail shape.
+    counts = service.counts_for(session, bid.id)
     base = BidOut.model_validate(bid).model_dump()
     base["title"] = service.describe(bid)
     return BidDetailOut(
         **base,
-        participants=participants,
-        quotes=quote_out,
-        winner=by_participant.get(bid.winner_quote.participant_id if bid.winner_quote else -1),
-        best_price=service.best_price(bid),
+        participant_count=counts[0],
+        quote_count=counts[1],
+        winner=_quote_out(bid.winner_quote, bid.winner_quote_id) if bid.winner_quote else None,
+        best_price=service.best_price_of(session, bid),
     )
 
 
@@ -205,10 +185,82 @@ def award_bid(
     return _detail(session, bid, _public_base(request))
 
 
-@router.get("/{bid_id}/history", response_model=list[BidEvent])
-def bid_history(bid_id: int, session: SessionDep, _: StaffUser) -> list[BidEvent]:
+@router.get("/{bid_id}/quotes", response_model=Page[BidQuoteOut])
+def list_quotes(
+    bid_id: int,
+    session: SessionDep,
+    _: StaffUser,
+    params: PageParams = Depends(page_params),
+    q: str | None = Query(None, description="Participant name"),
+    sort_by: str | None = Query(None, pattern="^(price|submitted_at|revision)$"),
+    sort_dir: str | None = Query(None, pattern="^(asc|desc)$"),
+) -> Page[BidQuoteOut]:
+    """The offers on this bid, best first unless asked otherwise."""
+    bid = service.get_bid(session, bid_id)
+    rows, total = service.list_quotes(
+        session, bid_id, params, q=q, sort_by=sort_by, sort_dir=sort_dir
+    )
+    return Page.build([_quote_out(row, bid.winner_quote_id) for row in rows], total, params)
+
+
+@router.get("/{bid_id}/participants", response_model=Page[BidParticipantOut])
+def list_participants(
+    bid_id: int,
+    session: SessionDep,
+    _: StaffUser,
+    request: Request,
+    params: PageParams = Depends(page_params),
+    q: str | None = Query(None, description="Participant name"),
+    quoted: bool | None = Query(None, description="Only those who have, or have not, quoted"),
+    opened: bool | None = Query(None, description="Only those who have, or have not, opened it"),
+    sort_by: str | None = Query(None, pattern="^(name|created_at|last_opened_at)$"),
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
+) -> Page[BidParticipantOut]:
+    """Everyone invited, with their link and whether they have answered."""
+    bid = service.get_bid(session, bid_id)
+    rows, total = service.list_participants(
+        session,
+        bid_id,
+        params,
+        q=q,
+        quoted=quoted,
+        opened=opened,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+    base_url = _public_base(request)
+    out = []
+    for participant in rows:
+        code = service.portal_code(session, participant.party)
+        out.append(
+            BidParticipantOut(
+                id=participant.id,
+                party=participant.party,
+                first_opened_at=participant.first_opened_at,
+                last_opened_at=participant.last_opened_at,
+                quote=(
+                    _quote_out(participant.quote, bid.winner_quote_id)
+                    if participant.quote
+                    else None
+                ),
+                bid_link=f"{base_url}/portal/{code}/{bid.id}",
+                portal_link=f"{base_url}/portal/{code}",
+            )
+        )
+    return Page.build(out, total, params)
+
+
+@router.get("/{bid_id}/history", response_model=Page[BidEvent])
+def bid_history(
+    bid_id: int,
+    session: SessionDep,
+    _: StaffUser,
+    params: PageParams = Depends(page_params),
+) -> Page[BidEvent]:
+    """What happened to this bid, newest first."""
     service.get_bid(session, bid_id)  # 404 for an unknown bid
-    return service.history(session, bid_id)
+    rows, total = service.history(session, bid_id, params)
+    return Page.build(rows, total, params)
 
 
 @router.get("/{bid_id}/links", response_model=Message)

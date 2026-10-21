@@ -153,8 +153,15 @@ class BidOut(ORMBase):
 
 
 class BidDetailOut(BidOut):
-    participants: list[BidParticipantOut] = Field(default_factory=list)
-    quotes: list[BidQuoteOut] = Field(default_factory=list)
+    """The bid itself and where it stands.
+
+    The room is deliberately not here: a bid can hold a hundred participants,
+    so the quotations and the participants are served by their own paginated
+    endpoints rather than riding along with every poll of this one.
+    """
+
+    participant_count: int = 0
+    quote_count: int = 0
     winner: BidQuoteOut | None = None
     best_price: Decimal | None = None
 

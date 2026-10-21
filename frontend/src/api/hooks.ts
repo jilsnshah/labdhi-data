@@ -27,6 +27,8 @@ import type {
   BidDetail,
   BidEvent,
   BidListItem,
+  BidParticipant,
+  BidQuote,
   PartyBookSummary,
   PartyDetail,
   PartyListItem,
@@ -182,10 +184,28 @@ export const useBid = (id?: number) =>
     refetchOnWindowFocus: true,
   });
 
-export const useBidHistory = (id?: number, live = false) =>
+/** The offers on one bid, a page at a time - a hundred may be bidding. */
+export const useBidQuotes = (id: number | undefined, params: Params = {}, live = false) =>
   useQuery({
-    queryKey: ['bid-history', id],
-    queryFn: () => api.get<BidEvent[]>(`/bids/${id}/history`),
+    ...listQuery<BidQuote>(`bid-quotes-${id}`, `/bids/${id}/quotes`, params),
+    enabled: Boolean(id),
+    refetchInterval: live ? LIVE_MS : false,
+    refetchIntervalInBackground: false,
+  });
+
+/** Everyone invited, a page at a time, with their links. */
+export const useBidParticipants = (id: number | undefined, params: Params = {}, live = false) =>
+  useQuery({
+    ...listQuery<BidParticipant>(`bid-participants-${id}`, `/bids/${id}/participants`, params),
+    enabled: Boolean(id),
+    refetchInterval: live ? LIVE_MS : false,
+    refetchIntervalInBackground: false,
+  });
+
+/** The latest entries only: a busy auction writes hundreds of them. */
+export const useBidHistory = (id?: number, live = false, params: Params = {}) =>
+  useQuery({
+    ...listQuery<BidEvent>(`bid-history-${id}`, `/bids/${id}/history`, { page_size: 8, ...params }),
     enabled: Boolean(id),
     refetchInterval: live ? LIVE_MS : false,
     refetchIntervalInBackground: false,

@@ -350,8 +350,8 @@ export interface BidDetail {
   awarded_at: string | null;
   creator: IdName | null;
   closer: IdName | null;
-  participants: BidParticipant[];
-  quotes: BidQuote[];
+  participant_count: number;
+  quote_count: number;
   winner: BidQuote | null;
   best_price: string | null;
 }

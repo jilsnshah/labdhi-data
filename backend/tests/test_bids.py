@@ -28,7 +28,20 @@ def bid(client, auth, masters, parties):
     assert created.status_code == 201, created.text
     bid_id = created.json()["id"]
     client.post(f"/api/v1/bids/{bid_id}/publish", headers=auth)
-    return client.get(f"/api/v1/bids/{bid_id}", headers=auth).json()
+    detail = client.get(f"/api/v1/bids/{bid_id}", headers=auth).json()
+    detail["participants"] = participants_of(client, auth, bid_id)
+    return detail
+
+
+def quotes_of(client, auth, bid_id: int, **params) -> list[dict]:
+    """The offers on a bid, from the paginated endpoint the desk uses."""
+    return client.get(f"/api/v1/bids/{bid_id}/quotes", params=params, headers=auth).json()["items"]
+
+
+def participants_of(client, auth, bid_id: int, **params) -> list[dict]:
+    return client.get(f"/api/v1/bids/{bid_id}/participants", params=params, headers=auth).json()[
+        "items"
+    ]
 
 
 def code_of(bid: dict, party_id: int) -> str:
@@ -55,6 +68,7 @@ def test_a_bid_starts_as_a_draft_and_is_invisible_until_opened(client, auth, mas
     ).json()
     assert created["status"] == "DRAFT"
 
+    created["participants"] = participants_of(client, auth, created["id"])
     code = code_of(created, parties["customer"])
     assert client.get(f"/api/v1/portal/{code}/bids/{created['id']}").status_code == 404
     assert client.get(f"/api/v1/portal/{code}").json()["open_bids"] == []
@@ -161,7 +175,7 @@ def test_selling_rewards_the_highest_and_buying_the_lowest(client, auth, masters
     ).json()
     client.post(f"/api/v1/bids/{buying['id']}/publish", headers=auth)
     supplier_code = code_of(
-        client.get(f"/api/v1/bids/{buying['id']}", headers=auth).json(), parties["supplier"]
+        {"participants": participants_of(client, auth, buying["id"])}, parties["supplier"]
     )
     quote(client, supplier_code, buying["id"], "88")
     seen = client.get(f"/api/v1/portal/{supplier_code}/bids/{buying['id']}").json()
@@ -220,11 +234,11 @@ def test_a_quote_can_be_replaced_while_the_bid_is_open(client, auth, bid, partie
     assert second["my_quote"]["revision"] == 2
 
     # The desk sees one standing offer, not two.
-    desk = client.get(f"/api/v1/bids/{bid['id']}", headers=auth).json()
-    assert len(desk["quotes"]) == 1
-    assert desk["quotes"][0]["price"] == "94.25"
+    desk = quotes_of(client, auth, bid["id"])
+    assert len(desk) == 1
+    assert desk[0]["price"] == "94.25"
     # ...and the history keeps both.
-    events = client.get(f"/api/v1/bids/{bid['id']}/history", headers=auth).json()
+    events = client.get(f"/api/v1/bids/{bid['id']}/history", headers=auth).json()["items"]
     quoted = [event for event in events if event["action"] == "QUOTE"]
     assert len(quoted) == 2
 
@@ -262,7 +276,7 @@ def test_closing_freezes_the_quotations(client, auth, bid, parties):
 
     closed = client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth).json()
     assert closed["status"] == "CLOSED"
-    assert len(closed["quotes"]) == 1, "quotations are kept"
+    assert len(quotes_of(client, auth, bid["id"])) == 1, "quotations are kept"
 
     refused = quote(client, code, bid["id"], "99")
     assert refused.status_code == 409
@@ -279,7 +293,7 @@ def test_closing_without_a_winner_is_recorded_as_such(client, auth, bid, parties
     assert closed["status"] == "CLOSED"
     assert closed["no_winner"] is True
     assert closed["winner"] is None
-    assert len(closed["quotes"]) == 1
+    assert len(quotes_of(client, auth, bid["id"])) == 1
 
 
 def test_the_desk_picks_the_winner_by_judgement_not_by_price(client, auth, bid, parties):
@@ -289,11 +303,11 @@ def test_the_desk_picks_the_winner_by_judgement_not_by_price(client, auth, bid, 
     quote(client, second, bid["id"], "97")
     client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
 
-    detail = client.get(f"/api/v1/bids/{bid['id']}", headers=auth).json()
-    assert [q["price"] for q in detail["quotes"]] == ["97.00", "90.00"], "best first"
+    rows = quotes_of(client, auth, bid["id"])
+    assert [q["price"] for q in rows] == ["97.00", "90.00"], "best first"
 
     # Award the lower offer: the desk's call, not the arithmetic.
-    lower = next(q for q in detail["quotes"] if q["price"] == "90.00")
+    lower = next(q for q in rows if q["price"] == "90.00")
     awarded = client.post(
         f"/api/v1/bids/{bid['id']}/award", json={"quote_id": lower["id"]}, headers=auth
     ).json()
@@ -307,10 +321,9 @@ def test_a_winner_cannot_be_chosen_before_closing(client, auth, bid, parties):
     code = code_of(bid, parties["customer"])
     quoted = quote(client, code, bid["id"], "93")
     assert quoted.status_code == 200
-    detail = client.get(f"/api/v1/bids/{bid['id']}", headers=auth).json()
     response = client.post(
         f"/api/v1/bids/{bid['id']}/award",
-        json={"quote_id": detail["quotes"][0]["id"]},
+        json={"quote_id": quotes_of(client, auth, bid["id"])[0]["id"]},
         headers=auth,
     )
     assert response.status_code == 409
@@ -322,10 +335,9 @@ def test_the_winner_is_not_announced_to_the_participants(client, auth, bid, part
     quote(client, first, bid["id"], "90")
     quote(client, second, bid["id"], "97")
     client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
-    detail = client.get(f"/api/v1/bids/{bid['id']}", headers=auth).json()
     client.post(
         f"/api/v1/bids/{bid['id']}/award",
-        json={"quote_id": detail["quotes"][0]["id"]},
+        json={"quote_id": quotes_of(client, auth, bid["id"])[0]["id"]},
         headers=auth,
     )
 
@@ -340,9 +352,9 @@ def test_the_bid_keeps_its_own_history(client, auth, bid, parties):
     client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
     actions = [
         event["action"]
-        for event in client.get(f"/api/v1/bids/{bid['id']}/history", headers=auth).json()
+        for event in client.get(f"/api/v1/bids/{bid['id']}/history", headers=auth).json()["items"]
     ]
-    assert actions[0] == "CREATE"
+    assert actions[-1] == "CREATE", "newest first, so the raising is last"
     assert "PUBLISH" in actions
     assert "QUOTE" in actions
     assert "CLOSE" in actions
@@ -403,3 +415,126 @@ def test_a_transport_bid_is_found_by_either_end_of_its_route(client, auth, parti
     assert client.get("/api/v1/bids", params={"area": "Nowhere"}, headers=auth).json()["total"] == 0
     # Asking what the material is excludes transport, which carries none.
     assert client.get("/api/v1/bids", params={"material_id": 1}, headers=auth).json()["total"] == 0
+
+
+# --- a room of a hundred ----------------------------------------------------- #
+@pytest.fixture
+def crowded(client, auth, masters):
+    """One bid, sixty customers invited, forty of them quoting."""
+    ids = []
+    for index in range(60):
+        party = client.post(
+            "/api/v1/parties",
+            json={"name": f"Bidder {index:03d}", "party_type": "CUSTOMER"},
+            headers=auth,
+        ).json()
+        ids.append(party["id"])
+
+    created = client.post(
+        "/api/v1/bids",
+        json={
+            "bid_type": "CUSTOMER",
+            "product_id": masters["product_id"],
+            "quantity": "500",
+            "party_ids": ids,
+        },
+        headers=auth,
+    ).json()
+    client.post(f"/api/v1/bids/{created['id']}/publish", headers=auth)
+
+    rows = participants_of(client, auth, created["id"], page_size=100)
+    for index, participant in enumerate(rows[:40]):
+        code = participant["bid_link"].split("/portal/")[1].split("/")[0]
+        quote(client, code, created["id"], str(90 + index))
+    return created["id"]
+
+
+def test_a_crowded_bid_is_served_a_page_at_a_time(client, auth, crowded):
+    """Sixty participants must not arrive in one payload."""
+    detail = client.get(f"/api/v1/bids/{crowded}", headers=auth).json()
+    assert detail["participant_count"] == 60
+    assert detail["quote_count"] == 40
+    assert "participants" not in detail, "the room is fetched separately"
+    assert "quotes" not in detail
+
+    first = client.get(
+        f"/api/v1/bids/{crowded}/quotes", params={"page_size": 10}, headers=auth
+    ).json()
+    assert first["total"] == 40
+    assert len(first["items"]) == 10
+    second = client.get(
+        f"/api/v1/bids/{crowded}/quotes", params={"page_size": 10, "page": 2}, headers=auth
+    ).json()
+    assert {row["id"] for row in first["items"]}.isdisjoint({row["id"] for row in second["items"]})
+
+
+def test_the_best_offer_is_on_the_first_page(client, auth, crowded):
+    """Best first, across the whole bid - not merely the page."""
+    page = client.get(
+        f"/api/v1/bids/{crowded}/quotes", params={"page_size": 5}, headers=auth
+    ).json()
+    prices = [float(row["price"]) for row in page["items"]]
+    assert prices == sorted(prices, reverse=True), "selling: highest leads"
+    detail = client.get(f"/api/v1/bids/{crowded}", headers=auth).json()
+    assert float(detail["best_price"]) == prices[0]
+
+
+def test_the_desk_can_sort_the_offers_the_other_way(client, auth, crowded):
+    cheapest = client.get(
+        f"/api/v1/bids/{crowded}/quotes",
+        params={"sort_by": "price", "sort_dir": "asc", "page_size": 3},
+        headers=auth,
+    ).json()["items"]
+    prices = [float(row["price"]) for row in cheapest]
+    assert prices == sorted(prices)
+
+
+def test_a_participant_can_be_found_by_name(client, auth, crowded):
+    found = client.get(
+        f"/api/v1/bids/{crowded}/participants", params={"q": "Bidder 042"}, headers=auth
+    ).json()
+    assert found["total"] == 1
+    assert found["items"][0]["party"]["name"] == "Bidder 042"
+
+    quotes = client.get(
+        f"/api/v1/bids/{crowded}/quotes", params={"q": "Bidder 00"}, headers=auth
+    ).json()
+    assert 0 < quotes["total"] < 40, "narrowed to the matching names"
+
+
+def test_the_desk_can_see_who_has_not_answered(client, auth, crowded):
+    silent = client.get(
+        f"/api/v1/bids/{crowded}/participants",
+        params={"quoted": False, "page_size": 100},
+        headers=auth,
+    ).json()
+    assert silent["total"] == 20
+    assert all(row["quote"] is None for row in silent["items"])
+
+    answered = client.get(
+        f"/api/v1/bids/{crowded}/participants", params={"quoted": True}, headers=auth
+    ).json()
+    assert answered["total"] == 40
+
+
+def test_listing_bids_does_not_drag_in_the_rooms(client, auth, crowded):
+    """The counts on a list row are counted in the database, not in Python."""
+    row = next(
+        item
+        for item in client.get("/api/v1/bids", headers=auth).json()["items"]
+        if item["id"] == crowded
+    )
+    assert row["participant_count"] == 60
+    assert row["quote_count"] == 40
+    assert row["best_price"] is not None
+
+
+def test_a_busy_auction_does_not_return_its_whole_history(client, auth, crowded):
+    """Forty quotations write forty lines; the rail asks for the latest few."""
+    page = client.get(
+        f"/api/v1/bids/{crowded}/history", params={"page_size": 10}, headers=auth
+    ).json()
+    assert page["total"] > 40
+    assert len(page["items"]) == 10
+    stamps = [event["at"] for event in page["items"]]
+    assert stamps == sorted(stamps, reverse=True), "newest first"

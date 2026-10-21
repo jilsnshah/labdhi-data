@@ -456,7 +456,10 @@ th.wrap,
   align-items: start;
 }
 
-@media (max-width: 1100px) {
+/* Below this the rail and a table cannot both have room: a 340px rail leaves
+   under 600px for the work, which is narrower than a quotations table. The
+   rail goes above instead, and the table gets the width. */
+@media (max-width: 1360px) {
   .detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -474,7 +477,7 @@ th.wrap,
   overflow-y: auto;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1360px) {
   .detail-rail {
     position: static;
     max-height: none;

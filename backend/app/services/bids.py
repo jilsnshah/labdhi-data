@@ -12,6 +12,7 @@ Two audiences, two sets of rules, both enforced here rather than in the UI:
 from __future__ import annotations
 
 import secrets
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -59,6 +60,51 @@ DETAIL_LOADERS = (
 )
 
 SORTABLE = {"created_at", "closes_at", "status", "quantity", "id"}
+QUOTE_SORTABLE = {"price", "submitted_at", "revision"}
+PARTICIPANT_SORTABLE = {"name", "created_at", "last_opened_at"}
+
+
+def _counts(session: Session, bid_ids: Sequence[int]) -> dict[int, tuple[int, int]]:
+    """Participants and quotations per bid, counted in the database.
+
+    A bid can hold a hundred participants; loading them to call len() would
+    make the list page grow with the size of the rooms it is listing.
+    """
+    if not bid_ids:
+        return {}
+    rows = session.execute(
+        select(
+            BidParticipant.bid_id,
+            func.count(BidParticipant.id),
+            func.count(BidQuote.id),
+        )
+        .select_from(BidParticipant)
+        .outerjoin(BidQuote, BidQuote.participant_id == BidParticipant.id)
+        .where(BidParticipant.bid_id.in_(bid_ids))
+        .group_by(BidParticipant.bid_id)
+    ).all()
+    return {bid_id: (participants, quotes) for bid_id, participants, quotes in rows}
+
+
+def _best_prices(session: Session, bids: Sequence[Bid]) -> dict[int, Decimal | None]:
+    """The price to beat per bid: the highest when selling, the lowest when buying."""
+    if not bids:
+        return {}
+    highest = [bid.id for bid in bids if bid.best_is_highest]
+    lowest = [bid.id for bid in bids if not bid.best_is_highest]
+    best: dict[int, Decimal | None] = {}
+    for ids, aggregate in ((highest, func.max), (lowest, func.min)):
+        if not ids:
+            continue
+        rows = session.execute(
+            select(BidParticipant.bid_id, aggregate(BidQuote.price))
+            .select_from(BidQuote)
+            .join(BidParticipant, BidParticipant.id == BidQuote.participant_id)
+            .where(BidParticipant.bid_id.in_(ids))
+            .group_by(BidParticipant.bid_id)
+        ).all()
+        best.update(dict(rows))
+    return best
 
 
 # --------------------------------------------------------------------------- #
@@ -473,7 +519,8 @@ def list_bids(
     sort_by: str | None = None,
     sort_dir: str = "desc",
 ) -> tuple[list[BidListItem], int]:
-    stmt = select(Bid).options(*DETAIL_LOADERS)
+    # No participant loading here: the row needs counts, not the room.
+    stmt = select(Bid)
     stmt = _apply_filters(
         stmt,
         bid_type=bid_type,
@@ -492,11 +539,19 @@ def list_bids(
     column = getattr(Bid, sort_by if sort_by in SORTABLE else "created_at")
     stmt = stmt.order_by(column.desc() if sort_dir.lower() == "desc" else column.asc())
     rows, total = paginate(session, stmt, params)
-    return [to_list_item(bid) for bid in rows], total
+
+    counts = _counts(session, [bid.id for bid in rows])
+    best = _best_prices(session, rows)
+    return [to_list_item(bid, counts=counts, best=best) for bid in rows], total
 
 
-def to_list_item(bid: Bid) -> BidListItem:
-    quotes = quotes_of(bid)
+def to_list_item(
+    bid: Bid,
+    *,
+    counts: dict[int, tuple[int, int]] | None = None,
+    best: dict[int, Decimal | None] | None = None,
+) -> BidListItem:
+    participant_count, quote_count = (counts or {}).get(bid.id, (0, 0))
     winner = bid.winner_quote
     return BidListItem(
         id=bid.id,
@@ -510,9 +565,9 @@ def to_list_item(bid: Bid) -> BidListItem:
         pickup_name=bid.pickup_location.display_name if bid.pickup_location else None,
         delivery_name=bid.delivery_location.display_name if bid.delivery_location else None,
         closes_at=bid.closes_at,
-        participant_count=len(bid.participants),
-        quote_count=len(quotes),
-        best_price=best_price(bid),
+        participant_count=participant_count,
+        quote_count=quote_count,
+        best_price=(best or {}).get(bid.id),
         winner_party_name=winner.participant.party.name if winner else None,
         no_winner=bid.no_winner,
         created_by=bid.created_by,
@@ -523,13 +578,115 @@ def to_list_item(bid: Bid) -> BidListItem:
     )
 
 
-def history(session: Session, bid_id: int) -> list[BidEvent]:
-    """What happened to this bid, from the audit log."""
-    rows = session.execute(
+def counts_for(session: Session, bid_id: int) -> tuple[int, int]:
+    """(participants, quotations) for one bid, counted in the database."""
+    return _counts(session, [bid_id]).get(bid_id, (0, 0))
+
+
+def best_price_of(session: Session, bid: Bid) -> Decimal | None:
+    """The price to beat, without loading the room to find it."""
+    return _best_prices(session, [bid]).get(bid.id)
+
+
+def list_quotes(
+    session: Session,
+    bid_id: int,
+    params: PageParams,
+    *,
+    q: str | None = None,
+    sort_by: str | None = None,
+    sort_dir: str | None = None,
+) -> tuple[list[BidQuote], int]:
+    """The offers on one bid, best first unless the desk asks otherwise.
+
+    Paginated: a hundred parties can be quoting, and the desk still has to be
+    able to find one of them.
+    """
+    bid = get_bid(session, bid_id)
+    stmt = (
+        select(BidQuote)
+        .join(BidParticipant, BidParticipant.id == BidQuote.participant_id)
+        .where(BidParticipant.bid_id == bid_id)
+        .options(selectinload(BidQuote.participant).selectinload(BidParticipant.party))
+    )
+    if q:
+        stmt = stmt.where(
+            BidQuote.participant_id.in_(
+                select(BidParticipant.id)
+                .join(Party, Party.id == BidParticipant.party_id)
+                .where(BidParticipant.bid_id == bid_id, Party.name.ilike(f"%{q.strip()}%"))
+            )
+        )
+
+    column = {
+        "price": BidQuote.price,
+        "submitted_at": BidQuote.submitted_at,
+        "revision": BidQuote.revision,
+    }.get(sort_by or "", BidQuote.price)
+    if sort_dir:
+        descending = sort_dir.lower() == "desc"
+    else:
+        # No preference: best first, which depends on which way the bid runs.
+        descending = bid.best_is_highest if column is BidQuote.price else True
+    stmt = stmt.order_by(column.desc() if descending else column.asc(), BidQuote.id.asc())
+    return paginate(session, stmt, params)
+
+
+def list_participants(
+    session: Session,
+    bid_id: int,
+    params: PageParams,
+    *,
+    q: str | None = None,
+    quoted: bool | None = None,
+    opened: bool | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
+) -> tuple[list[BidParticipant], int]:
+    """Everyone invited to one bid, with who has answered and who has not."""
+    get_bid(session, bid_id)
+    stmt = (
+        select(BidParticipant)
+        .join(Party, Party.id == BidParticipant.party_id)
+        .where(BidParticipant.bid_id == bid_id)
+        .options(
+            selectinload(BidParticipant.party),
+            selectinload(BidParticipant.quote),
+        )
+    )
+    if q:
+        stmt = stmt.where(Party.name.ilike(f"%{q.strip()}%"))
+    if quoted is not None:
+        has_quote = BidParticipant.id.in_(select(BidQuote.participant_id))
+        stmt = stmt.where(has_quote if quoted else ~has_quote)
+    if opened is not None:
+        stmt = stmt.where(
+            BidParticipant.first_opened_at.is_not(None)
+            if opened
+            else BidParticipant.first_opened_at.is_(None)
+        )
+
+    column = {
+        "name": Party.name,
+        "created_at": BidParticipant.created_at,
+        "last_opened_at": BidParticipant.last_opened_at,
+    }.get(sort_by or "", Party.name)
+    stmt = stmt.order_by(column.desc() if sort_dir.lower() == "desc" else column.asc())
+    return paginate(session, stmt, params)
+
+
+def history(session: Session, bid_id: int, params: PageParams) -> tuple[list[BidEvent], int]:
+    """What happened to this bid, newest first and a page at a time.
+
+    A busy auction writes an entry per quotation and per re-quote, so a bid
+    with a hundred bidders has hundreds of lines; the rail shows the latest.
+    """
+    stmt = (
         select(AuditLog)
         .where(AuditLog.entity_type == "bid", AuditLog.entity_id == bid_id)
-        .order_by(AuditLog.created_at.asc())
-    ).scalars()
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+    )
+    rows, total = paginate(session, stmt, params)
 
     events: list[BidEvent] = []
     for row in rows:
@@ -563,7 +720,7 @@ def history(session: Session, bid_id: int) -> list[BidEvent]:
                 actor=row.user.name if row.user else None,
             )
         )
-    return events
+    return events, total
 
 
 # --------------------------------------------------------------------------- #

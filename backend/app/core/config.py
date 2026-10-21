@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     #: Minutes around a scheduled activity used to warn about double booking.
     schedule_conflict_window_minutes: int = 60
 
+    #: Requests a single caller may make to the public bidding portal each
+    #: minute. A bidder watching one auction polls a handful of times; this is
+    #: set well above that and only bites on someone probing for codes.
+    portal_rate_limit_per_minute: int = 240
+
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
     #: 30 days. A trader opening the app each morning, and a salesperson whose

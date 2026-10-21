@@ -124,6 +124,17 @@ def other_salesperson(db_session: Session) -> User:
     return user
 
 
+@pytest.fixture(autouse=True)
+def _fresh_portal_throttle():
+    """The portal's rate limiter is process-wide; one test must not spend
+    another's allowance."""
+    from app.api.v1.portal import reset_throttle
+
+    reset_throttle()
+    yield
+    reset_throttle()
+
+
 @pytest.fixture
 def client(db_session: Session) -> Iterator[TestClient]:
     def override() -> Iterator[Session]:

@@ -49,3 +49,10 @@ class AuthError(AppError):
 class PermissionError_(AppError):
     status_code = 403
     code = "forbidden"
+
+
+class RateLimitError(AppError):
+    """Too many requests from one caller, too quickly."""
+
+    status_code = 429
+    code = "rate_limited"
