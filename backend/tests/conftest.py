@@ -124,6 +124,83 @@ def other_salesperson(db_session: Session) -> User:
     return user
 
 
+class _Outbox:
+    """Stands in for Meta: records what would have gone out, sends nothing."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str]] = []
+        self.templates: list[tuple[str, str, list[str]]] = []
+        self.fail_with: str | None = None
+
+    def post(self, payload: dict) -> dict:
+        from app.services.whatsapp import WhatsAppError
+
+        if self.fail_with:
+            raise WhatsAppError(self.fail_with)
+        to = payload["to"]
+        if payload["type"] == "template":
+            template = payload["template"]
+            params = [
+                parameter["text"]
+                for component in template.get("components", [])
+                for parameter in component["parameters"]
+            ]
+            self.templates.append((to, template["name"], params))
+        else:
+            self.sent.append((to, payload["text"]["body"]))
+        return {"messages": [{"id": f"wamid.test.{len(self.sent) + len(self.templates)}"}]}
+
+
+@pytest.fixture
+def whatsapp_outbox(monkeypatch):
+    """WhatsApp configured, but wired to a double. Nothing leaves the machine."""
+    from app.core.config import settings
+    from app.services import whatsapp
+
+    monkeypatch.setattr(settings, "whatsapp_access_token", "test-token", raising=False)
+    monkeypatch.setattr(settings, "whatsapp_phone_number_id", "1234567890", raising=False)
+    outbox = _Outbox()
+    whatsapp.set_transport(outbox)
+    yield outbox
+    whatsapp.reset_transport()
+
+
+@pytest.fixture
+def template_mode(monkeypatch):
+    """The approved template instead of free text.
+
+    What the desk switches to for a party who has never written to its number,
+    since free text only reaches someone inside the 24-hour window they open by
+    writing first.
+    """
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "whatsapp_use_template", True, raising=False)
+
+
+@pytest.fixture
+def whatsapp_unconfigured(monkeypatch):
+    """No credentials, which is how the desk runs until Meta is set up."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "whatsapp_access_token", "", raising=False)
+    monkeypatch.setattr(settings, "whatsapp_phone_number_id", "", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_whatsapp():
+    """No test may post to Meta, even one that forgets to ask for the double."""
+    from app.services import whatsapp
+
+    class _Refuse:
+        def post(self, payload: dict) -> dict:
+            raise AssertionError("a test tried to send a real WhatsApp message")
+
+    whatsapp.set_transport(_Refuse())
+    yield
+    whatsapp.reset_transport()
+
+
 @pytest.fixture(autouse=True)
 def _fresh_portal_throttle():
     """The portal's rate limiter is process-wide; one test must not spend

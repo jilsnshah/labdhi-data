@@ -19,6 +19,7 @@ from decimal import Decimal
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.core.pagination import PageParams, paginate
 from app.models.audit import AuditLog
@@ -27,6 +28,7 @@ from app.models.enums import (
     AuditAction,
     BidStatus,
     BidType,
+    MessageDeliveryStatus,
     PartyStage,
     PartyType,
     RecordStatus,
@@ -43,8 +45,9 @@ from app.schemas.bid import (
     PortalHome,
     PortalQuote,
     PortalQuoteRequest,
+    PortalResult,
 )
-from app.services import audit
+from app.services import audit, whatsapp
 from app.services.common import get_or_404
 
 #: Which book a bid is addressed to.
@@ -333,6 +336,120 @@ def remove_participant(session: Session, bid_id: int, participant_id: int, user_
         new_value={"removed": name},
     )
     return get_bid(session, bid.id)
+
+
+def invite_message(party_name: str, bid: Bid, link: str) -> str:
+    """What the participant reads on their phone.
+
+    Short, because it arrives on a phone and is read in a second: who it is
+    for, what is on offer, and the one link that is theirs.
+    """
+    lot = describe(bid)
+    lines = [
+        f"Hello {party_name}, a new bid is open on the Labdhi trading desk.",
+        "",
+        f"Lot: {lot}",
+    ]
+    if bid.closes_at:
+        lines.append(f"Closes: {bid.closes_at.astimezone().strftime('%d %b %Y, %H:%M')}")
+    lines += [
+        "",
+        "Open this link to see the details and place your offer:",
+        link,
+        "",
+        "You can revise your offer at any time while the bid is open.",
+        "",
+        "Reply to this message so we can reach you on future bids.",
+    ]
+    return "\n".join(lines)
+
+
+def _send_invite(party_name: str, phone: str | None, bid: Bid, link: str):
+    """Plain text, which reads like a message from a person, not a form letter.
+
+    It reaches anyone who has written to the desk's number in the last 24
+    hours. For anyone who has not, WhatsApp accepts the message, hands back a
+    message id, and drops it without ever saying so - verified against a real
+    handset both ways. That is why the invitation asks them to reply: one reply
+    opens the window for every bid after it.
+
+    Error 131047 is the one case where Meta admits the window is shut, so a
+    text refused for that reason is retried as the approved template, and
+    ``whatsapp_use_template`` sends everything that way.
+    """
+    body = invite_message(party_name, bid, link)
+    params = [party_name, f"{_amount(bid.quantity)} {bid.unit.value}", link]
+
+    if settings.whatsapp_use_template:
+        return whatsapp.send_template(phone, template=settings.whatsapp_bid_template, params=params)
+
+    result = whatsapp.send_text(phone, body)
+    if not result.ok and not result.skipped and "131047" in (result.error or ""):
+        return whatsapp.send_template(phone, template=settings.whatsapp_bid_template, params=params)
+    return result
+
+
+def notify(
+    session: Session,
+    bid_id: int,
+    base_url: str,
+    *,
+    participant_ids: Sequence[int] | None = None,
+    retry_failed: bool = False,
+) -> dict[str, int]:
+    """WhatsApp each participant the link that belongs to them.
+
+    Called when a bid is opened, and when someone is invited to one already
+    running. Never raises: the desk asked for the bid to open, so a phone
+    network that will not cooperate is recorded against the participant rather
+    than thrown back at the caller.
+
+    Only a participant who has not already been told is messaged, so pressing
+    Open twice does not message the room twice.
+    """
+    bid = get_bid(session, bid_id)
+    if bid.status != BidStatus.OPEN:
+        return {"sent": 0, "failed": 0, "skipped": 0}
+
+    participants = session.scalars(
+        select(BidParticipant)
+        .options(selectinload(BidParticipant.party))
+        .where(BidParticipant.bid_id == bid_id)
+    ).all()
+
+    tally = {"sent": 0, "failed": 0, "skipped": 0}
+    for participant in participants:
+        if participant.id in (participant_ids or []) or participant_ids is None:
+            already_told = participant.notify_status == MessageDeliveryStatus.SENT
+            worth_retrying = retry_failed and participant.notify_status in {
+                MessageDeliveryStatus.FAILED,
+                MessageDeliveryStatus.SKIPPED,
+            }
+            if already_told or (participant.notify_status is not None and not worth_retrying):
+                continue
+        else:
+            continue
+
+        party = participant.party
+        code = portal_code(session, party)
+        link = f"{base_url}/portal/{code}/{bid.id}"
+        result = _send_invite(party.name, party.phone, bid, link)
+
+        participant.notified_at = _now()
+        participant.notify_message_id = result.message_id
+        participant.notify_error = result.error
+        if result.ok:
+            participant.notify_status = MessageDeliveryStatus.SENT
+            tally["sent"] += 1
+        elif result.skipped or not party.phone:
+            participant.notify_status = MessageDeliveryStatus.SKIPPED
+            tally["skipped"] += 1
+        else:
+            participant.notify_status = MessageDeliveryStatus.FAILED
+            tally["failed"] += 1
+
+    session.flush()
+    return tally
 
 
 def publish(session: Session, bid_id: int, user_id: int) -> Bid:
@@ -761,6 +878,25 @@ def _participant(session: Session, party: Party, bid_id: int) -> BidParticipant:
     return participant
 
 
+def _portal_result(bid: Bid, participant: BidParticipant) -> PortalResult | None:
+    """How a closed bid ended, told from this participant's seat.
+
+    An open bid has no result yet. A closed one does, and the party who quoted
+    on it is owed the answer either way - but only their own half of it: that
+    their offer was taken or that another was, never whose.
+    """
+    if bid.status != BidStatus.CLOSED:
+        return None
+    if bid.no_winner:
+        return PortalResult.NO_WINNER
+    if bid.winner_quote_id is None:
+        return PortalResult.UNDECIDED
+    quote = participant.quote
+    if quote is not None and quote.id == bid.winner_quote_id:
+        return PortalResult.WON
+    return PortalResult.NOT_SELECTED
+
+
 def to_portal_bid(bid: Bid, participant: BidParticipant) -> PortalBid:
     quote = participant.quote
     best = best_price(bid)
@@ -792,6 +928,8 @@ def to_portal_bid(bid: Bid, participant: BidParticipant) -> PortalBid:
             else None
         ),
         can_quote=bid.status == BidStatus.OPEN,
+        closed_at=bid.closed_at,
+        result=_portal_result(bid, participant),
     )
 
 

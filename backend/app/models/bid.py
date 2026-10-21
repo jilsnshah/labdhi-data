@@ -31,9 +31,11 @@ from app.db.base import Base, TimestampMixin
 from app.models.enums import (
     BidStatus,
     BidType,
+    MessageDeliveryStatus,
     QuantityUnit,
     bid_status_enum,
     bid_type_enum,
+    message_delivery_status_enum,
     quantity_unit_enum,
 )
 
@@ -180,6 +182,14 @@ class BidParticipant(Base, TimestampMixin):
     )
     first_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    #: What happened when we tried to WhatsApp them their link.
+    notify_status: Mapped[MessageDeliveryStatus | None] = mapped_column(
+        message_delivery_status_enum
+    )
+    notify_error: Mapped[str | None] = mapped_column(Text())
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notify_message_id: Mapped[str | None] = mapped_column(String(80))
 
     bid: Mapped[Bid] = relationship(back_populates="participants")
     party: Mapped[Party] = relationship(lazy="joined")  # noqa: F821

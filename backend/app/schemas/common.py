@@ -30,6 +30,8 @@ class PartyRef(ORMBase):
     name: str
     party_type: PartyType
     status: RecordStatus
+    #: Needed wherever we might message them; null when none is on file.
+    phone: str | None = None
     #: PROSPECT means "met just now, identity unverified" - the UI badges it.
     stage: PartyStage = PartyStage.ACTIVE
 

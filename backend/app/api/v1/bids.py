@@ -6,6 +6,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request
 
+from app.core.config import settings
 from app.core.deps import SessionDep, StaffUser
 from app.core.pagination import Page, PageParams, page_params
 from app.models.enums import BidStatus, BidType
@@ -15,6 +16,7 @@ from app.schemas.bid import (
     BidDetailOut,
     BidEvent,
     BidListItem,
+    BidNotifyResult,
     BidOut,
     BidParticipantOut,
     BidParticipantsRequest,
@@ -33,6 +35,8 @@ def _public_base(request: Request) -> str:
     The links are handed to people outside the company, so they point at the
     web app the admin is using, not at the API.
     """
+    if settings.portal_base_url:
+        return settings.portal_base_url.rstrip("/")
     origin = request.headers.get("origin")
     if origin:
         return origin.rstrip("/")
@@ -141,8 +145,14 @@ def add_participants(
     user: StaffUser,
     request: Request,
 ) -> BidDetailOut:
+    base_url = _public_base(request)
+    before = {participant.id for participant in service.get_bid(session, bid_id).participants}
     bid = service.add_participants(session, bid_id, payload.party_ids, user.id)
-    return _detail(session, bid, _public_base(request))
+    # A bid already running: tell the newcomers, and only them.
+    added = [p.id for p in bid.participants if p.id not in before]
+    if added:
+        service.notify(session, bid.id, base_url, participant_ids=added)
+    return _detail(session, service.get_bid(session, bid.id), base_url)
 
 
 @router.delete("/{bid_id}/participants/{participant_id}", response_model=BidDetailOut)
@@ -157,8 +167,11 @@ def remove_participant(
 def publish_bid(
     bid_id: int, session: SessionDep, user: StaffUser, request: Request
 ) -> BidDetailOut:
+    """Open the bid, then WhatsApp every participant their own link."""
+    base_url = _public_base(request)
     bid = service.publish(session, bid_id, user.id)
-    return _detail(session, bid, _public_base(request))
+    service.notify(session, bid.id, base_url)
+    return _detail(session, service.get_bid(session, bid.id), base_url)
 
 
 @router.post("/{bid_id}/close", response_model=BidDetailOut)
@@ -238,6 +251,9 @@ def list_participants(
                 party=participant.party,
                 first_opened_at=participant.first_opened_at,
                 last_opened_at=participant.last_opened_at,
+                notify_status=participant.notify_status,
+                notify_error=participant.notify_error,
+                notified_at=participant.notified_at,
                 quote=(
                     _quote_out(participant.quote, bid.winner_quote_id)
                     if participant.quote
@@ -248,6 +264,15 @@ def list_participants(
             )
         )
     return Page.build(out, total, params)
+
+
+@router.post("/{bid_id}/notify", response_model=BidNotifyResult)
+def notify_participants(
+    bid_id: int, session: SessionDep, _: StaffUser, request: Request
+) -> BidNotifyResult:
+    """Send the link again to anyone the message did not reach."""
+    tally = service.notify(session, bid_id, _public_base(request), retry_failed=True)
+    return BidNotifyResult(**tally)
 
 
 @router.get("/{bid_id}/history", response_model=Page[BidEvent])

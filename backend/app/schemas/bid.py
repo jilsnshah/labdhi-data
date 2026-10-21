@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.enums import BidStatus, BidType, QuantityUnit
+from app.models.enums import BidStatus, BidType, MessageDeliveryStatus, QuantityUnit
 from app.schemas.common import LocationRef, ORMBase, PartyRef, ProductRef, UserRef
 
 QUANTITY = Field(gt=0, max_digits=14, decimal_places=3)
@@ -90,11 +91,23 @@ class BidQuoteOut(ORMBase):
     is_winner: bool = False
 
 
+class BidNotifyResult(BaseModel):
+    """How many of the room were reached on this attempt."""
+
+    sent: int = 0
+    failed: int = 0
+    skipped: int = 0
+
+
 class BidParticipantOut(ORMBase):
     id: int
     party: PartyRef
     first_opened_at: datetime | None = None
     last_opened_at: datetime | None = None
+    #: What happened when we WhatsApped them their link.
+    notify_status: MessageDeliveryStatus | None = None
+    notify_error: str | None = None
+    notified_at: datetime | None = None
     quote: BidQuoteOut | None = None
     #: Ready-to-copy link for this party's view of this bid.
     bid_link: str
@@ -174,6 +187,15 @@ class BidEvent(BaseModel):
 
 
 # --- Participant views ------------------------------------------------------
+class PortalResult(str, Enum):
+    """What a closed bid came to, from the participant's side."""
+
+    WON = "WON"
+    NOT_SELECTED = "NOT_SELECTED"
+    NO_WINNER = "NO_WINNER"
+    UNDECIDED = "UNDECIDED"
+
+
 class PortalQuote(BaseModel):
     """The participant's own quotation, echoed back to them."""
 
@@ -212,6 +234,13 @@ class PortalBid(BaseModel):
     leading: bool = False
     my_quote: PortalQuote | None = None
     can_quote: bool = False
+    closed_at: datetime | None = None
+    #: How a closed bid ended, for this participant. None while it is open.
+    #:
+    #: ``WON`` their offer was taken, ``NOT_SELECTED`` another was,
+    #: ``NO_WINNER`` the desk took none, ``UNDECIDED`` closed but not yet
+    #: decided. Who won is never named - only whether it was them.
+    result: PortalResult | None = None
 
 
 class PortalHome(BaseModel):

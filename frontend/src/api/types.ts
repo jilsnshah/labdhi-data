@@ -372,6 +372,9 @@ export interface PortalQuote {
   revision: number;
 }
 
+/** WON: their offer was taken. NOT_SELECTED: another was, and they are not told whose. */
+export type PortalResult = 'WON' | 'NOT_SELECTED' | 'NO_WINNER' | 'UNDECIDED';
+
 export interface PortalBid {
   id: number;
   bid_type: BidType;
@@ -390,6 +393,9 @@ export interface PortalBid {
   leading: boolean;
   my_quote: PortalQuote | null;
   can_quote: boolean;
+  closed_at: string | null;
+  /** How a closed bid ended for this party. Null while it is open. */
+  result: PortalResult | null;
 }
 
 export interface PortalHome {

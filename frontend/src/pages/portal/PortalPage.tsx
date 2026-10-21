@@ -19,6 +19,44 @@ import { formatDateTime, formatQuantity } from '@/lib/format';
 const unitOf = (bid: PortalBid) => (bid.bid_type === 'TRANSPORT' ? '₹' : '₹/kg');
 
 /**
+ * What a closed bid comes to, in the words the party is owed.
+ *
+ * A bidder who has lost is told so plainly and told nothing about who won: the
+ * portal is anonymous while the bid runs and stays anonymous afterwards.
+ * UNDECIDED is the honest answer while the desk is still making up its mind.
+ */
+function outcomeOf(bid: PortalBid): { tone: string; label: string; said: string } | null {
+  switch (bid.result) {
+    case 'WON':
+      return {
+        tone: 'won',
+        label: 'You won this',
+        said: 'Your offer was accepted. We will be in touch to confirm the details.',
+      };
+    case 'NOT_SELECTED':
+      return {
+        tone: 'lost',
+        label: 'Not selected',
+        said: 'This one went elsewhere. Thank you for bidding — we will send you the next.',
+      };
+    case 'NO_WINNER':
+      return {
+        tone: 'none',
+        label: 'Closed with no winner',
+        said: 'The bid was closed without any offer being taken.',
+      };
+    case 'UNDECIDED':
+      return {
+        tone: '',
+        label: 'Closed',
+        said: 'Bidding has ended. We are going through the offers and will let you know.',
+      };
+    default:
+      return null;
+  }
+}
+
+/**
  * Keep a page current without the person touching it.
  *
  * A bidder leaves this open on a phone while they decide, so it has to move on
@@ -168,6 +206,7 @@ export function PortalBidPage() {
   if (!bid) return <PortalLoading />;
 
   const unit = unitOf(bid);
+  const outcome = outcomeOf(bid);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy || !price) return;
@@ -194,8 +233,8 @@ export function PortalBidPage() {
       <PortalHeader name="" back={`/portal/${code}`} />
       <main className="portal-main">
         <div className="portal-bid-head">
-          <span className={`portal-pill ${bid.status === 'OPEN' ? 'live' : ''}`}>
-            {bid.status === 'OPEN' ? 'Open for bidding' : 'Closed'}
+          <span className={`portal-pill ${bid.status === 'OPEN' ? 'live' : (outcome?.tone ?? '')}`}>
+            {bid.status === 'OPEN' ? 'Open for bidding' : (outcome?.label ?? 'Closed')}
           </span>
           <h1>{bid.title}</h1>
           <dl className="portal-facts">
@@ -237,7 +276,13 @@ export function PortalBidPage() {
         >
           <div className="portal-board-main">
             <span className="portal-board-label">
-              {bid.best_is_highest ? 'Highest offer so far' : 'Lowest offer so far'}
+              {bid.status === 'OPEN'
+                ? bid.best_is_highest
+                  ? 'Highest offer so far'
+                  : 'Lowest offer so far'
+                : bid.best_is_highest
+                  ? 'Highest offer received'
+                  : 'Lowest offer received'}
               {bid.status === 'OPEN' && <span className="portal-live">Live</span>}
             </span>
             <span className="portal-board-value">
@@ -246,9 +291,13 @@ export function PortalBidPage() {
             <span className="portal-board-hint">
               {moved && <b>Just changed · </b>}
               {bid.bidders === 0
-                ? 'Be the first to bid.'
-                : `${bid.bidders} ${bid.bidders === 1 ? 'party has' : 'parties have'} bid.`}
-              {bid.leading && ' You are leading.'}
+                ? bid.status === 'OPEN'
+                  ? 'Be the first to bid.'
+                  : 'Nobody bid on this one.'
+                : `${bid.bidders} ${bid.bidders === 1 ? 'party' : 'parties'} ${
+                    bid.status === 'OPEN' ? 'have bid' : 'bid'
+                  }.`}
+              {bid.leading && bid.status === 'OPEN' && ' You are leading.'}
             </span>
           </div>
         </div>
@@ -310,18 +359,22 @@ export function PortalBidPage() {
             )}
           </form>
         ) : (
-          <div className="portal-form">
-            <h2>This bid is closed</h2>
+          <div className={`portal-form portal-closed ${outcome?.tone ?? ''}`}>
+            <h2>{outcome?.label ?? 'This bid is closed'}</h2>
+            {outcome && <p className="portal-said">{outcome.said}</p>}
             {bid.my_quote ? (
               <p className="portal-note">
                 Your final offer was{' '}
                 <b>
                   {unit} {bid.my_quote.price}
                 </b>
-                , sent {formatDateTime(bid.my_quote.submitted_at)}. We will be in touch.
+                , sent {formatDateTime(bid.my_quote.submitted_at)}.
               </p>
             ) : (
               <p className="portal-note">You did not bid on this one.</p>
+            )}
+            {bid.closed_at && (
+              <p className="portal-note">Bidding closed {formatDateTime(bid.closed_at)}.</p>
             )}
           </div>
         )}
@@ -333,18 +386,21 @@ export function PortalBidPage() {
 
 function BidCard({ bid, code }: { bid: PortalBid; code: string }) {
   const unit = unitOf(bid);
+  const outcome = outcomeOf(bid);
   return (
     <Link to={`/portal/${code}/${bid.id}`} className="portal-card">
       <div className="portal-card-top">
-        <span className={`portal-pill ${bid.status === 'OPEN' ? 'live' : ''}`}>
-          {bid.status === 'OPEN' ? 'Open' : 'Closed'}
+        <span className={`portal-pill ${bid.status === 'OPEN' ? 'live' : (outcome?.tone ?? '')}`}>
+          {bid.status === 'OPEN' ? 'Open' : (outcome?.label ?? 'Closed')}
         </span>
         {bid.leading && bid.status === 'OPEN' && <span className="portal-tag">You lead</span>}
       </div>
       <div className="portal-card-title">{bid.title}</div>
       <div className="portal-card-meta">
         {formatQuantity(bid.quantity, bid.unit)}
-        {bid.best_price ? ` · best ${unit} ${bid.best_price}` : ' · no offers yet'}
+        {bid.best_price
+          ? ` · ${bid.status === 'OPEN' ? 'best' : 'closed at'} ${unit} ${bid.best_price}`
+          : ' · no offers'}
       </div>
       <div className="portal-card-foot">
         {bid.my_quote ? `Your offer: ${unit} ${bid.my_quote.price}` : 'You have not bid'}

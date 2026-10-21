@@ -32,10 +32,44 @@ class Settings(BaseSettings):
     #: Minutes around a scheduled activity used to warn about double booking.
     schedule_conflict_window_minutes: int = 60
 
+    #: Where the bidding portal lives, as a participant reaches it.
+    #:
+    #: Links in a WhatsApp invitation are opened on someone else's phone, so
+    #: they cannot be built from whatever host the desk happens to be using:
+    #: an admin working on localhost would otherwise send dead links. Set this
+    #: to the public web address and every link is built from it. Left empty,
+    #: the request's own origin is used, which is right for local work.
+    portal_base_url: str = ""
     #: Requests a single caller may make to the public bidding portal each
     #: minute. A bidder watching one auction polls a handful of times; this is
     #: set well above that and only bites on someone probing for codes.
     portal_rate_limit_per_minute: int = 240
+
+    # --- WhatsApp (Meta Cloud API) ---
+    #: Permanent or test access token from the Meta app. Empty means "not
+    #: configured", and the service then reports every send skipped rather
+    #: than failing a bid.
+    whatsapp_access_token: str = ""
+    #: The sending number's id in the Meta app, not the number itself.
+    whatsapp_phone_number_id: str = ""
+    whatsapp_api_version: str = "v21.0"
+    #: Invitations go as plain text.
+    #:
+    #: Verified against a real handset, in both directions: WhatsApp delivers
+    #: free text to someone who has written to the business number in the last
+    #: 24 hours, and silently drops it for anyone who has not - accepting the
+    #: call, returning a message id, and reporting no error. Nothing in the
+    #: response distinguishes the two, so a party must message the desk once
+    #: before invitations can reach them. Set this true to send the approved
+    #: template instead, which has no such window.
+    whatsapp_use_template: bool = False
+    #: The template Meta approved, used when this is switched on.
+    whatsapp_bid_template: str = "bid_invitation"
+    #: Language of the approved template, as registered with Meta.
+    whatsapp_language: str = "en"
+    #: Assumed when a number is written as ten bare digits.
+    whatsapp_default_country_code: str = "91"
+    whatsapp_timeout_seconds: float = 15.0
 
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"

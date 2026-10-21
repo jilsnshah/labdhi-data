@@ -346,6 +346,84 @@ def test_the_winner_is_not_announced_to_the_participants(client, auth, bid, part
     assert str(loser).count("XYZ Polymers") == 0
 
 
+# --- how a closed bid reads to the people who quoted on it ----------------- #
+def test_a_closed_bid_stays_on_the_participant_portal(client, auth, bid, parties):
+    """Closing a bid does not take it away from the people who bid on it."""
+    code = code_of(bid, parties["customer"])
+    quote(client, code, bid["id"], "93")
+    client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
+
+    home = client.get(f"/api/v1/portal/{code}").json()
+    assert [b["id"] for b in home["open_bids"]] == []
+    closed = next(b for b in home["closed_bids"] if b["id"] == bid["id"])
+    assert closed["status"] == "CLOSED"
+    assert closed["my_quote"]["price"] == "93.00"
+    assert closed["closed_at"] is not None
+
+
+def test_a_bid_closed_but_not_yet_decided_says_so(client, auth, bid, parties):
+    code = code_of(bid, parties["customer"])
+    quote(client, code, bid["id"], "93")
+    client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
+
+    seen = client.get(f"/api/v1/portal/{code}/bids/{bid['id']}").json()
+    assert seen["result"] == "UNDECIDED", "the desk has not picked yet"
+
+
+def test_the_party_who_won_is_told_they_won(client, auth, bid, parties):
+    first = code_of(bid, parties["customer"])
+    second = code_of(bid, parties["other_customer"])
+    quote(client, first, bid["id"], "90")
+    quote(client, second, bid["id"], "97")
+    client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
+    winning = next(q for q in quotes_of(client, auth, bid["id"]) if q["price"] == "90.00")
+    client.post(f"/api/v1/bids/{bid['id']}/award", json={"quote_id": winning["id"]}, headers=auth)
+
+    assert client.get(f"/api/v1/portal/{first}/bids/{bid['id']}").json()["result"] == "WON"
+
+
+def test_the_party_who_lost_is_told_that_much_and_no_more(client, auth, bid, parties):
+    """They are owed the answer; they are not owed the winner's name."""
+    first = code_of(bid, parties["customer"])
+    second = code_of(bid, parties["other_customer"])
+    quote(client, first, bid["id"], "90")
+    quote(client, second, bid["id"], "97")
+    client.post(f"/api/v1/bids/{bid['id']}/close", headers=auth)
+    winning = next(q for q in quotes_of(client, auth, bid["id"]) if q["price"] == "90.00")
+    client.post(f"/api/v1/bids/{bid['id']}/award", json={"quote_id": winning["id"]}, headers=auth)
+
+    seen = client.get(f"/api/v1/portal/{second}/bids/{bid['id']}").json()
+    assert seen["result"] == "NOT_SELECTED"
+    assert "XYZ Polymers" not in str(seen), "no name of whoever took it"
+
+
+def test_a_bid_closed_with_nobody_tells_everyone_that(client, auth, bid, parties):
+    code = code_of(bid, parties["customer"])
+    quote(client, code, bid["id"], "93")
+    client.post(f"/api/v1/bids/{bid['id']}/close", params={"without_winner": True}, headers=auth)
+
+    seen = client.get(f"/api/v1/portal/{code}/bids/{bid['id']}").json()
+    assert seen["result"] == "NO_WINNER"
+
+
+def test_an_open_bid_has_no_result_yet(client, bid, parties):
+    code = code_of(bid, parties["customer"])
+    quote(client, code, bid["id"], "93")
+
+    assert client.get(f"/api/v1/portal/{code}/bids/{bid['id']}").json()["result"] is None
+
+
+def test_a_party_who_never_quoted_still_sees_how_it_ended(client, auth, bid, parties):
+    """Invited, did not bid: the bid is theirs to see, with no offer of their own."""
+    silent = code_of(bid, parties["other_customer"])
+    quote(client, code_of(bid, parties["customer"]), bid["id"], "93")
+    client.post(f"/api/v1/bids/{bid['id']}/close", params={"without_winner": True}, headers=auth)
+
+    seen = client.get(f"/api/v1/portal/{silent}/bids/{bid['id']}").json()
+    assert seen["result"] == "NO_WINNER"
+    assert seen["my_quote"] is None
+
+
 # --- history ---------------------------------------------------------------- #
 def test_the_bid_keeps_its_own_history(client, auth, bid, parties):
     quote(client, code_of(bid, parties["customer"]), bid["id"], "93")

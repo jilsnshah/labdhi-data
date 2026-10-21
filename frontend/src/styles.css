@@ -1476,6 +1476,36 @@ a.board-row:hover {
   color: var(--supply);
 }
 
+/* How a closed bid ended. Won is the house gold; the rest stay quiet, because
+   a party who lost should read it once and not be shouted at. */
+.portal-pill.won {
+  background: var(--brass);
+  color: #171310;
+}
+
+.portal-pill.lost,
+.portal-pill.none {
+  background: var(--mantine-color-gray-2);
+  color: var(--mantine-color-ink-5);
+}
+
+/* The panel that replaces the bidding form once a bid is closed. */
+.portal-closed {
+  border-left: 3px solid var(--mantine-color-gray-3);
+}
+
+.portal-closed.won {
+  border-left-color: var(--brass);
+  background: var(--brass-soft);
+}
+
+.portal-said {
+  margin: 0.4rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--mantine-color-ink-7);
+}
+
 .portal-tag {
   font-size: 0.6875rem;
   font-weight: 700;

@@ -150,9 +150,11 @@ class ActivityOutcome(_Str):
 
 
 class MessageDeliveryStatus(_Str):
-    """Reserved for the future WhatsApp/SMS integration."""
+    """How an outbound WhatsApp message fared."""
 
     PENDING = "PENDING"
+    #: Nothing was attempted: no number on file, or WhatsApp not configured.
+    SKIPPED = "SKIPPED"
     SENT = "SENT"
     DELIVERED = "DELIVERED"
     READ = "READ"
