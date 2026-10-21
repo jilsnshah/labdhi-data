@@ -146,7 +146,8 @@ export function BidDetailPage() {
         <Alert color={bid.no_winner ? 'gray' : 'amber'} icon={<IconInfoCircle size={16} />} mb="md">
           {bid.no_winner
             ? 'Closed without a winner. The quotations below are kept for the record.'
-            : 'Closed. Pick the offer you want from the table below.'}
+            : 'Closed. Choose the offer you want with the Award button beside it - any offer, not ' +
+              'necessarily the best number. Leaving it unawarded is fine too.'}
         </Alert>
       )}
 
@@ -221,6 +222,9 @@ export function BidDetailPage() {
               <Text fz="xs" c="ink.5">
                 {quoted} of {bid.participants.length} invited have quoted
                 {bid.bid_type === 'CUSTOMER' ? ' · highest leads' : ' · lowest leads'}
+                {isClosed && !bid.winner && !bid.no_winner && quoted > 0
+                  ? ' · award one below'
+                  : ''}
               </Text>
             </div>
             {isOpen && <LiveDot updatedAt={dataUpdatedAt} />}
@@ -233,8 +237,7 @@ export function BidDetailPage() {
                   <Table.Th style={{ textAlign: 'right' }}>Price</Table.Th>
                   <Table.Th style={{ textAlign: 'right' }}>Quantity</Table.Th>
                   <Table.Th>Notes</Table.Th>
-                  <Table.Th>Submitted</Table.Th>
-                  {isClosed && <Table.Th />}
+                  {isClosed && <Table.Th w={120}>Decision</Table.Th>}
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -265,11 +268,10 @@ export function BidDetailPage() {
                               </Badge>
                             )}
                           </Group>
-                          {quote.revision > 1 && (
-                            <Text fz="xs" c="ink.5">
-                              revised {quote.revision - 1}×
-                            </Text>
-                          )}
+                          <Text fz="xs" c="ink.5">
+                            {formatDateTime(quote.submitted_at)}
+                            {quote.revision > 1 ? ` · revised ${quote.revision - 1}×` : ''}
+                          </Text>
                         </Stack>
                       </Group>
                     </Table.Td>
@@ -288,19 +290,23 @@ export function BidDetailPage() {
                         {quote.notes || '—'}
                       </Text>
                     </Table.Td>
-                    <Table.Td data-label="Submitted">
-                      <Text fz="xs" c="ink.5">
-                        {formatDateTime(quote.submitted_at)}
-                      </Text>
-                    </Table.Td>
                     {isClosed && (
                       <Table.Td data-label="">
                         {quote.is_winner ? (
-                          <Badge color="moss" variant="light">
-                            Awarded
+                          <Badge
+                            color="moss"
+                            variant="filled"
+                            leftSection={<IconTrophy size={12} />}
+                          >
+                            Winner
                           </Badge>
                         ) : (
-                          <Button size="xs" variant="light" onClick={() => setAwarding(quote)}>
+                          <Button
+                            size="xs"
+                            variant="filled"
+                            leftSection={<IconTrophy size={13} />}
+                            onClick={() => setAwarding(quote)}
+                          >
                             Award
                           </Button>
                         )}
