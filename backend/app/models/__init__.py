@@ -28,6 +28,7 @@ from app.models.party import (
 )
 from app.models.portal_enquiry import PortalEnquiry
 from app.models.user import User
+from app.models.whatsapp_message import WhatsAppMessage
 
 __all__ = [
     "Base",
@@ -53,5 +54,6 @@ __all__ = [
     "SupplierInquiry",
     "TransportInquiry",
     "User",
+    "WhatsAppMessage",
     "product_applications",
 ]

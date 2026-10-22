@@ -54,6 +54,14 @@ services:
         sync: false
       - key: WHATSAPP_ACCESS_TOKEN
         sync: false
+      # The inbound webhook, at /api/v1/webhooks/whatsapp. The verify token is
+      # whatever string is typed into the Meta dashboard beside the URL; the
+      # app secret is what every payload is signed with, and without it this
+      # deployment accepts nothing inbound at all.
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
 
   - type: web
     name: labdhi-crm

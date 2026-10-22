@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     #: before invitations can reach them. Set this true to send the approved
     #: template instead, which has no such window.
     whatsapp_use_template: bool = False
+    #: Shared with Meta when the webhook URL is first saved, and echoed back
+    #: on their subscribe handshake. Any string; it only has to match.
+    whatsapp_verify_token: str = ""
+    #: The Meta app secret, used to check that a webhook really came from them.
+    #: Without it nothing inbound is accepted in production, because an open
+    #: endpoint that writes to the database is worse than one that is not
+    #: working yet.
+    whatsapp_app_secret: str = ""
     #: The template Meta approved, used when this is switched on.
     whatsapp_bid_template: str = "bid_invitation"
     #: Language of the approved template, as registered with Meta.

@@ -16,6 +16,7 @@ from app.api.v1 import (
     products,
     salesperson,
     system,
+    whatsapp_webhook,
 )
 from app.core.deps import require_staff
 
@@ -48,5 +49,10 @@ api_router.include_router(salesperson.router)
 # or raising an enquiry of their own. No authentication, so every route resolves
 # the portal code server-side and returns nothing about anybody else.
 api_router.include_router(portal.router)
+
+# Meta's webhook. Public too, and for the same reason - WhatsApp cannot sign
+# in - but what stands in for authentication here is a signature over the raw
+# body, checked on every call.
+api_router.include_router(whatsapp_webhook.router)
 
 __all__ = ["api_router"]
