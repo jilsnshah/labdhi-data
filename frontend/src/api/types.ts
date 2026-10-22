@@ -11,6 +11,8 @@ export type PartyProductRelationship = 'SUPPLIES' | 'PURCHASES' | 'INTERESTED_IN
 export type InquiryType = 'CUSTOMER' | 'SUPPLIER' | 'TRANSPORT';
 /** An inquiry is still being worked, or it is done. Nothing in between. */
 export type InquiryStatus = 'ACTIVE' | 'CLOSED';
+/** PORTAL means the party raised it themselves, with no salesperson behind it. */
+export type InquirySource = 'DESK' | 'PORTAL';
 export type QuantityUnit = 'MT' | 'KG' | 'BAG' | 'LITRE' | 'PIECE';
 export type ActivityType = 'CALL' | 'WHATSAPP' | 'SMS' | 'VISIT' | 'EMAIL' | 'MEETING';
 export type ActivityStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -269,8 +271,10 @@ export interface InquiryListItem {
   delivery_name: string | null;
   /** Rupees (transport inquiries). */
   price: string | null;
-  created_by: number;
+  /** Null when the party raised it themselves; `source` says which. */
+  created_by: number | null;
   created_by_name: string | null;
+  source: InquirySource;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
@@ -373,15 +377,11 @@ export interface PortalQuote {
 }
 
 /* ------------------- enquiries parties raise themselves ------------------ */
-/** NEW: waiting on the desk. ACCEPTED: it became an inquiry. */
-export type PortalEnquiryStatus = 'NEW' | 'ACCEPTED' | 'DECLINED';
-
 /** One enquiry, as the party who sent it sees it. */
 export interface PortalEnquiry {
   id: number;
   inquiry_type: InquiryType;
-  status: PortalEnquiryStatus;
-  /** Ours if they picked it from the list, theirs if they typed it. */
+  /** Null only for a load, which carries no product. */
   product_name: string | null;
   quantity: string;
   unit: QuantityUnit;
@@ -392,22 +392,18 @@ export interface PortalEnquiry {
   created_at: string;
 }
 
-/** A line in the grade picker on the public form. */
-export interface PortalProduct {
+/** A line in one of the public pickers: a material, a grade or a manufacturer. */
+export interface PortalOption {
   id: number;
-  display_name: string;
+  name: string;
 }
 
-/** The same enquiry in the desk's inbox, with who sent it. */
+/** What a party sent, and the inquiry it became. */
 export interface DeskEnquiry {
   id: number;
   inquiry_type: InquiryType;
-  status: PortalEnquiryStatus;
   party: PartyRef;
-  /** Set when they found their grade in our list. */
   product: ProductRef | null;
-  /** Set when they typed it instead. Exactly one of the two is filled in. */
-  product_text: string | null;
   quantity: string;
   unit: QuantityUnit;
   from_place: string | null;
@@ -415,16 +411,8 @@ export interface DeskEnquiry {
   rate: string | null;
   notes: string | null;
   created_at: string;
-  /** The inquiry it became, once accepted. */
-  inquiry_id: number | null;
-  handled_at: string | null;
-  handler: IdName | null;
-}
-
-export interface DeskEnquiryCounts {
-  new: number;
-  accepted: number;
-  declined: number;
+  /** Always set: the inquiry is written as the enquiry lands. */
+  inquiry_id: number;
 }
 
 /** The links the desk copies for one party. */
@@ -505,7 +493,9 @@ export interface InquiryDetail {
   inquiry_type: InquiryType;
   status: InquiryStatus;
   title: string | null;
-  created_by: number;
+  /** Null when the party raised it themselves; `source` says which. */
+  created_by: number | null;
+  source: InquirySource;
   created_at: string;
   updated_at: string;
   closed_at: string | null;

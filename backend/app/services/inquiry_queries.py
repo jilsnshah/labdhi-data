@@ -46,6 +46,7 @@ def to_list_item(inquiry: Inquiry) -> InquiryListItem:
         "title": inquiry.title,
         "created_by": inquiry.created_by,
         "created_by_name": inquiry.creator.name if inquiry.creator else None,
+        "source": inquiry.source,
         "created_at": inquiry.created_at,
         "updated_at": inquiry.updated_at,
         "closed_at": inquiry.closed_at,

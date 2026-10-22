@@ -2,7 +2,6 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
-  Badge,
   Box,
   Burger,
   Button,
@@ -46,7 +45,6 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 
 import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
-import { usePortalEnquiryCounts } from '@/api/hooks';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -54,8 +52,6 @@ interface NavItem {
   label: string;
   to: string;
   icon: React.ReactNode;
-  /** Draws a count beside the label; see ``NavBadge``. */
-  badge?: 'portal-enquiries';
 }
 
 interface NavSection {
@@ -99,9 +95,6 @@ const NAV: NavSection[] = [
         label: 'From parties',
         to: '/inquiries/from-parties',
         icon: <IconInbox size={16} />,
-        // The one nav entry that counts: a waiting enquiry is somebody outside
-        // expecting an answer, so the sidebar says how many.
-        badge: 'portal-enquiries',
       },
     ],
   },
@@ -139,17 +132,6 @@ const NAV: NavSection[] = [
     ],
   },
 ];
-
-/** How many enquiries are waiting to be read. Nothing is drawn when none are. */
-function NavBadge() {
-  const { data } = usePortalEnquiryCounts();
-  if (!data?.new) return null;
-  return (
-    <Badge size="xs" circle variant="filled" color="brass" ml="auto">
-      {data.new}
-    </Badge>
-  );
-}
 
 function initials(name?: string): string {
   if (!name) return '?';
@@ -309,7 +291,6 @@ export function AppLayout() {
                     >
                       <span className="nav-icon">{item.icon}</span>
                       {item.label}
-                      {item.badge === 'portal-enquiries' && <NavBadge />}
                     </Link>
                   ))}
                 </Stack>

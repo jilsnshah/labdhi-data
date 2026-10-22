@@ -15,7 +15,6 @@ import type {
   AuditLog,
   Dashboard,
   DeskEnquiry,
-  DeskEnquiryCounts,
   EnquiryLink,
   Grade,
   InquiryDetail,
@@ -216,10 +215,10 @@ export const useBidHistory = (id?: number, live = false, params: Params = {}) =>
 
 /* ------------------- enquiries parties raise themselves ------------------ */
 /**
- * The inbox for enquiries that arrived through a portal link.
+ * The log of enquiries that arrived through a portal link.
  *
- * Parties write in whenever they like, so this polls: an enquiry sitting
- * unread is the one thing on the desk that somebody outside is waiting on.
+ * Each is already an inquiry, so there is nothing to action here - but parties
+ * write in whenever they like, so it polls to stay current.
  */
 export const usePortalEnquiries = (params: Params = {}) =>
   useQuery({
@@ -233,15 +232,6 @@ export const usePortalEnquiry = (id?: number) =>
     queryKey: ['portal-enquiry', id],
     queryFn: () => api.get<DeskEnquiry>(`/portal-enquiries/${id}`),
     enabled: Boolean(id),
-  });
-
-/** For the badge on the nav: how many are waiting to be read. */
-export const usePortalEnquiryCounts = () =>
-  useQuery({
-    queryKey: ['portal-enquiry-counts'],
-    queryFn: () => api.get<DeskEnquiryCounts>('/portal-enquiries/counts'),
-    refetchInterval: 60_000,
-    refetchIntervalInBackground: false,
   });
 
 /** The link this party uses to raise enquiries. Issues their code on first ask. */
@@ -363,7 +353,6 @@ const INVALIDATE_ALL = [
   'party-duplicates',
   'portal-enquiries',
   'portal-enquiry',
-  'portal-enquiry-counts',
   'select',
   'salespeople-workload',
   'activity-calendar',
@@ -412,12 +401,6 @@ export const bidApi = {
     api.post<BidDetail>(`/bids/${id}/close?without_winner=${withoutWinner}`),
   award: (id: number, quoteId: number) =>
     api.post<BidDetail>(`/bids/${id}/award`, { quote_id: quoteId }),
-};
-
-export const portalEnquiryApi = {
-  /** Create the inquiry this enquiry asked for, on the desk's own terms. */
-  accept: (id: number, body: unknown) => api.post<DeskEnquiry>(`/portal-enquiries/${id}/accept`, body),
-  decline: (id: number) => api.post<DeskEnquiry>(`/portal-enquiries/${id}/decline`),
 };
 
 export const inquiryApi = {

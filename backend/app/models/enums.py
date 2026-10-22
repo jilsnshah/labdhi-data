@@ -79,6 +79,15 @@ class InquiryType(_Str):
     TRANSPORT = "TRANSPORT"
 
 
+class InquirySource(_Str):
+    """Who put this inquiry on the book."""
+
+    #: Keyed in by the desk or a salesperson.
+    DESK = "DESK"
+    #: Sent in by the party themselves, through their portal link.
+    PORTAL = "PORTAL"
+
+
 class InquiryStatus(_Str):
     """An inquiry is either still being worked, or it is done.
 
@@ -89,23 +98,6 @@ class InquiryStatus(_Str):
 
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
-
-
-class PortalEnquiryStatus(_Str):
-    """What the desk has done with an enquiry a party sent in by itself.
-
-    An enquiry arriving from a portal link is a request, not yet a row in the
-    book: the desk reads it, maps it onto a real product and location, and
-    accepts it - at which point a proper inquiry is created and this row
-    records where it went.
-    """
-
-    #: Waiting for the desk.
-    NEW = "NEW"
-    #: Turned into an inquiry; ``inquiry_id`` says which.
-    ACCEPTED = "ACCEPTED"
-    #: Read and not taken up.
-    DECLINED = "DECLINED"
 
 
 class BidType(_Str):
@@ -212,6 +204,7 @@ location_type_enum = _enum(LocationType, "location_type")
 party_product_rel_enum = _enum(PartyProductRelationship, "party_product_relationship")
 inquiry_type_enum = _enum(InquiryType, "inquiry_type")
 inquiry_status_enum = _enum(InquiryStatus, "inquiry_status")
+inquiry_source_enum = _enum(InquirySource, "inquiry_source")
 quantity_unit_enum = _enum(QuantityUnit, "quantity_unit")
 bid_type_enum = _enum(BidType, "bid_type")
 bid_status_enum = _enum(BidStatus, "bid_status")
@@ -219,5 +212,4 @@ activity_type_enum = _enum(ActivityType, "activity_type")
 activity_status_enum = _enum(ActivityStatus, "activity_status")
 activity_outcome_enum = _enum(ActivityOutcome, "activity_outcome")
 message_delivery_status_enum = _enum(MessageDeliveryStatus, "message_delivery_status")
-portal_enquiry_status_enum = _enum(PortalEnquiryStatus, "portal_enquiry_status")
 audit_action_enum = _enum(AuditAction, "audit_action")

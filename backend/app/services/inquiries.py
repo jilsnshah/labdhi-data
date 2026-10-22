@@ -8,7 +8,14 @@ from decimal import Decimal
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.errors import NotFoundError, ValidationError
-from app.models.enums import AuditAction, InquiryStatus, InquiryType, PartyStage, PartyType
+from app.models.enums import (
+    AuditAction,
+    InquirySource,
+    InquiryStatus,
+    InquiryType,
+    PartyStage,
+    PartyType,
+)
 from app.models.inquiry import (
     CustomerInquiry,
     Inquiry,
@@ -104,13 +111,18 @@ def _money(value: Decimal | None) -> str | None:
 # Create
 # --------------------------------------------------------------------------- #
 def _new_header(
-    session: Session, inquiry_type: InquiryType, status: InquiryStatus, user_id: int
+    session: Session,
+    inquiry_type: InquiryType,
+    status: InquiryStatus,
+    user_id: int | None,
+    source: InquirySource = InquirySource.DESK,
 ) -> Inquiry:
     now = datetime.now(UTC)
     closed = status == InquiryStatus.CLOSED
     inquiry = Inquiry(
         inquiry_type=inquiry_type,
         status=status,
+        source=source,
         created_by=user_id,
         closed_at=now if closed else None,
         closed_by=user_id if closed else None,
@@ -121,14 +133,18 @@ def _new_header(
 
 
 def _create_customer(
-    session: Session, payload: CustomerInquiryCreate, status: InquiryStatus, user_id: int
+    session: Session,
+    payload: CustomerInquiryCreate,
+    status: InquiryStatus,
+    user_id: int | None,
+    source: InquirySource = InquirySource.DESK,
 ) -> Inquiry:
     customer = _party(session, payload.customer_id, PartyType.CUSTOMER, "customer_id")
     product = _product(session, payload.product_id)
     if payload.location_id is not None:
         _location(session, payload.location_id, "location_id")
 
-    inquiry = _new_header(session, InquiryType.CUSTOMER, status, user_id)
+    inquiry = _new_header(session, InquiryType.CUSTOMER, status, user_id, source)
     session.add(
         CustomerInquiry(
             inquiry_id=inquiry.id,
@@ -156,14 +172,18 @@ def _create_customer(
 
 
 def _create_supplier(
-    session: Session, payload: SupplierInquiryCreate, status: InquiryStatus, user_id: int
+    session: Session,
+    payload: SupplierInquiryCreate,
+    status: InquiryStatus,
+    user_id: int | None,
+    source: InquirySource = InquirySource.DESK,
 ) -> Inquiry:
     supplier = _party(session, payload.supplier_id, PartyType.SUPPLIER, "supplier_id")
     product = _product(session, payload.product_id)
     if payload.location_id is not None:
         _location(session, payload.location_id, "location_id")
 
-    inquiry = _new_header(session, InquiryType.SUPPLIER, status, user_id)
+    inquiry = _new_header(session, InquiryType.SUPPLIER, status, user_id, source)
     session.add(
         SupplierInquiry(
             inquiry_id=inquiry.id,
@@ -191,13 +211,17 @@ def _create_supplier(
 
 
 def _create_transport(
-    session: Session, payload: TransportInquiryCreate, status: InquiryStatus, user_id: int
+    session: Session,
+    payload: TransportInquiryCreate,
+    status: InquiryStatus,
+    user_id: int | None,
+    source: InquirySource = InquirySource.DESK,
 ) -> Inquiry:
     transporter = _party(session, payload.transporter_id, PartyType.TRANSPORTER, "transporter_id")
     _location(session, payload.pickup_location_id, "pickup_location_id")
     _location(session, payload.delivery_location_id, "delivery_location_id")
 
-    inquiry = _new_header(session, InquiryType.TRANSPORT, status, user_id)
+    inquiry = _new_header(session, InquiryType.TRANSPORT, status, user_id, source)
     session.add(
         TransportInquiry(
             inquiry_id=inquiry.id,
@@ -224,7 +248,7 @@ def _create_transport(
     return inquiry
 
 
-def _audit_create(session: Session, inquiry: Inquiry, user_id: int, **fields) -> None:
+def _audit_create(session: Session, inquiry: Inquiry, user_id: int | None, **fields) -> None:
     audit.record(
         session,
         user_id=user_id,
@@ -242,16 +266,27 @@ def _audit_create(session: Session, inquiry: Inquiry, user_id: int, **fields) ->
     )
 
 
-def create_inquiry(session: Session, payload: InquiryCreate, user_id: int) -> Inquiry:
+def create_inquiry(
+    session: Session,
+    payload: InquiryCreate,
+    user_id: int | None,
+    source: InquirySource = InquirySource.DESK,
+) -> Inquiry:
+    """Record an inquiry.
+
+    ``user_id`` is None, and ``source`` PORTAL, when a party raised this
+    themselves through their own link: there is no salesperson behind it, and
+    the row says so rather than borrowing somebody's name.
+    """
     if payload.inquiry_type == InquiryType.CUSTOMER:
         assert payload.customer is not None
-        inquiry = _create_customer(session, payload.customer, payload.status, user_id)
+        inquiry = _create_customer(session, payload.customer, payload.status, user_id, source)
     elif payload.inquiry_type == InquiryType.SUPPLIER:
         assert payload.supplier is not None
-        inquiry = _create_supplier(session, payload.supplier, payload.status, user_id)
+        inquiry = _create_supplier(session, payload.supplier, payload.status, user_id, source)
     else:
         assert payload.transport is not None
-        inquiry = _create_transport(session, payload.transport, payload.status, user_id)
+        inquiry = _create_transport(session, payload.transport, payload.status, user_id, source)
     session.flush()
     return get_inquiry(session, inquiry.id)
 

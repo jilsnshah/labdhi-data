@@ -1,61 +1,34 @@
 /**
- * The inbox for enquiries parties raised themselves.
+ * What parties sent in through their own links.
  *
- * These did not come from the desk, so they are not inquiries yet: each one is
- * somebody's own words, waiting to be read. The desk accepts one - which is
- * the moment a real inquiry exists, with master data behind every field and a
- * name against it - or declines it. Either way the words stay on the record.
+ * Every row here is already an inquiry - a party writes in and it is on the
+ * book - so there is nothing to approve and nothing to press. The screen earns
+ * its place by holding what an inquiry cannot: the note they wrote, and the
+ * places in their own words rather than the location rows we matched them to.
  *
- * Waiting ones sort first, because every NEW row is a person outside expecting
- * an answer.
+ * Read it as a record of where the book's newest entries came from.
  */
 
 import { Badge, Button, SegmentedControl, Text, Tooltip } from '@mantine/core';
-import { IconAdjustmentsHorizontal, IconCheck, IconX } from '@tabler/icons-react';
+import { IconAdjustmentsHorizontal, IconArrowRight } from '@tabler/icons-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { portalEnquiryApi, useApiMutation, usePortalEnquiries } from '@/api/hooks';
-import type { DeskEnquiry, InquiryType, PortalEnquiryStatus } from '@/api/types';
+import { usePortalEnquiries } from '@/api/hooks';
+import type { DeskEnquiry, InquiryType } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { EntitySelect } from '@/components/EntitySelect';
 import { FilterBar } from '@/components/FilterBar';
 import { PageHeader } from '@/components/PageHeader';
-import { AcceptEnquiryModal } from '@/components/modals/AcceptEnquiryModal';
 import { useListState } from '@/hooks/useListState';
 import { formatDateTime, formatQuantity } from '@/lib/format';
-
-const STANDING: Record<PortalEnquiryStatus, { label: string; color: string }> = {
-  NEW: { label: 'Waiting', color: 'brass' },
-  ACCEPTED: { label: 'Accepted', color: 'teal' },
-  DECLINED: { label: 'Declined', color: 'gray' },
-};
 
 const SIDE: Record<InquiryType, string> = {
   CUSTOMER: 'Wants',
   SUPPLIER: 'Offers',
   TRANSPORT: 'Can carry',
 };
-
-/** What they asked about: our grade if they found it, their words if not. */
-function grade(row: DeskEnquiry) {
-  if (row.product) return <Text size="sm">{row.product.display_name}</Text>;
-  if (row.product_text) {
-    return (
-      <Tooltip label="Typed by the party - not a grade in our master data" withArrow>
-        <Text size="sm" fs="italic" c="dimmed">
-          “{row.product_text}”
-        </Text>
-      </Tooltip>
-    );
-  }
-  return (
-    <Text size="sm" c="dimmed">
-      —
-    </Text>
-  );
-}
 
 function route(row: DeskEnquiry) {
   const places = [row.from_place, row.to_place].filter(Boolean);
@@ -64,7 +37,6 @@ function route(row: DeskEnquiry) {
 
 export function PartyEnquiriesPage() {
   const list = useListState<{
-    status?: string;
     inquiry_type?: string;
     party_id?: number;
     product_id?: number;
@@ -72,9 +44,8 @@ export function PartyEnquiriesPage() {
     grade_id?: number;
     manufacturer_id?: number;
     application_id?: number;
-  }>({ status: 'NEW' });
+  }>({});
   const { data, isFetching } = usePortalEnquiries(list.params);
-  const [accepting, setAccepting] = useState<DeskEnquiry | null>(null);
   const [productOpen, setProductOpen] = useState(false);
 
   const productFilterCount = [
@@ -84,11 +55,6 @@ export function PartyEnquiriesPage() {
     list.filters.manufacturer_id,
     list.filters.application_id,
   ].filter((value) => value !== undefined && value !== null).length;
-
-  const decline = useApiMutation((id: number) => portalEnquiryApi.decline(id), {
-    successMessage: 'Enquiry declined.',
-    invalidate: ['portal-enquiries', 'portal-enquiry-counts'],
-  });
 
   const columns: Column<DeskEnquiry>[] = [
     {
@@ -106,20 +72,54 @@ export function PartyEnquiriesPage() {
         </div>
       ),
     },
-    { key: 'product', label: 'Grade', render: grade },
+    {
+      key: 'product',
+      label: 'Grade',
+      render: (row) =>
+        row.product ? (
+          <Text size="sm">{row.product.display_name}</Text>
+        ) : (
+          <Text size="sm" c="dimmed">
+            —
+          </Text>
+        ),
+    },
     {
       key: 'quantity',
       label: 'Quantity',
       align: 'right',
       render: (row) => formatQuantity(row.quantity, row.unit),
     },
-    { key: 'route', label: 'Where', cardMeta: true, render: route },
+    {
+      key: 'route',
+      label: 'Where they said',
+      cardMeta: true,
+      render: (row) => (
+        <Tooltip label="The words they typed, not the location we matched" withArrow>
+          <Text size="sm">{route(row)}</Text>
+        </Tooltip>
+      ),
+    },
     {
       key: 'rate',
       label: 'They said',
       align: 'right',
       render: (row) =>
         row.rate ? `${row.inquiry_type === 'TRANSPORT' ? '₹' : '₹/kg'} ${row.rate}` : '—',
+    },
+    {
+      key: 'notes',
+      label: 'Their note',
+      render: (row) =>
+        row.notes ? (
+          <Text size="sm" fs="italic" lineClamp={2}>
+            “{row.notes}”
+          </Text>
+        ) : (
+          <Text size="sm" c="dimmed">
+            —
+          </Text>
+        ),
     },
     {
       key: 'created_at',
@@ -132,57 +132,20 @@ export function PartyEnquiriesPage() {
       ),
     },
     {
-      key: 'status',
-      label: 'Standing',
+      key: 'inquiry',
+      label: 'On the book as',
+      width: 160,
       render: (row) => (
-        <div>
-          <Badge size="sm" variant="light" color={STANDING[row.status].color}>
-            {STANDING[row.status].label}
-          </Badge>
-          {row.status === 'ACCEPTED' && row.inquiry_id && (
-            <div>
-              <Link to={`/inquiries/${row.inquiry_id}`} className="cell-link">
-                Inquiry #{row.inquiry_id}
-              </Link>
-            </div>
-          )}
-          {row.handler && (
-            <Text size="xs" c="dimmed">
-              by {row.handler.name}
-            </Text>
-          )}
-        </div>
+        <Button
+          component={Link}
+          to={`/inquiries/${row.inquiry_id}`}
+          size="xs"
+          variant="light"
+          rightSection={<IconArrowRight size={14} />}
+        >
+          Inquiry #{row.inquiry_id}
+        </Button>
       ),
-    },
-    {
-      key: 'decision',
-      label: 'Decision',
-      width: 190,
-      render: (row) =>
-        row.status === 'NEW' ? (
-          <div className="row-actions">
-            <Button
-              size="xs"
-              leftSection={<IconCheck size={14} />}
-              onClick={() => setAccepting(row)}
-            >
-              Accept
-            </Button>
-            <Button
-              size="xs"
-              variant="default"
-              leftSection={<IconX size={14} />}
-              loading={decline.isPending && decline.variables === row.id}
-              onClick={() => decline.mutate(row.id)}
-            >
-              Decline
-            </Button>
-          </div>
-        ) : (
-          <Text size="xs" c="dimmed">
-            Decided {row.handled_at ? formatDateTime(row.handled_at) : ''}
-          </Text>
-        ),
     },
   ];
 
@@ -191,7 +154,7 @@ export function PartyEnquiriesPage() {
       <PageHeader
         eyebrow="Inquiries"
         title="From parties"
-        subtitle="Enquiries customers, suppliers and transporters sent in through their own link."
+        subtitle="Sent in by customers, suppliers and transporters through their own link. Each one is already on the book."
       />
       <FilterBar
         q={list.q}
@@ -202,17 +165,6 @@ export function PartyEnquiriesPage() {
           setProductOpen(false);
         }}
       >
-        <SegmentedControl
-          size="xs"
-          value={list.filters.status ?? 'ALL'}
-          onChange={(value) => list.setFilter('status', value === 'ALL' ? undefined : value)}
-          data={[
-            { label: 'Waiting', value: 'NEW' },
-            { label: 'Accepted', value: 'ACCEPTED' },
-            { label: 'Declined', value: 'DECLINED' },
-            { label: 'All', value: 'ALL' },
-          ]}
-        />
         <SegmentedControl
           size="xs"
           value={list.filters.inquiry_type ?? 'ALL'}
@@ -249,8 +201,8 @@ export function PartyEnquiriesPage() {
           Product filters
         </Button>
         {productOpen && (
-          // These narrow through the grade we recognised, so an enquiry whose
-          // product was typed as free text is not reachable by them.
+          // These narrow through the product, so a load - which has none - is
+          // never matched by them.
           <>
             <div style={{ width: 190 }}>
               <EntitySelect
@@ -318,12 +270,7 @@ export function PartyEnquiriesPage() {
         loading={isFetching}
         fill
         emptyMessage="Nothing has come in yet."
-        emptyHint="Send a party their enquiry link from their page, and what they send lands here."
-      />
-
-      <AcceptEnquiryModal
-        enquiry={accepting}
-        onClose={() => setAccepting(null)}
+        emptyHint="Send a party their enquiry link from their page, and what they send lands here - and on the book."
       />
     </div>
   );

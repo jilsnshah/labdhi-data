@@ -25,7 +25,7 @@ from app.schemas.bid import PortalBid, PortalHome, PortalQuoteRequest
 from app.schemas.portal_enquiry import (
     PortalEnquiryOut,
     PortalEnquiryRequest,
-    PortalProduct,
+    PortalOption,
 )
 from app.services import bids as service
 from app.services import portal_enquiries as enquiries
@@ -73,25 +73,52 @@ def portal_bid(request: Request, session: SessionDep, bid_id: int, code: str = C
 # --------------------------------------------------------------------------- #
 # Enquiries a party raises themselves
 # --------------------------------------------------------------------------- #
-@router.get("/{code}/products", response_model=list[PortalProduct])
-def portal_products(
+def _options(rows) -> list[PortalOption]:
+    return [PortalOption(id=row.id, name=row.name) for row in rows]
+
+
+@router.get("/{code}/materials", response_model=list[PortalOption])
+def portal_materials(
     request: Request,
     session: SessionDep,
     code: str = CODE,
-    q: str | None = Query(None, description="Part of a material, grade or brand name"),
-) -> list[PortalProduct]:
-    """Grades to choose from when raising an enquiry.
+    q: str | None = Query(None, description="Part of a material name"),
+) -> list[PortalOption]:
+    """Materials to choose from. They can type one we do not have.
 
-    The product master is material, grade and manufacturer: nothing in it
-    belongs to another party, so it is the one piece of our data a portal
-    caller may read. They can always type a name instead.
+    Material, grade and manufacturer belong to nobody in particular, which is
+    why they are the one part of our data a portal caller may read. Parties,
+    locations and rates are not offered here and never should be.
     """
     _throttle(request)
     party_by_code(session, code)
-    return [
-        PortalProduct(id=product.id, display_name=product.display_name)
-        for product in enquiries.search_products(session, q)
-    ]
+    return _options(enquiries.search_materials(session, q))
+
+
+@router.get("/{code}/grades", response_model=list[PortalOption])
+def portal_grades(
+    request: Request,
+    session: SessionDep,
+    code: str = CODE,
+    material_id: int | None = Query(None, description="Grades of this material"),
+    q: str | None = Query(None, description="Part of a grade name"),
+) -> list[PortalOption]:
+    """Grades of the material they picked - a grade means nothing without it."""
+    _throttle(request)
+    party_by_code(session, code)
+    return _options(enquiries.search_grades(session, material_id, q))
+
+
+@router.get("/{code}/manufacturers", response_model=list[PortalOption])
+def portal_manufacturers(
+    request: Request,
+    session: SessionDep,
+    code: str = CODE,
+    q: str | None = Query(None, description="Part of a manufacturer name"),
+) -> list[PortalOption]:
+    _throttle(request)
+    party_by_code(session, code)
+    return _options(enquiries.search_manufacturers(session, q))
 
 
 @router.post("/{code}/enquiries", response_model=PortalEnquiryOut)
@@ -101,7 +128,12 @@ def raise_enquiry(
     session: SessionDep,
     code: str = CODE,
 ) -> PortalEnquiryOut:
-    """Send in an enquiry. What kind it is follows from who they are."""
+    """Send in an enquiry, which becomes an inquiry as it lands.
+
+    What kind it is follows from who they are. Anything they named that we did
+    not have - a material, a grade, a manufacturer, a town - is created in the
+    same breath, so nobody is turned away by a gap in our own records.
+    """
     _throttle(request)
     return _enquiry_out(enquiries.submit(session, code, payload))
 
@@ -114,11 +146,10 @@ def my_enquiries(request: Request, session: SessionDep, code: str = CODE) -> lis
 
 
 def _enquiry_out(enquiry) -> PortalEnquiryOut:
-    """Their own enquiry, with the grade named however it was given."""
+    """Their own enquiry, said back to them."""
     return PortalEnquiryOut(
         id=enquiry.id,
         inquiry_type=enquiry.inquiry_type,
-        status=enquiry.status,
         product_name=enquiry.product_name,
         quantity=enquiry.quantity,
         unit=enquiry.unit,

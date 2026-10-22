@@ -1,4 +1,4 @@
-import { Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Badge, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 
 import type { InquiryListItem, InquiryType } from '@/api/types';
@@ -65,6 +65,14 @@ export function InquiryTable({
               #{row.id}
             </Text>
             {showType && <StatusBadge value={row.inquiry_type} size="xs" />}
+            {row.source === 'PORTAL' && (
+              // Nobody keyed this one in: the party sent it through their link.
+              <Tooltip label="Sent in by the party through their own link" withArrow>
+                <Badge size="xs" variant="light" color="brass">
+                  Theirs
+                </Badge>
+              </Tooltip>
+            )}
           </Group>
           <Text fz="xs" c="dimmed">
             {formatDate(row.created_at)}

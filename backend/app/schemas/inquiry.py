@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.enums import InquiryStatus, InquiryType, QuantityUnit
+from app.models.enums import InquirySource, InquiryStatus, InquiryType, QuantityUnit
 from app.schemas.common import (
     LocationRef,
     ORMBase,
@@ -173,8 +173,10 @@ class InquiryListItem(BaseModel):
     delivery_name: str | None = None
     #: Rupees (transport inquiries).
     price: Decimal | None = None
-    created_by: int
+    #: Null when the party raised it themselves; ``source`` says which.
+    created_by: int | None = None
     created_by_name: str | None = None
+    source: InquirySource = InquirySource.DESK
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None = None
@@ -195,7 +197,9 @@ class InquiryOut(ORMBase):
     inquiry_type: InquiryType
     status: InquiryStatus
     title: str | None
-    created_by: int
+    #: Null when the party raised it themselves; ``source`` says which.
+    created_by: int | None = None
+    source: InquirySource = InquirySource.DESK
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None

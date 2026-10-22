@@ -1,8 +1,8 @@
 """Enquiries raised by parties themselves: what they send, and the two views out.
 
 The party sends loose words and gets back their own list. The desk sees the
-same words plus who typed them, and turns one into an inquiry by supplying the
-master data the party could not: which product, which location, what rate.
+same words plus who typed them, and the inquiry each one became - which exists
+already, because an enquiry is written onto the book as it arrives.
 """
 
 from __future__ import annotations
@@ -12,12 +12,14 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.enums import InquiryType, PortalEnquiryStatus, QuantityUnit
-from app.schemas.common import ORMBase, PartyRef, ProductRef, UserRef
+from app.models.enums import InquiryType, QuantityUnit
+from app.schemas.common import ORMBase, PartyRef, ProductRef
 
 QUANTITY = Field(gt=0, max_digits=14, decimal_places=3)
 RATE = Field(default=None, gt=0, max_digits=14, decimal_places=2)
 PLACE = Field(default=None, max_length=200)
+#: A name they may be creating in our master data, so it is kept short.
+NAME = Field(default=None, max_length=80)
 
 
 def _tidy(value: str | None) -> str | None:
@@ -32,17 +34,23 @@ def _tidy(value: str | None) -> str | None:
 class PortalEnquiryRequest(BaseModel):
     """One enquiry, as typed into a portal link.
 
-    Deliberately forgiving. The party is not expected to know our product
-    master, so they may pick a grade from the list *or* type its name; and
-    places are free text, because they do not know our locations either. What
-    they are *not* allowed to do is say who they are - that comes from the code
-    in the link, never from the form.
+    The grade is asked for the way a trader thinks of it: the material, then a
+    grade of that material, then whose it is. Each may be picked from our list
+    or typed; anything typed that we do not have is created, so a party is
+    never turned away because our master list is short of a name.
+
+    What they are *not* allowed to do is say who they are - that comes from the
+    code in the link, never from the form.
     """
 
-    #: Chosen from the list the portal offers.
-    product_id: int | None = None
-    #: Or typed, when the list did not have it.
-    product_text: str | None = Field(default=None, max_length=200)
+    #: Chosen from the list the portal offers...
+    material_id: int | None = None
+    #: ...or typed, when the list did not have it.
+    material_text: str | None = NAME
+    grade_id: int | None = None
+    grade_text: str | None = NAME
+    manufacturer_id: int | None = None
+    manufacturer_text: str | None = NAME
     quantity: Decimal = QUANTITY
     unit: QuantityUnit = QuantityUnit.MT
     from_place: str | None = PLACE
@@ -51,23 +59,26 @@ class PortalEnquiryRequest(BaseModel):
     rate: Decimal | None = RATE
     notes: str | None = Field(default=None, max_length=2000)
 
-    _clean = field_validator("product_text", "from_place", "to_place", "notes")(
-        lambda cls, value: _tidy(value)
-    )
+    _clean = field_validator(
+        "material_text",
+        "grade_text",
+        "manufacturer_text",
+        "from_place",
+        "to_place",
+        "notes",
+    )(lambda cls, value: _tidy(value))
 
 
 # --- What the party sees back -----------------------------------------------
 class PortalEnquiryOut(BaseModel):
-    """Their own enquiry, echoed back with where it has got to.
+    """Their own enquiry, echoed back.
 
-    ``status`` is shown because a party who sent something is owed the
-    knowledge that it was read. Nothing about the inquiry it became is
-    included: that is the desk's record, not theirs.
+    Nothing about the inquiry it became is included: that it reached us is
+    theirs to know, what we do with it is the desk's.
     """
 
     id: int
     inquiry_type: InquiryType
-    status: PortalEnquiryStatus
     product_name: str | None = None
     quantity: Decimal
     unit: QuantityUnit
@@ -78,25 +89,27 @@ class PortalEnquiryOut(BaseModel):
     created_at: datetime
 
 
-class PortalProduct(BaseModel):
-    """One line in the picker a party chooses their grade from."""
+class PortalOption(BaseModel):
+    """One line in a picker: a material, a grade or a manufacturer."""
 
     id: int
-    display_name: str
+    name: str
 
 
 # --- What the desk sees -----------------------------------------------------
 class DeskEnquiryOut(ORMBase):
-    """An enquiry in the desk's inbox: the party's words, and who typed them."""
+    """What a party sent, and the inquiry it became.
+
+    Worth its own screen because an inquiry cannot hold all of it: their note
+    is theirs, and the places are the words they used rather than the rows we
+    matched them to.
+    """
 
     id: int
     inquiry_type: InquiryType
-    status: PortalEnquiryStatus
     party: PartyRef
-    #: Set when the party found their grade in the list.
+    #: Null only for a load, which carries no product.
     product: ProductRef | None = None
-    #: Set when they typed it instead. Exactly one of the two is filled in.
-    product_text: str | None = None
     quantity: Decimal
     unit: QuantityUnit
     from_place: str | None = None
@@ -104,36 +117,8 @@ class DeskEnquiryOut(ORMBase):
     rate: Decimal | None = None
     notes: str | None = None
     created_at: datetime
-    #: The inquiry this became, once accepted.
-    inquiry_id: int | None = None
-    handled_at: datetime | None = None
-    handler: UserRef | None = None
-
-
-class DeskEnquiryCounts(BaseModel):
-    """For the badge on the nav: how much is waiting to be read."""
-
-    new: int = 0
-    accepted: int = 0
-    declined: int = 0
-
-
-class EnquiryAcceptRequest(BaseModel):
-    """What the desk supplies to turn an enquiry into a real inquiry.
-
-    The party's quantity, unit and rate carry over unless the desk overrides
-    them; the product and the locations have to be named here, because a text
-    box cannot point at master data. A transport enquiry needs both locations,
-    anything else needs the product.
-    """
-
-    product_id: int | None = None
-    location_id: int | None = None
-    pickup_location_id: int | None = None
-    delivery_location_id: int | None = None
-    quantity: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=3)
-    unit: QuantityUnit | None = None
-    rate: Decimal | None = RATE
+    #: The inquiry this became. Always set - it is written as the enquiry lands.
+    inquiry_id: int
 
 
 class EnquiryLink(BaseModel):

@@ -3,21 +3,21 @@
  *
  * The bid portal is the desk talking: here is a lot, name your price. This is
  * the other direction - a customer saying what they want, a supplier what they
- * have, a transporter which load they can take - and it arrives on the desk as
- * a request, not as a record.
+ * have, a transporter which load they can take - and what they send goes
+ * straight onto the book.
  *
- * So the form asks for as little as it can get away with. Nobody filling this
- * in on a phone knows our product master or our location list: they pick a
- * grade if they can find it, type its name if they cannot, and write place
- * names as places, not as rows. Mapping that onto master data is the desk's
- * job, which is the one thing a public form must never be trusted with.
+ * The grade is asked for the way a trader thinks of one: the material, then a
+ * grade of that material, then whose it is. Each step offers our list and
+ * takes anything they type that is not on it, because turning away business to
+ * keep a master list tidy is the wrong way round. Places are place names, for
+ * the same reason: nobody outside knows our locations.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { ApiError, api } from '@/api/client';
-import type { PortalEnquiry, PortalHome, PortalProduct } from '@/api/types';
+import type { PortalEnquiry, PortalHome, PortalOption } from '@/api/types';
 import { formatDateTime, formatQuantity } from '@/lib/format';
 
 import {
@@ -37,10 +37,7 @@ const COPY = {
   CUSTOMER: {
     heading: 'Tell us what you need',
     blurb: 'Send us the grade and the quantity, and we will come back with our rate.',
-    product: 'Which grade do you need?',
     quantity: 'How much do you need?',
-    place: 'Deliver to',
-    placeHint: 'City or area is enough',
     rate: 'Your target rate (₹/kg)',
     rateHint: 'Optional - leave it blank to just ask for our rate',
     submit: 'Send my enquiry',
@@ -48,10 +45,7 @@ const COPY = {
   SUPPLIER: {
     heading: 'Tell us what you have',
     blurb: 'Send us the grade, the quantity and your rate, and we will get back to you.',
-    product: 'Which grade are you offering?',
     quantity: 'How much can you supply?',
-    place: 'Ships from',
-    placeHint: 'City or area is enough',
     rate: 'Your rate (₹/kg)',
     rateHint: 'Optional',
     submit: 'Send my offer',
@@ -59,10 +53,7 @@ const COPY = {
   TRANSPORT: {
     heading: 'Tell us the load you can take',
     blurb: 'Send us the route and your freight, and we will come back to you.',
-    product: '',
     quantity: 'Load you can take',
-    place: '',
-    placeHint: '',
     rate: 'Your freight (₹)',
     rateHint: 'Optional - for the whole load',
     submit: 'Send my quote',
@@ -78,6 +69,15 @@ const KIND_OF: Record<string, Kind> = {
   TRANSPORTER: 'TRANSPORT',
 };
 
+/** One step of the grade: either a row of ours, or a name they typed. */
+interface Choice {
+  id: number | null;
+  text: string;
+}
+
+const EMPTY: Choice = { id: null, text: '' };
+const named = (choice: Choice) => choice.id !== null || choice.text.trim().length > 0;
+
 export function PortalEnquiryPage() {
   const { code = '' } = useParams();
   const [who, setWho] = useState<PortalHome | null>(null);
@@ -85,8 +85,9 @@ export function PortalEnquiryPage() {
   const [error, setError] = useState<string | null>(null);
   useDocumentTitle('Place an enquiry');
 
-  const [productId, setProductId] = useState<number | null>(null);
-  const [productText, setProductText] = useState('');
+  const [material, setMaterial] = useState<Choice>(EMPTY);
+  const [grade, setGrade] = useState<Choice>(EMPTY);
+  const [maker, setMaker] = useState<Choice>(EMPTY);
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<string>('MT');
   const [fromPlace, setFromPlace] = useState('');
@@ -116,15 +117,17 @@ export function PortalEnquiryPage() {
 
   const kind = KIND_OF[who.party_type] ?? 'CUSTOMER';
   const copy = COPY[kind];
-  const needsProduct = kind !== 'TRANSPORT';
-  const namedProduct = productId !== null || productText.trim().length > 0;
+  const needsGrade = kind !== 'TRANSPORT';
   const bothEnds = fromPlace.trim().length > 0 && toPlace.trim().length > 0;
   const ready =
-    Number(quantity) > 0 && (needsProduct ? namedProduct : bothEnds) && !busy;
+    Number(quantity) > 0 &&
+    !busy &&
+    (needsGrade ? named(material) && named(grade) && named(maker) : bothEnds);
 
   const clear = () => {
-    setProductId(null);
-    setProductText('');
+    setMaterial(EMPTY);
+    setGrade(EMPTY);
+    setMaker(EMPTY);
     setQuantity('');
     setFromPlace('');
     setToPlace('');
@@ -139,8 +142,12 @@ export function PortalEnquiryPage() {
     setFormError(null);
     try {
       await api.post<PortalEnquiry>(`/portal/${code}/enquiries`, {
-        product_id: productId,
-        product_text: productId === null ? productText.trim() || null : null,
+        material_id: material.id,
+        material_text: material.id === null ? material.text.trim() || null : null,
+        grade_id: grade.id,
+        grade_text: grade.id === null ? grade.text.trim() || null : null,
+        manufacturer_id: maker.id,
+        manufacturer_text: maker.id === null ? maker.text.trim() || null : null,
         quantity,
         unit,
         from_place: fromPlace.trim() || null,
@@ -180,21 +187,40 @@ export function PortalEnquiryPage() {
             </div>
           )}
 
-          {needsProduct && (
-            <GradePicker
-              code={code}
-              label={copy.product}
-              productId={productId}
-              typed={productText}
-              onPick={(product) => {
-                setProductId(product?.id ?? null);
-                setProductText(product?.display_name ?? '');
-              }}
-              onType={(value) => {
-                setProductId(null);
-                setProductText(value);
-              }}
-            />
+          {needsGrade && (
+            <>
+              <Picker
+                code={code}
+                path="materials"
+                label="Which material?"
+                placeholder="PVC, HDPE, PP…"
+                choice={material}
+                onChange={(next) => {
+                  setMaterial(next);
+                  // A grade belongs to one material; drop one that no longer fits.
+                  setGrade(EMPTY);
+                }}
+              />
+              <Picker
+                code={code}
+                path="grades"
+                label="Which grade?"
+                placeholder="K-67, MFI 0.3…"
+                query={material.id !== null ? { material_id: material.id } : undefined}
+                disabled={!named(material)}
+                disabledHint="Tell us the material first."
+                choice={grade}
+                onChange={setGrade}
+              />
+              <Picker
+                code={code}
+                path="manufacturers"
+                label="Whose material?"
+                placeholder="Reliance, Finolex…"
+                choice={maker}
+                onChange={setMaker}
+              />
+            </>
           )}
 
           <div className="portal-row">
@@ -223,7 +249,7 @@ export function PortalEnquiryPage() {
             </label>
           </div>
 
-          {kind === 'TRANSPORT' ? (
+          {kind === 'TRANSPORT' && (
             <div className="portal-row">
               <label className="grow">
                 <span>Pick up from</span>
@@ -244,19 +270,17 @@ export function PortalEnquiryPage() {
                 />
               </label>
             </div>
-          ) : (
+          )}
+
+          {kind === 'CUSTOMER' && (
             <label>
-              <span>{copy.place}</span>
+              <span>Deliver to</span>
               <input
-                value={kind === 'SUPPLIER' ? fromPlace : toPlace}
-                onChange={(event) =>
-                  kind === 'SUPPLIER'
-                    ? setFromPlace(event.currentTarget.value)
-                    : setToPlace(event.currentTarget.value)
-                }
+                value={toPlace}
+                onChange={(event) => setToPlace(event.currentTarget.value)}
                 placeholder="Rajkot"
               />
-              <small className="portal-hint">{copy.placeHint}</small>
+              <small className="portal-hint">City or area is enough</small>
             </label>
           )}
 
@@ -309,21 +333,13 @@ export function PortalEnquiryPage() {
   );
 }
 
-/** How far one of their enquiries has got. They are never told who else wrote in. */
-const STANDING: Record<PortalEnquiry['status'], { tone: string; label: string }> = {
-  NEW: { tone: '', label: 'With the desk' },
-  ACCEPTED: { tone: 'won', label: 'Taken up' },
-  DECLINED: { tone: 'lost', label: 'Not this time' },
-};
-
 function SentCard({ enquiry }: { enquiry: PortalEnquiry }) {
-  const standing = STANDING[enquiry.status];
   const route = [enquiry.from_place, enquiry.to_place].filter(Boolean).join(' → ');
   const unit = enquiry.inquiry_type === 'TRANSPORT' ? '₹' : '₹/kg';
   return (
     <div className="portal-card portal-card-still">
       <div className="portal-card-top">
-        <span className={`portal-pill ${standing.tone}`}>{standing.label}</span>
+        <span className="portal-pill">With the desk</span>
       </div>
       <div className="portal-card-title">{enquiry.product_name ?? (route || 'Enquiry')}</div>
       <div className="portal-card-meta">
@@ -337,70 +353,81 @@ function SentCard({ enquiry }: { enquiry: PortalEnquiry }) {
 }
 
 /**
- * Pick a grade from ours, or type your own.
+ * One step of the grade: search ours, or keep what you typed.
  *
- * Searching is the whole interaction: a trader knows what they want and types
- * three characters of it. If nothing matches, what they typed is the answer -
- * refusing an enquiry because our master data is short of a grade would be
- * turning away business to keep a list tidy.
+ * Searching is the whole interaction - a trader types three characters of what
+ * they want. Nothing matching is not an error: what they typed is the answer,
+ * and the desk ends up with the name rather than a shrug.
  */
-function GradePicker({
+function Picker({
   code,
+  path,
   label,
-  productId,
-  typed,
-  onPick,
-  onType,
+  placeholder,
+  query,
+  disabled,
+  disabledHint,
+  choice,
+  onChange,
 }: {
   code: string;
+  path: 'materials' | 'grades' | 'manufacturers';
   label: string;
-  productId: number | null;
-  typed: string;
-  onPick: (product: PortalProduct | null) => void;
-  onType: (value: string) => void;
+  placeholder: string;
+  query?: Record<string, number>;
+  disabled?: boolean;
+  disabledHint?: string;
+  choice: Choice;
+  onChange: (choice: Choice) => void;
 }) {
-  const [matches, setMatches] = useState<PortalProduct[]>([]);
+  const [matches, setMatches] = useState<PortalOption[]>([]);
   const [open, setOpen] = useState(false);
-  const query = typed.trim();
+  const typed = choice.text.trim();
+  const picked = choice.id !== null;
+  // Serialised so the effect below compares it by value, not by identity.
+  const scope = JSON.stringify(query ?? {});
 
   useEffect(() => {
-    if (productId !== null || query.length < 2) {
+    if (disabled || picked) {
       setMatches([]);
       return undefined;
     }
     const timer = window.setTimeout(() => {
       api
-        .get<PortalProduct[]>(`/portal/${code}/products`, { q: query })
+        .get<PortalOption[]>(`/portal/${code}/${path}`, { ...JSON.parse(scope), q: typed })
         .then(setMatches)
         .catch(() => setMatches([]));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [code, query, productId]);
+  }, [code, path, typed, picked, disabled, scope]);
 
-  const showList = open && productId === null && matches.length > 0;
-  const nothingFound = useMemo(
-    () => open && productId === null && query.length >= 2 && matches.length === 0,
-    [open, productId, query, matches],
-  );
+  const showList = open && !picked && !disabled && matches.length > 0;
+  const nothingFound = open && !picked && !disabled && typed.length >= 2 && matches.length === 0;
 
   return (
     <label className="portal-picker">
       <span>{label}</span>
       <input
-        value={typed}
+        value={choice.text}
+        disabled={disabled}
         onChange={(event) => {
-          onType(event.currentTarget.value);
+          onChange({ id: null, text: event.currentTarget.value });
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
-        placeholder="Start typing, e.g. K-67"
+        placeholder={disabled ? '' : placeholder}
         autoComplete="off"
       />
-      {productId !== null && (
+      {disabled && <small className="portal-hint">{disabledHint}</small>}
+      {picked && (
         <small className="portal-hint">
           Picked from our list.{' '}
-          <button type="button" className="portal-link" onClick={() => onPick(null)}>
+          <button
+            type="button"
+            className="portal-link"
+            onClick={() => onChange({ id: null, text: '' })}
+          >
             change
           </button>
         </small>
@@ -412,18 +439,18 @@ function GradePicker({
       )}
       {showList && (
         <div className="portal-options" role="listbox">
-          {matches.map((product) => (
+          {matches.map((option) => (
             <button
-              key={product.id}
+              key={option.id}
               type="button"
               className="portal-option"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
-                onPick(product);
+                onChange({ id: option.id, text: option.name });
                 setOpen(false);
               }}
             >
-              {product.display_name}
+              {option.name}
             </button>
           ))}
         </div>

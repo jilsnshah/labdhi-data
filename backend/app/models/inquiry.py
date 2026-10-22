@@ -27,9 +27,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 from app.models.enums import (
+    InquirySource,
     InquiryStatus,
     InquiryType,
     QuantityUnit,
+    inquiry_source_enum,
     inquiry_status_enum,
     inquiry_type_enum,
     quantity_unit_enum,
@@ -62,13 +64,25 @@ class Inquiry(Base, TimestampMixin):
         index=True,
     )
     title: Mapped[str | None] = mapped_column(String(200))
-    created_by: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
+    #: Who put it on the book. PORTAL means the party sent it in themselves.
+    source: Mapped[InquirySource] = mapped_column(
+        inquiry_source_enum,
+        nullable=False,
+        default=InquirySource.DESK,
+        server_default=InquirySource.DESK.value,
+        index=True,
+    )
+    #: The salesperson behind it - null for one a party raised themselves,
+    #: because there is nobody to name and borrowing a name would be a lie.
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
 
-    creator: Mapped[User] = relationship(foreign_keys=[created_by], lazy="joined")  # noqa: F821
+    creator: Mapped[User | None] = relationship(  # noqa: F821
+        foreign_keys=[created_by], lazy="joined"
+    )
     closer: Mapped[User | None] = relationship(  # noqa: F821
         foreign_keys=[closed_by], lazy="joined"
     )
