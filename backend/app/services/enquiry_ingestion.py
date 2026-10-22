@@ -274,11 +274,13 @@ def _record(session: Session, message: WhatsAppMessage, party: Party) -> Outcome
             party_id=party.id,
         )
 
-    # No tool call at all: the message was an enquiry but did not carry enough
-    # to write one down. The desk reads it themselves.
+    # The message was an enquiry but did not carry enough to write one down -
+    # no quantity, no second town. The desk reads it themselves, and the note
+    # says which part was missing so they know what to ask for.
+    missing = "; ".join(dict.fromkeys(outcome.refusals))
     return Outcome(
         MessageProcessing.IGNORED,
-        said.note or "An enquiry, but it did not say enough to record one.",
+        missing or said.note or "An enquiry, but it did not say enough to record one.",
         party_id=party.id,
     )
 

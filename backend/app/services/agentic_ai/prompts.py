@@ -80,14 +80,25 @@ them and there is no history to read it against.
 
 Decide one thing only: is this a genuine business enquiry?
 
-Be harder on this than you would be on a message from a known party. A stranger
-writing in could be a real trader, or a wrong number, a sales pitch, a bot, or
-spam. Only say yes if the message itself shows somebody wanting to trade
-polymer or to carry a load - a material, a quantity, a route, a rate.
+The desk trades in three directions, and all three are enquiries:
 
-These are NOT enquiries: greetings, wrong numbers, marketing, job applications,
-loan and crypto offers, anything selling the desk a service rather than
-material or transport.
+* Somebody wanting to BUY polymer from the desk.
+* Somebody wanting to SELL polymer to the desk. A supplier's offer is an
+  enquiry. A price list, a quotation, an offer letter, "we have 50 MT
+  available", a broker circulating a cargo - these are the desk's supply side
+  and it wants every one of them. They are written like sales pitches because
+  that is what selling looks like; that does not make them spam.
+* Somebody offering to CARRY a load.
+
+So the question is not whether they are selling something. It is whether what
+they are selling, buying or carrying is polymer.
+
+These are NOT enquiries: greetings and festival wishes, wrong numbers, job
+applications, loans, crypto, and anyone selling the desk something that is not
+polymer or freight - software, advertising, office supplies.
+
+A stranger could be any of those, so read the message rather than its tone. An
+offer naming a grade and a price is a trader whatever letterhead it carries.
 
 {HONESTY}
 
@@ -126,17 +137,29 @@ been given.
 
 {extraction}
 
-What to do about what is missing:
+Three rules about what you write down, and they matter more than filling the
+form in:
 
-* The tool's required fields have to be filled. If the message genuinely does
-  not give one of them, do not invent it - say what is missing and create
-  nothing.
-* Everything optional stays empty unless the message says it. A rate nobody
-  quoted is not zero.
-* Use the desk's own names where the message means one of them. {lookup}
+**Quantity.** If the message does not say how much, there is no quantity. Leave
+it out and say so. A tonnage nobody wrote is a figure the desk will quote
+against, and one is as wrong as a hundred.
 
-Call the tool exactly once when you have what it needs. If you cannot fill the
-required fields, call nothing and say which ones the message did not give.\
+**Rate.** The desk records rupees per kilogram, and nothing else. If the price
+is quoted in another currency or against another unit - USD per tonne, rupees
+per tonne, a price per bag - leave the rate empty and put the quoted price in
+the notes exactly as it was written. Do not convert it. You do not know today's
+exchange rate, and a converted figure looks like one the desk agreed to.
+
+**Manufacturer.** This is who made the polymer, not who sent the message. A
+trading firm, a broker or an agent offering somebody else's material is not its
+manufacturer. If the message names only the seller, the manufacturer is
+missing.
+
+Beyond those: anything optional stays empty unless the message says it, and
+{lookup}
+
+Call the tool once when you have what it needs. If something required is
+missing, call nothing and say plainly which part the message did not give.\
 """
 
 CUSTOMER_ENQUIRY = _ENQUIRY.format(
@@ -152,12 +175,15 @@ number written in these instructions is describing the shape of an enquiry, not
 the contents of one, and copying it would put a price on the book that nobody
 quoted.
 
-An enquiry naming a manufacturer, a grade, a quantity, a unit, a town and a
-rate gives you all six. One that says only a grade and a quantity gives you two
-of them, and the manufacturer is then a missing required field - not a reason
-to name the one you have seen most often.\
+A message naming a maker, a grade, a quantity, a unit, a town and a rate in
+rupees per kilogram gives you all six. One naming only a grade and a quantity
+gives you two, and the manufacturer is then missing - not a reason to name the
+maker you have seen most often, nor the firm that sent the message.\
 """,
-    lookup="Call the lookup tool to see what the desk already carries.",
+    lookup=(
+        "use the desk's own spelling where the message means something it\n"
+        "  already carries - the lookup tool will show you."
+    ),
 )
 
 SUPPLIER_ENQUIRY = _ENQUIRY.format(
@@ -171,7 +197,10 @@ Take every figure from the message in front of you and from nowhere else.
 
 Do not record where it ships from; the desk does not ask suppliers that here.\
 """,
-    lookup="Call the lookup tool to see what the desk already carries.",
+    lookup=(
+        "use the desk's own spelling where the message means something it\n"
+        "  already carries - the lookup tool will show you."
+    ),
 )
 
 TRANSPORT_ENQUIRY = _ENQUIRY.format(
@@ -186,5 +215,5 @@ Take every figure from the message in front of you and from nowhere else.
 A load needs both ends of the run. A message saying only that a truck is free
 tomorrow names neither end, and is not enough to record.\
 """,
-    lookup="There is no product in a load, so there is nothing to look up.",
+    lookup="there is no product in a load, so there is nothing to look up.",
 )

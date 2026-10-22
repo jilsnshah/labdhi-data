@@ -67,7 +67,10 @@ class ToolOutcome:
 
     inquiry_id: int | None = None
     enquiry_id: int | None = None
+    #: The desk's own rules said no. A failure to look at.
     errors: list[str] = field(default_factory=list)
+    #: The message did not carry enough. Not a failure - a thing that happens.
+    refusals: list[str] = field(default_factory=list)
     calls: int = 0
 
     @property
@@ -151,6 +154,22 @@ def _submit(
     return f"Recorded. The desk now has inquiry #{enquiry.inquiry_id}."
 
 
+def _no_quantity(outcome: ToolOutcome) -> str:
+    """What the agent is told when it reached for the tool without a tonnage.
+
+    Refusing is the whole point. A required column is pressure to invent a
+    number, and an invented tonnage on the book is worse than no row at all -
+    the desk would quote against it.
+    """
+    outcome.calls += 1
+    outcome.refusals.append("The message does not say how much.")
+    return (
+        "This cannot be recorded: the message does not say how much. Do not "
+        "guess a quantity and do not call this tool again. Stop now and report "
+        "that the quantity is missing."
+    )
+
+
 def _as_decimal(value) -> Decimal | None:
     """Models hand back numbers as numbers, strings, or not at all."""
     if value is None or value == "":
@@ -199,6 +218,8 @@ def customer_tools(session: Session, party: Party, outcome: ToolOutcome) -> list
             rate=_as_decimal(rate),
             notes=notes,
         )
+        if draft.quantity is None:
+            return _no_quantity(outcome)
         return _submit(
             session,
             party,
@@ -251,6 +272,8 @@ def supplier_tools(session: Session, party: Party, outcome: ToolOutcome) -> list
             rate=_as_decimal(rate),
             notes=notes,
         )
+        if draft.quantity is None:
+            return _no_quantity(outcome)
         return _submit(
             session,
             party,
@@ -300,6 +323,8 @@ def transport_tools(session: Session, party: Party, outcome: ToolOutcome) -> lis
             freight=_as_decimal(freight),
             notes=notes,
         )
+        if draft.quantity is None:
+            return _no_quantity(outcome)
         return _submit(
             session,
             party,

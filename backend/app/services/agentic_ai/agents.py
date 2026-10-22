@@ -162,6 +162,15 @@ class LangChainBackend:
         except AIUnavailable:
             raise
         except Exception as error:
+            if "recursion" in str(error).lower():
+                # The agent went round its tools without settling. Usually it
+                # was told the message lacks something required and kept trying
+                # anyway. Nothing was created, so this is a message to leave for
+                # a person rather than a fault to raise an alarm about.
+                logger.info("agentic ai: %s went round in circles", agent)
+                return EnquiryResult(
+                    created=False, note="The agent could not settle on an answer."
+                )
             raise AgentError(f"{agent} could not answer: {error}") from error
 
         structured = result.get("structured_response") if isinstance(result, dict) else None

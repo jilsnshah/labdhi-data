@@ -471,6 +471,27 @@ def test_a_tool_the_desk_refuses_is_a_failure_not_a_silent_drop(
     assert inquiries_on_the_book(db_session) == []
 
 
+def test_a_tool_called_without_a_quantity_refuses_rather_than_guessing(
+    client, auth, db_session, parties, masters, backend
+):
+    """A required column is pressure to invent a number.
+
+    A real supplier offer - a grade, a price, shipment terms, no tonnage
+    anywhere - had one MT written against it to fill the field. The quantity is
+    optional in the tool's own schema now, so "the message did not say" is
+    something the agent can express, and the tool says no to the rest.
+    """
+    with_phone(client, auth, parties["supplier"], "9825022222")
+    backend(tool_call={**SUPPLIER_CALL, "quantity": None})
+    message = arrive(db_session, "Offer: Yihua SG-5 at USD 900/MT CIF", number="919825022222")
+
+    outcome = enquiry_ingestion.process(db_session, message)
+
+    assert outcome.status is MessageProcessing.IGNORED
+    assert "does not say how much" in outcome.note
+    assert inquiries_on_the_book(db_session) == []
+
+
 def test_an_enquiry_that_did_not_say_enough_is_left_for_a_person(
     client, auth, db_session, parties, backend
 ):

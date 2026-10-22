@@ -85,13 +85,17 @@ class CustomerEnquiry(BaseModel):
     material: str = Field(max_length=80, description="PVC, HDPE, PP - the polymer itself.")
     grade: str = Field(max_length=80, description="The grade of it, such as K-67.")
     manufacturer: str = Field(max_length=80, description="Whose material, such as Reliance.")
-    quantity: Decimal = Field(gt=0, description="How much they want.")
+    quantity: Decimal | None = Field(
+        default=None, gt=0, description="How much they want. Leave out if the message does not say."
+    )
     unit: Literal["MT", "KG", "BAG", "LITRE", "PIECE"] = "MT"
     deliver_to: str | None = Field(
         default=None, max_length=200, description="Town or area for delivery, if they said."
     )
     rate: Decimal | None = Field(
-        default=None, gt=0, description="Rupees per kilogram, only if they named one."
+        default=None,
+        gt=0,
+        description="Rupees per kilogram only. Leave out for any other currency or unit.",
     )
     notes: str | None = Field(default=None, max_length=2000)
 
@@ -102,16 +106,26 @@ class SupplierEnquiry(BaseModel):
     material: str = Field(max_length=80)
     grade: str = Field(max_length=80)
     manufacturer: str = Field(max_length=80)
-    quantity: Decimal = Field(gt=0)
+    quantity: Decimal | None = Field(
+        default=None, gt=0, description="How much they are offering. Leave out if not stated."
+    )
     unit: Literal["MT", "KG", "BAG", "LITRE", "PIECE"] = "MT"
-    rate: Decimal | None = Field(default=None, gt=0, description="Rupees per kilogram.")
+    rate: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Rupees per kilogram only. Leave out for any other currency or unit.",
+    )
     notes: str | None = Field(default=None, max_length=2000)
 
 
 class TransportEnquiry(BaseModel):
     """A transporter offering to move a load."""
 
-    quantity: Decimal = Field(gt=0, description="The load they can take.")
+    quantity: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="The load they can take. Leave out if the message does not say.",
+    )
     unit: Literal["MT", "KG", "BAG", "LITRE", "PIECE"] = "MT"
     pickup: str = Field(max_length=200, description="Where it is picked up.")
     delivery: str = Field(max_length=200, description="Where it goes.")
