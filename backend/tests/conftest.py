@@ -188,6 +188,26 @@ def whatsapp_unconfigured(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_real_model(monkeypatch):
+    """No test may reach a real language model, or cost anybody money.
+
+    The machine running these may well have working Gemini credentials - the
+    developer's does. Switching the AI off for every test means a test that
+    forgets to install a scripted backend gets a deterministic "not
+    configured" rather than a live, billed call to Google; a test that wants
+    agents installs its own backend, which ``available()`` honours regardless.
+    """
+    from app.core.config import settings
+    from app.services import agentic_ai
+
+    monkeypatch.setattr(settings, "ai_enabled", False, raising=False)
+    agentic_ai.reset_backend()
+    agentic_ai.reset_model()
+    yield
+    agentic_ai.reset_backend()
+
+
+@pytest.fixture(autouse=True)
 def _no_real_whatsapp():
     """No test may post to Meta, even one that forgets to ask for the double."""
     from app.services import whatsapp

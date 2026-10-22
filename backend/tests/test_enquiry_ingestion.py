@@ -92,13 +92,6 @@ def backend():
     agentic_ai.reset_backend()
 
 
-@pytest.fixture(autouse=True)
-def _no_real_model():
-    """No test may reach a real model, even one that forgets to script it."""
-    yield
-    agentic_ai.reset_backend()
-
-
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #

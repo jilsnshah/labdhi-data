@@ -98,6 +98,30 @@ def chat_model() -> Any:
     return model
 
 
+def _service_account():
+    """Credentials from the key file named in settings, or None.
+
+    None means "use whatever this machine already has" - the Application
+    Default Credentials of a developer who has run `gcloud auth
+    application-default login`, or the attached identity of a Google-hosted
+    deployment. The file is only needed where neither of those exists, which
+    is most hosts that are not Google's.
+
+    Read from settings rather than the GOOGLE_APPLICATION_CREDENTIALS
+    environment variable, because this application's settings come from a .env
+    file that google-auth knows nothing about: a path set there would be
+    silently ignored, which is a confusing way to fail.
+    """
+    path = settings.google_application_credentials
+    if not path:
+        return None
+    from google.oauth2 import service_account
+
+    return service_account.Credentials.from_service_account_file(
+        path, scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+
+
 def _build(signature: tuple[str, str, float]) -> Any:
     provider, model_name, temperature = signature
     if provider == "google_ai":
@@ -121,5 +145,6 @@ def _build(signature: tuple[str, str, float]) -> Any:
             project=settings.google_cloud_project,
             location=settings.google_cloud_location,
             max_retries=settings.ai_max_retries,
+            credentials=_service_account(),
         )
     raise AIUnavailable(f"Unknown AI provider '{provider}'.")

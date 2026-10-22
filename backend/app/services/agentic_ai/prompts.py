@@ -147,9 +147,15 @@ Read out: the material, the grade, the manufacturer, how much they want and in
 what unit, where they want it delivered, and the rate they are asking for if
 they named one.
 
-"20 MT Reliance K-67 for Rajkot at 91.50" is all six. "Need K-67 20 ton" gives
-you the grade, the quantity and the unit, and no manufacturer - which is a
-missing required field, not a reason to guess Reliance.\
+Take every figure from the message in front of you and from nowhere else. Any
+number written in these instructions is describing the shape of an enquiry, not
+the contents of one, and copying it would put a price on the book that nobody
+quoted.
+
+An enquiry naming a manufacturer, a grade, a quantity, a unit, a town and a
+rate gives you all six. One that says only a grade and a quantity gives you two
+of them, and the manufacturer is then a missing required field - not a reason
+to name the one you have seen most often.\
 """,
     lookup="Call the lookup tool to see what the desk already carries.",
 )
@@ -160,6 +166,8 @@ SUPPLIER_ENQUIRY = _ENQUIRY.format(
     extraction="""\
 Read out: the material, the grade, the manufacturer, how much they are offering
 and in what unit, and their rate if they named one.
+
+Take every figure from the message in front of you and from nowhere else.
 
 Do not record where it ships from; the desk does not ask suppliers that here.\
 """,
@@ -173,8 +181,10 @@ TRANSPORT_ENQUIRY = _ENQUIRY.format(
 Read out: the load they can take and in what unit, where it is picked up, where
 it goes, and their freight for the whole load if they named a figure.
 
-A load needs both ends of the run. "I have a truck free tomorrow" names
-neither, and is not enough to record.\
+Take every figure from the message in front of you and from nowhere else.
+
+A load needs both ends of the run. A message saying only that a truck is free
+tomorrow names neither end, and is not enough to record.\
 """,
     lookup="There is no product in a load, so there is nothing to look up.",
 )

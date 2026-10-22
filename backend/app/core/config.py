@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     #: For ai_provider="vertex".
     google_cloud_project: str = ""
     google_cloud_location: str = "us-central1"
+    #: Path to a service-account key, for ai_provider="vertex". Left empty, the
+    #: ambient Application Default Credentials are used - which is what a
+    #: developer who has run `gcloud auth application-default login` has, and
+    #: what a Google-hosted deployment has without any file at all.
+    google_application_credentials: str = ""
 
     #: Requests a single caller may make to the public bidding portal each
     #: minute. A bidder watching one auction polls a handful of times; this is

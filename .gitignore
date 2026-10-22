@@ -29,3 +29,6 @@ keystore.properties
 *.xlsx
 *.xls
 *.csv
+
+# Service-account keys. Never committed.
+.secrets/

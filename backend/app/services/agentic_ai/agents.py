@@ -71,6 +71,22 @@ def _runtime():
     return create_agent
 
 
+def _answer_as(schema):
+    """Ask for the answer as a tool call rather than as native JSON.
+
+    Gemini's own structured-output mode returns an empty body often enough to
+    be unusable here - a parse failure where there should have been a verdict.
+    Asking the model to "call" a one-off tool shaped like the schema is the
+    same question by a route every provider implements properly, and the
+    answer comes back validated either way.
+    """
+    try:
+        from langchain.agents.structured_output import ToolStrategy
+    except ImportError as error:  # pragma: no cover - depends on what is installed
+        raise AIUnavailable(f"LangChain is not installed: {error}") from error
+    return ToolStrategy(schema)
+
+
 class AgentError(Exception):
     """An agent could not answer. Distinct from an agent answering 'no'."""
 
@@ -107,7 +123,7 @@ class LangChainBackend:
                 model=chat_model(),
                 tools=[],
                 system_prompt=prompt,
-                response_format=schema,
+                response_format=_answer_as(schema),
                 name=agent,
             )
             result = runner.invoke({"messages": [("user", _as_input(message, extra))]})
@@ -136,7 +152,7 @@ class LangChainBackend:
                 model=chat_model(),
                 tools=tools,
                 system_prompt=_PROMPT_FOR[agent],
-                response_format=EnquiryResult,
+                response_format=_answer_as(EnquiryResult),
                 name=agent,
             )
             result = runner.invoke(

@@ -18,7 +18,12 @@ services:
     buildCommand: pip install -r requirements.txt
     # Free instances have no pre-deploy step, so migrate on start. The bootstrap
     # creates only the admin account, and only when the database has no users.
+    # The service-account key arrives as an environment variable and has to be
+    # a file on disk before google-auth will read it.
     startCommand: >-
+      if [ -n "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+      printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/vertex-sa.json &&
+      export GOOGLE_APPLICATION_CREDENTIALS=/tmp/vertex-sa.json; fi &&
       alembic upgrade head &&
       python -m app.seed --bootstrap &&
       uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
@@ -65,13 +70,28 @@ services:
       # Reading those messages with an agent. Off by default: with AI_ENABLED
       # false every message is recorded and left for a person, which is how
       # this runs until somebody decides otherwise.
+      #
+      # Vertex rather than the Gemini API, because Vertex bills the Labdhi
+      # Cloud billing account directly while the Gemini API runs on AI Studio
+      # prepay credits that have to be topped up by hand.
+      #
+      # Credentials: Render is not Google-hosted, so there are no ambient
+      # credentials to pick up. Paste the contents of the labdhi-crm-ai service
+      # account key as GOOGLE_SERVICE_ACCOUNT_JSON; the start command writes it
+      # to a file and points GOOGLE_APPLICATION_CREDENTIALS at it.
       - key: AI_ENABLED
         value: "false"
       - key: AI_PROVIDER
-        value: google_ai
+        value: vertex
       - key: AI_MODEL
         value: gemini-3.1-flash-lite
-      - key: GOOGLE_API_KEY
+      - key: GOOGLE_CLOUD_PROJECT
+        value: labdhi-exim
+      # The newer flash-lite models are served from the global endpoint only;
+      # us-central1 returns a 404 for them.
+      - key: GOOGLE_CLOUD_LOCATION
+        value: global
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false
 
   - type: web
