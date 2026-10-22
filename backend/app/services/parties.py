@@ -550,7 +550,7 @@ def add_party_location(
     session: Session,
     party_id: int,
     payload: PartyLocationCreate,
-    user_id: int,
+    user_id: int | None,
     *,
     _audit: bool = True,
 ) -> PartyLocation:
@@ -891,13 +891,16 @@ def quick_create_party(
     payload: PartyQuickCreate,
     *,
     party_type: PartyType,
-    user_id: int,
+    user_id: int | None,
     source: PartySource = PartySource.QUICK_CREATE,
 ) -> Party:
     """Create a PROSPECT in one step from an inquiry or activity form.
 
     Only an identifier is required (name or phone). GST stays globally unique, so
     a colliding GST is reported as a conflict pointing at the existing party.
+
+    ``user_id`` is None for a party that introduced itself over WhatsApp: there
+    is nobody to name, and the audit row says so rather than borrowing a name.
     """
     if payload.gst_number:
         existing = session.scalar(

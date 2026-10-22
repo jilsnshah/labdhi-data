@@ -255,8 +255,25 @@ def _resolve_place(session: Session, typed: str | None) -> Location | None:
 # The party's side
 # --------------------------------------------------------------------------- #
 def submit(session: Session, code: str, payload: PortalEnquiryRequest) -> PortalEnquiry:
-    """Record what a party asked for, as an inquiry on the book."""
-    party = party_by_code(session, code)
+    """Record what a party asked for, through their portal link."""
+    return submit_for(session, party_by_code(session, code), payload)
+
+
+def submit_for(
+    session: Session,
+    party: Party,
+    payload: PortalEnquiryRequest,
+    source: InquirySource = InquirySource.PORTAL,
+) -> PortalEnquiry:
+    """Record what a party asked for, as an inquiry on the book.
+
+    The portal reaches this through a code in a link; WhatsApp reaches it with
+    a party resolved from a phone number. Everything after that point is the
+    same work and must stay the same work - the resolving of names into master
+    data, the validation, the inquiry itself - so there is one of it, here.
+    ``source`` is the only thing that differs, and it only records which door
+    the enquiry came in by.
+    """
     enquiry_type = ENQUIRY_OF[party.party_type]
     quantity: Decimal = payload.quantity
 
@@ -302,7 +319,7 @@ def submit(session: Session, code: str, payload: PortalEnquiryRequest) -> Portal
             )
         )
 
-    inquiry = inquiries.create_inquiry(session, create, None, InquirySource.PORTAL)
+    inquiry = inquiries.create_inquiry(session, create, None, source)
 
     enquiry = PortalEnquiry(
         party_id=party.id,
@@ -457,6 +474,7 @@ def link_for(session: Session, party_id: int, base_url: str) -> dict[str, str | 
 
 __all__ = [
     "ENQUIRY_OF",
+    "submit_for",
     "Inquiry",
     "for_inquiry",
     "get_enquiry",

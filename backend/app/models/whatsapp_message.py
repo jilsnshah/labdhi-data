@@ -11,8 +11,10 @@ desk that saw one reply three times would be worse than one that saw none.
 ``wa_message_id`` is Meta's own id for the message and is unique here, which is
 what makes a retry harmless.
 
-Nothing acts on these yet - they are recorded, matched to a party where the
-number is one we know, and kept.
+Reading one is a separate step: ``services/enquiry_ingestion`` picks up the
+PENDING rows afterwards and decides whether anything should come of them. That
+separation is what keeps Meta's 200 fast, and it is also what makes the reading
+idempotent - a message delivered twice is one row, and one row is read once.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.enums import MessageProcessing, message_processing_enum
 
 
 class WhatsAppMessage(Base):
@@ -77,7 +80,25 @@ class WhatsAppMessage(Base):
     #: is not lost - and so a bug here can be diagnosed from what was sent.
     raw: Mapped[dict | None] = mapped_column(JSONB)
 
+    #: How far this message has got. Only PENDING rows are ever picked up.
+    processing_status: Mapped[MessageProcessing] = mapped_column(
+        message_processing_enum,
+        nullable=False,
+        default=MessageProcessing.PENDING,
+        server_default=MessageProcessing.PENDING.value,
+        index=True,
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Why it ended where it did, in one line - the agent's reason for ignoring
+    #: it, or what failed. Kept short, and never the message itself.
+    processing_note: Mapped[str | None] = mapped_column(String(300))
+    #: The inquiry this message produced, when it produced one.
+    inquiry_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inquiries.id", ondelete="SET NULL"), index=True
+    )
+
     party: Mapped[Party | None] = relationship(lazy="joined")  # noqa: F821
+    inquiry: Mapped[Inquiry | None] = relationship(lazy="joined")  # noqa: F821
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<WhatsAppMessage {self.wa_message_id} from {self.from_number}>"

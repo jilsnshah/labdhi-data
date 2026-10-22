@@ -57,6 +57,8 @@ class PartySource(_Str):
     QUICK_CREATE = "QUICK_CREATE"
     IMPORT = "IMPORT"
     FIELD = "FIELD"
+    #: Introduced themselves by writing to the desk's WhatsApp number.
+    WHATSAPP = "WHATSAPP"
 
 
 class LocationType(_Str):
@@ -86,6 +88,8 @@ class InquirySource(_Str):
     DESK = "DESK"
     #: Sent in by the party themselves, through their portal link.
     PORTAL = "PORTAL"
+    #: Read out of a WhatsApp message they sent the desk.
+    WHATSAPP = "WHATSAPP"
 
 
 class InquiryStatus(_Str):
@@ -98,6 +102,26 @@ class InquiryStatus(_Str):
 
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
+
+
+class MessageProcessing(_Str):
+    """How far an inbound WhatsApp message has got through the pipeline.
+
+    Every message is recorded first and read afterwards, so this is also what
+    makes reading it idempotent: only PENDING rows are picked up, and a webhook
+    Meta delivers twice cannot produce two enquiries.
+    """
+
+    #: Recorded, not yet read.
+    PENDING = "PENDING"
+    #: Read, and it was not an enquiry. Nothing was created.
+    IGNORED = "IGNORED"
+    #: Read, and it became an enquiry.
+    PROCESSED = "PROCESSED"
+    #: Nothing was attempted because no model is configured.
+    SKIPPED = "SKIPPED"
+    #: Something went wrong. ``processing_note`` says what; it can be retried.
+    FAILED = "FAILED"
 
 
 class BidType(_Str):
@@ -212,4 +236,5 @@ activity_type_enum = _enum(ActivityType, "activity_type")
 activity_status_enum = _enum(ActivityStatus, "activity_status")
 activity_outcome_enum = _enum(ActivityOutcome, "activity_outcome")
 message_delivery_status_enum = _enum(MessageDeliveryStatus, "message_delivery_status")
+message_processing_enum = _enum(MessageProcessing, "message_processing")
 audit_action_enum = _enum(AuditAction, "audit_action")

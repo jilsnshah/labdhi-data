@@ -40,6 +40,35 @@ class Settings(BaseSettings):
     #: to the public web address and every link is built from it. Left empty,
     #: the request's own origin is used, which is right for local work.
     portal_base_url: str = ""
+    # ----------------------------------------------------------------- #
+    # Agentic AI
+    # ----------------------------------------------------------------- #
+    #: Master switch. Off, every message is recorded and left alone - the desk
+    #: reads them itself and nothing is created on its behalf.
+    ai_enabled: bool = False
+    #: "google_ai" uses an API key from AI Studio; "vertex" uses the Google
+    #: Cloud project and whatever credentials gcloud has already set up.
+    ai_provider: str = "google_ai"
+    #: The cheapest Gemini that can hold a conversation and call a tool. Named
+    #: here and nowhere else, so changing it never touches business logic.
+    ai_model: str = "gemini-3.1-flash-lite"
+    #: Reading a message is not a creative act: same message, same answer.
+    ai_temperature: float = 0.0
+    ai_timeout_seconds: float = 30.0
+    ai_max_retries: int = 2
+    #: How many tool calls one enquiry agent may make before we stop it.
+    ai_max_tool_calls: int = 6
+    #: Below this, a classification is treated as "not sure" and nothing is
+    #: created. A wrong enquiry on the book costs more than a missed one.
+    ai_min_confidence: float = 0.6
+    #: How many pending messages one pass of the ingestion worker reads.
+    ai_batch_size: int = 20
+    #: For ai_provider="google_ai".
+    google_api_key: str = ""
+    #: For ai_provider="vertex".
+    google_cloud_project: str = ""
+    google_cloud_location: str = "us-central1"
+
     #: Requests a single caller may make to the public bidding portal each
     #: minute. A bidder watching one auction polls a handful of times; this is
     #: set well above that and only bites on someone probing for codes.
