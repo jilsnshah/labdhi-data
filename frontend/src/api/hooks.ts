@@ -14,6 +14,9 @@ import type {
   Application,
   AuditLog,
   Dashboard,
+  DeskEnquiry,
+  DeskEnquiryCounts,
+  EnquiryLink,
   Grade,
   InquiryDetail,
   InquiryListItem,
@@ -211,6 +214,45 @@ export const useBidHistory = (id?: number, live = false, params: Params = {}) =>
     refetchIntervalInBackground: false,
   });
 
+/* ------------------- enquiries parties raise themselves ------------------ */
+/**
+ * The inbox for enquiries that arrived through a portal link.
+ *
+ * Parties write in whenever they like, so this polls: an enquiry sitting
+ * unread is the one thing on the desk that somebody outside is waiting on.
+ */
+export const usePortalEnquiries = (params: Params = {}) =>
+  useQuery({
+    ...listQuery<DeskEnquiry>('portal-enquiries', '/portal-enquiries', params),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
+
+export const usePortalEnquiry = (id?: number) =>
+  useQuery({
+    queryKey: ['portal-enquiry', id],
+    queryFn: () => api.get<DeskEnquiry>(`/portal-enquiries/${id}`),
+    enabled: Boolean(id),
+  });
+
+/** For the badge on the nav: how many are waiting to be read. */
+export const usePortalEnquiryCounts = () =>
+  useQuery({
+    queryKey: ['portal-enquiry-counts'],
+    queryFn: () => api.get<DeskEnquiryCounts>('/portal-enquiries/counts'),
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+  });
+
+/** The link this party uses to raise enquiries. Issues their code on first ask. */
+export const useEnquiryLink = (partyId?: number) =>
+  useQuery({
+    queryKey: ['enquiry-link', partyId],
+    queryFn: () => api.get<EnquiryLink>(`/portal-enquiries/link/${partyId}`),
+    enabled: Boolean(partyId),
+    staleTime: Infinity,
+  });
+
 /* ------------------------------- activities ----------------------------- */
 export const useActivities = (params: Params = {}) =>
   useQuery(listQuery<Activity>('activities', '/activities', params));
@@ -319,6 +361,9 @@ const INVALIDATE_ALL = [
   'audit-logs',
   'search',
   'party-duplicates',
+  'portal-enquiries',
+  'portal-enquiry',
+  'portal-enquiry-counts',
   'select',
   'salespeople-workload',
   'activity-calendar',
@@ -367,6 +412,12 @@ export const bidApi = {
     api.post<BidDetail>(`/bids/${id}/close?without_winner=${withoutWinner}`),
   award: (id: number, quoteId: number) =>
     api.post<BidDetail>(`/bids/${id}/award`, { quote_id: quoteId }),
+};
+
+export const portalEnquiryApi = {
+  /** Create the inquiry this enquiry asked for, on the desk's own terms. */
+  accept: (id: number, body: unknown) => api.post<DeskEnquiry>(`/portal-enquiries/${id}/accept`, body),
+  decline: (id: number) => api.post<DeskEnquiry>(`/portal-enquiries/${id}/decline`),
 };
 
 export const inquiryApi = {

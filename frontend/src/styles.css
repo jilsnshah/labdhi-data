@@ -1637,6 +1637,138 @@ a.board-row:hover {
   box-shadow: 0 0 0 3px rgba(199, 149, 42, 0.18);
 }
 
+/* A select is one of the form's own controls, so it wears the same clothes. */
+.portal-form select {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+  color: var(--mantine-color-ink-9);
+}
+
+/* Two fields that belong together - quantity and its unit, or the two ends of
+   a route. They stack on a narrow phone rather than squeeze. */
+.portal-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.portal-row > label {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* A unit beside a number needs only as much room as "LITRE". */
+.portal-row > label.portal-narrow {
+  flex: 0 0 7.5rem;
+}
+
+@media (max-width: 360px) {
+  .portal-row {
+    flex-wrap: wrap;
+  }
+
+  .portal-row > label,
+  .portal-row > label.portal-narrow {
+    flex-basis: 100%;
+  }
+}
+
+.portal-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--mantine-color-ink-5);
+}
+
+/* A plain-text button inside a hint, for "change" and the like. The submit
+   button is styled as `.portal-form button`, which outranks a bare class - so
+   these two reach through .portal-form to undo it. */
+.portal-form .portal-link {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brass);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The grade picker: an input with its matches hanging under it. */
+.portal-picker {
+  position: relative;
+}
+
+.portal-options {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  max-height: 260px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: 0 18px 40px rgba(18, 16, 16, 0.16);
+}
+
+.portal-form .portal-option {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  font-size: 0.9375rem;
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--mantine-color-ink-8);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.portal-form .portal-option:hover,
+.portal-form .portal-option:focus-visible {
+  background: var(--brass-soft);
+}
+
+/* The way in to raising an enquiry, at the top of their portal: the one thing
+   on the page that asks something of them rather than waiting to be asked. */
+.portal-cta {
+  display: block;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid var(--brass);
+  background: var(--brass-soft);
+  text-decoration: none;
+}
+
+.portal-cta-main {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--mantine-color-ink-9);
+}
+
+.portal-cta-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8125rem;
+  color: var(--mantine-color-ink-6);
+}
+
+/* An enquiry they have already sent: a card that is not a link anywhere. */
+.portal-card-still {
+  cursor: default;
+}
+
 .portal-form button {
   width: 100%;
   min-height: 52px;
@@ -1652,6 +1784,11 @@ a.board-row:hover {
 .portal-form button:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.portal-main a:not([class]) {
+  color: var(--brass);
+  font-weight: 600;
 }
 
 .portal-note {

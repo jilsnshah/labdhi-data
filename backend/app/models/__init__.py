@@ -26,6 +26,7 @@ from app.models.party import (
     PartyLocation,
     PartyProduct,
 )
+from app.models.portal_enquiry import PortalEnquiry
 from app.models.user import User
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     "PartyLocation",
     "PartyApplication",
     "PartyProduct",
+    "PortalEnquiry",
     "Product",
     "SupplierInquiry",
     "TransportInquiry",

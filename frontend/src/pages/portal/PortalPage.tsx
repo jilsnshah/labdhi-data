@@ -12,9 +12,18 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '@/api/client';
 import { ApiError } from '@/api/client';
 import type { PortalBid, PortalHome } from '@/api/types';
-import felesLogo from '@/assets/felesai.png';
-import { FELES_NAME, FELES_URL, FelesPanel } from '@/components/FelesCredit';
 import { formatDateTime, formatQuantity } from '@/lib/format';
+
+import {
+  PortalError,
+  PortalFoot,
+  PortalHeader,
+  PortalLoading,
+  useDocumentTitle,
+  useLive,
+} from './PortalChrome';
+
+const PRIVACY = 'Offers are private. Other bidders never see your name or your price.';
 
 const unitOf = (bid: PortalBid) => (bid.bid_type === 'TRANSPORT' ? '₹' : '₹/kg');
 
@@ -56,44 +65,6 @@ function outcomeOf(bid: PortalBid): { tone: string; label: string; said: string 
   }
 }
 
-/**
- * Keep a page current without the person touching it.
- *
- * A bidder leaves this open on a phone while they decide, so it has to move on
- * its own. It stops while the bid is closed (nothing can change), and pauses
- * whenever the tab is hidden, picking up again - with an immediate refresh -
- * the moment they come back to it.
- */
-function useLive(refresh: () => void, active: boolean, intervalMs = 8000) {
-  const latest = useRef(refresh);
-  latest.current = refresh;
-
-  useEffect(() => {
-    if (!active) return undefined;
-    const run = () => {
-      if (document.visibilityState === 'visible') latest.current();
-    };
-    const timer = window.setInterval(run, intervalMs);
-    document.addEventListener('visibilitychange', run);
-    window.addEventListener('focus', run);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', run);
-      window.removeEventListener('focus', run);
-    };
-  }, [active, intervalMs]);
-}
-
-function useDocumentTitle(title: string) {
-  useEffect(() => {
-    document.title = title;
-    return () => {
-      document.title = 'Trader CRM';
-    };
-  }, [title]);
-}
-
-/** The permanent link: everything this party has been asked to quote on. */
 export function PortalHomePage() {
   const { code = '' } = useParams();
   const [data, setData] = useState<PortalHome | null>(null);
@@ -123,6 +94,14 @@ export function PortalHomePage() {
     <div className="portal">
       <PortalHeader name={data.participant_name} />
       <main className="portal-main">
+        {/* The other direction: they ask us, rather than waiting to be asked. */}
+        <Link to={`/portal/${code}/enquire`} className="portal-cta">
+          <span className="portal-cta-main">Have something for us?</span>
+          <span className="portal-cta-hint">
+            Send us what you need or what you have, and we will come back with a rate.
+          </span>
+        </Link>
+
         <h2 className="portal-section">Open for bidding</h2>
         {data.open_bids.length ? (
           <div className="portal-list">
@@ -145,7 +124,7 @@ export function PortalHomePage() {
           </>
         )}
       </main>
-      <PortalFoot />
+      <PortalFoot note={PRIVACY} />
     </div>
   );
 }
@@ -230,7 +209,7 @@ export function PortalBidPage() {
 
   return (
     <div className="portal">
-      <PortalHeader name="" back={`/portal/${code}`} />
+      <PortalHeader name="" back={`/portal/${code}`} backLabel="Back to your bids" />
       <main className="portal-main">
         <div className="portal-bid-head">
           <span className={`portal-pill ${bid.status === 'OPEN' ? 'live' : (outcome?.tone ?? '')}`}>
@@ -379,7 +358,7 @@ export function PortalBidPage() {
           </div>
         )}
       </main>
-      <PortalFoot />
+      <PortalFoot note={PRIVACY} />
     </div>
   );
 }
@@ -406,67 +385,5 @@ function BidCard({ bid, code }: { bid: PortalBid; code: string }) {
         {bid.my_quote ? `Your offer: ${unit} ${bid.my_quote.price}` : 'You have not bid'}
       </div>
     </Link>
-  );
-}
-
-function PortalHeader({ name, back }: { name: string; back?: string }) {
-  return (
-    <header className="portal-head">
-      <div className="portal-head-row">
-        {back && (
-          <Link to={back} className="portal-back" aria-label="Back to your bids">
-            ‹
-          </Link>
-        )}
-        <div className="grow">
-          <div className="portal-brand">Labdhi</div>
-          {name && <div className="portal-who">{name}</div>}
-        </div>
-        <a
-          className="portal-powered"
-          href={FELES_URL}
-          target="_blank"
-          rel="noreferrer noopener"
-          title={`Built by ${FELES_NAME}`}
-        >
-          <img src={felesLogo} alt="" width={24} height={24} />
-          <span>
-            Built by<b>{FELES_NAME}</b>
-          </span>
-        </a>
-      </div>
-    </header>
-  );
-}
-
-function PortalFoot() {
-  return (
-    <footer className="portal-foot">
-      <div>Offers are private. Other bidders never see your name or your price.</div>
-      <FelesPanel />
-    </footer>
-  );
-}
-
-function PortalLoading() {
-  return (
-    <div className="portal portal-centre">
-      <div className="portal-spinner" />
-    </div>
-  );
-}
-
-function PortalError({ message }: { message: string }) {
-  return (
-    <div className="portal portal-centre">
-      <div className="portal-message">
-        <div className="portal-brand">Labdhi</div>
-        <p>{message}</p>
-        <p className="portal-note">
-          If you were sent this link by mistake, or it has expired, please contact us.
-        </p>
-        <FelesPanel />
-      </div>
-    </div>
   );
 }

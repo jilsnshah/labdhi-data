@@ -372,6 +372,68 @@ export interface PortalQuote {
   revision: number;
 }
 
+/* ------------------- enquiries parties raise themselves ------------------ */
+/** NEW: waiting on the desk. ACCEPTED: it became an inquiry. */
+export type PortalEnquiryStatus = 'NEW' | 'ACCEPTED' | 'DECLINED';
+
+/** One enquiry, as the party who sent it sees it. */
+export interface PortalEnquiry {
+  id: number;
+  inquiry_type: InquiryType;
+  status: PortalEnquiryStatus;
+  /** Ours if they picked it from the list, theirs if they typed it. */
+  product_name: string | null;
+  quantity: string;
+  unit: QuantityUnit;
+  from_place: string | null;
+  to_place: string | null;
+  rate: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/** A line in the grade picker on the public form. */
+export interface PortalProduct {
+  id: number;
+  display_name: string;
+}
+
+/** The same enquiry in the desk's inbox, with who sent it. */
+export interface DeskEnquiry {
+  id: number;
+  inquiry_type: InquiryType;
+  status: PortalEnquiryStatus;
+  party: PartyRef;
+  /** Set when they found their grade in our list. */
+  product: ProductRef | null;
+  /** Set when they typed it instead. Exactly one of the two is filled in. */
+  product_text: string | null;
+  quantity: string;
+  unit: QuantityUnit;
+  from_place: string | null;
+  to_place: string | null;
+  rate: string | null;
+  notes: string | null;
+  created_at: string;
+  /** The inquiry it became, once accepted. */
+  inquiry_id: number | null;
+  handled_at: string | null;
+  handler: IdName | null;
+}
+
+export interface DeskEnquiryCounts {
+  new: number;
+  accepted: number;
+  declined: number;
+}
+
+/** The links the desk copies for one party. */
+export interface EnquiryLink {
+  party_id: number;
+  enquiry_link: string;
+  portal_link: string;
+}
+
 /** WON: their offer was taken. NOT_SELECTED: another was, and they are not told whose. */
 export type PortalResult = 'WON' | 'NOT_SELECTED' | 'NO_WINNER' | 'UNDECIDED';
 

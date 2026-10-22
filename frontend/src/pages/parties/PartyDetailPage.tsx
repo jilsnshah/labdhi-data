@@ -13,6 +13,7 @@ import {
   Box,
   Button,
   Card,
+  CopyButton,
   Group,
   Loader,
   Menu,
@@ -20,10 +21,13 @@ import {
   Stack,
   Tabs,
   Text,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconCalendarPlus,
   IconArrowsExchange,
+  IconCheck,
+  IconCopy,
   IconDotsVertical,
   IconGitMerge,
   IconMapPin,
@@ -39,7 +43,7 @@ import {
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { partyApi, useApiMutation, useParty360 } from '@/api/hooks';
+import { partyApi, useApiMutation, useEnquiryLink, useParty360 } from '@/api/hooks';
 import type { PartyLocation, PartyProduct } from '@/api/types';
 import { ActivityTable } from '@/components/ActivityTable';
 import { DetailLayout, RailSection } from '@/components/DetailLayout';
@@ -58,6 +62,46 @@ import {
 } from '@/components/modals/PartyModals';
 import { EmptyState, Field } from '@/components/ui';
 import { formatDate, formatDateTime, humanize } from '@/lib/format';
+
+/**
+ * The link this party uses to send us enquiries of their own.
+ *
+ * Fetched only when the page is open, because asking for it is what issues
+ * their portal code: a party nobody has ever sent a link to has no public
+ * surface at all, and that is worth keeping true.
+ */
+function EnquiryLinkField({ partyId }: { partyId: number }) {
+  const { data, isLoading } = useEnquiryLink(partyId);
+  if (isLoading) return <Text size="xs" c="dimmed">Loading…</Text>;
+  if (!data) {
+    return (
+      <Text size="xs" c="dimmed">
+        This party cannot be given a link while they are inactive or merged.
+      </Text>
+    );
+  }
+  return (
+    <Stack gap={6}>
+      <Text size="xs" c="dimmed">
+        Send this and they can place enquiries themselves. It never expires.
+      </Text>
+      <Group gap={6} wrap="nowrap">
+        <Text size="xs" className="mono-tight" style={{ overflowWrap: 'anywhere' }}>
+          {data.enquiry_link}
+        </Text>
+        <CopyButton value={data.enquiry_link}>
+          {({ copied, copy }) => (
+            <Tooltip label={copied ? 'Copied' : 'Copy their enquiry link'}>
+              <ActionIcon variant="subtle" onClick={copy} aria-label="Copy enquiry link">
+                {copied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </CopyButton>
+      </Group>
+    </Stack>
+  );
+}
 
 export function PartyDetailPage() {
   const { partyId } = useParams();
@@ -117,6 +161,10 @@ export function PartyDetailPage() {
         <Field label="Phone" value={party.phone || '—'} width={74} />
         <Field label="Email" value={party.email || '—'} width={74} />
         <Field label="GST" value={party.gst_number || '—'} width={74} />
+      </RailSection>
+
+      <RailSection label="Their own link">
+        <EnquiryLinkField partyId={id} />
       </RailSection>
 
       <RailSection

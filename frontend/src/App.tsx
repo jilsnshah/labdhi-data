@@ -14,6 +14,7 @@ import { BidDetailPage } from '@/pages/bids/BidDetailPage';
 import { BidsPage } from '@/pages/bids/BidsPage';
 import { InquiriesPage } from '@/pages/inquiries/InquiriesPage';
 import { InquiryDetailPage } from '@/pages/inquiries/InquiryDetailPage';
+import { PartyEnquiriesPage } from '@/pages/inquiries/PartyEnquiriesPage';
 import { ApplicationsPage } from '@/pages/masters/ApplicationsPage';
 import { GradesPage } from '@/pages/masters/GradesPage';
 import { LocationsPage } from '@/pages/masters/LocationsPage';
@@ -22,16 +23,22 @@ import { MaterialsPage } from '@/pages/masters/MaterialsPage';
 import { ProductsPage } from '@/pages/masters/ProductsPage';
 import { PartiesPage } from '@/pages/parties/PartiesPage';
 import { PartyDetailPage } from '@/pages/parties/PartyDetailPage';
+import { PortalEnquiryPage } from '@/pages/portal/PortalEnquiryPage';
 import { PortalBidPage, PortalHomePage } from '@/pages/portal/PortalPage';
 
 /**
- * The bidding portal: open to customers, suppliers and transporters who hold a
- * link. It has no sign-in and no shell, and it is declared before everything
- * else so a signed-out visitor is never bounced to the login page.
+ * The party portal: open to customers, suppliers and transporters who hold a
+ * link - the bids they were invited to, and the enquiries they raise
+ * themselves. It has no sign-in and no shell, and it is declared before
+ * everything else so a signed-out visitor is never bounced to the login page.
+ *
+ * ``/enquire`` is declared before the bid route because both are one segment
+ * after the code; a static segment outranks a parameter, so the word wins.
  */
 const PORTAL_ROUTES = (
   <>
     <Route path="/portal/:code" element={<PortalHomePage />} />
+    <Route path="/portal/:code/enquire" element={<PortalEnquiryPage />} />
     <Route path="/portal/:code/:bidId" element={<PortalBidPage />} />
   </>
 );
@@ -84,6 +91,7 @@ export function App() {
         <Route path="/inquiries/customer" element={<InquiriesPage inquiryType="CUSTOMER" />} />
         <Route path="/inquiries/supplier" element={<InquiriesPage inquiryType="SUPPLIER" />} />
         <Route path="/inquiries/transport" element={<InquiriesPage inquiryType="TRANSPORT" />} />
+        <Route path="/inquiries/from-parties" element={<PartyEnquiriesPage />} />
         <Route path="/inquiries/:inquiryId" element={<InquiryDetailPage />} />
 
         <Route path="/activities/today" element={<ActivitiesPage scope="today" />} />

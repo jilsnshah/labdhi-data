@@ -91,6 +91,23 @@ class InquiryStatus(_Str):
     CLOSED = "CLOSED"
 
 
+class PortalEnquiryStatus(_Str):
+    """What the desk has done with an enquiry a party sent in by itself.
+
+    An enquiry arriving from a portal link is a request, not yet a row in the
+    book: the desk reads it, maps it onto a real product and location, and
+    accepts it - at which point a proper inquiry is created and this row
+    records where it went.
+    """
+
+    #: Waiting for the desk.
+    NEW = "NEW"
+    #: Turned into an inquiry; ``inquiry_id`` says which.
+    ACCEPTED = "ACCEPTED"
+    #: Read and not taken up.
+    DECLINED = "DECLINED"
+
+
 class BidType(_Str):
     """Who is being asked to quote."""
 
@@ -202,4 +219,5 @@ activity_type_enum = _enum(ActivityType, "activity_type")
 activity_status_enum = _enum(ActivityStatus, "activity_status")
 activity_outcome_enum = _enum(ActivityOutcome, "activity_outcome")
 message_delivery_status_enum = _enum(MessageDeliveryStatus, "message_delivery_status")
+portal_enquiry_status_enum = _enum(PortalEnquiryStatus, "portal_enquiry_status")
 audit_action_enum = _enum(AuditAction, "audit_action")

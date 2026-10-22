@@ -12,6 +12,7 @@ from app.api.v1 import (
     notes,
     parties,
     portal,
+    portal_enquiries,
     products,
     salesperson,
     system,
@@ -33,6 +34,7 @@ for crm_router in (
     parties.router,
     inquiries.router,
     bids.router,
+    portal_enquiries.router,
     activities.router,
     notes.router,
     system.router,
@@ -42,9 +44,9 @@ for crm_router in (
 # Field app: salesperson accounts only, always scoped to the caller.
 api_router.include_router(salesperson.router)
 
-# The one public surface: a customer, supplier or transporter answering a bid.
-# No authentication, so every route checks the portal code against the bid it
-# names and returns nothing about anybody else.
+# The one public surface: a customer, supplier or transporter answering a bid,
+# or raising an enquiry of their own. No authentication, so every route resolves
+# the portal code server-side and returns nothing about anybody else.
 api_router.include_router(portal.router)
 
 __all__ = ["api_router"]

@@ -16,13 +16,20 @@ from __future__ import annotations
 import time
 from collections import defaultdict
 
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, Path, Query, Request
 
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.errors import RateLimitError
 from app.schemas.bid import PortalBid, PortalHome, PortalQuoteRequest
+from app.schemas.portal_enquiry import (
+    PortalEnquiryOut,
+    PortalEnquiryRequest,
+    PortalProduct,
+)
 from app.services import bids as service
+from app.services import portal_enquiries as enquiries
+from app.services.portal import party_by_code
 
 router = APIRouter(prefix="/portal", tags=["portal"])
 
@@ -61,6 +68,66 @@ def portal_home(request: Request, session: SessionDep, code: str = CODE) -> Port
 def portal_bid(request: Request, session: SessionDep, bid_id: int, code: str = CODE) -> PortalBid:
     _throttle(request)
     return service.portal_bid(session, code, bid_id)
+
+
+# --------------------------------------------------------------------------- #
+# Enquiries a party raises themselves
+# --------------------------------------------------------------------------- #
+@router.get("/{code}/products", response_model=list[PortalProduct])
+def portal_products(
+    request: Request,
+    session: SessionDep,
+    code: str = CODE,
+    q: str | None = Query(None, description="Part of a material, grade or brand name"),
+) -> list[PortalProduct]:
+    """Grades to choose from when raising an enquiry.
+
+    The product master is material, grade and manufacturer: nothing in it
+    belongs to another party, so it is the one piece of our data a portal
+    caller may read. They can always type a name instead.
+    """
+    _throttle(request)
+    party_by_code(session, code)
+    return [
+        PortalProduct(id=product.id, display_name=product.display_name)
+        for product in enquiries.search_products(session, q)
+    ]
+
+
+@router.post("/{code}/enquiries", response_model=PortalEnquiryOut)
+def raise_enquiry(
+    request: Request,
+    payload: PortalEnquiryRequest,
+    session: SessionDep,
+    code: str = CODE,
+) -> PortalEnquiryOut:
+    """Send in an enquiry. What kind it is follows from who they are."""
+    _throttle(request)
+    return _enquiry_out(enquiries.submit(session, code, payload))
+
+
+@router.get("/{code}/enquiries", response_model=list[PortalEnquiryOut])
+def my_enquiries(request: Request, session: SessionDep, code: str = CODE) -> list[PortalEnquiryOut]:
+    """What this party has sent in, and how far each has got."""
+    _throttle(request)
+    return [_enquiry_out(row) for row in enquiries.mine(session, code)]
+
+
+def _enquiry_out(enquiry) -> PortalEnquiryOut:
+    """Their own enquiry, with the grade named however it was given."""
+    return PortalEnquiryOut(
+        id=enquiry.id,
+        inquiry_type=enquiry.inquiry_type,
+        status=enquiry.status,
+        product_name=enquiry.product_name,
+        quantity=enquiry.quantity,
+        unit=enquiry.unit,
+        from_place=enquiry.from_place,
+        to_place=enquiry.to_place,
+        rate=enquiry.rate,
+        notes=enquiry.notes,
+        created_at=enquiry.created_at,
+    )
 
 
 @router.post("/{code}/bids/{bid_id}/quote", response_model=PortalBid)
