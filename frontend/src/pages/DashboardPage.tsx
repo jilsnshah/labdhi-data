@@ -1,7 +1,7 @@
 /**
  * The desk's morning screen.
  *
- * A navy hero with the four numbers that set the day, then the market itself:
+ * A dark board with the four numbers that set the day, then the market itself:
  * the rate board (where is there a trade?), how rates have moved, the day's
  * calls and visits as a queue you can act on, and the latest inquiries.
  */
@@ -89,13 +89,13 @@ export function DashboardPage() {
       <section className="hero">
         <Group justify="space-between" align="flex-start" wrap="wrap" gap="lg">
           <Box>
-            <Text fz={11} fw={600} c="#c9b07a" tt="uppercase" style={{ letterSpacing: '0.18em' }}>
+            <Text fz={11} fw={600} c="var(--shell-muted)" tt="uppercase" style={{ letterSpacing: '0.06em' }}>
               {dayjs().format('dddd, D MMMM YYYY')}
             </Text>
-            <div className="hero-greeting" style={{ marginTop: 8 }}>
+            <div className="hero-greeting" style={{ marginTop: 4 }}>
               {greeting()}, <em>{firstName}</em>.
             </div>
-            <Text c="#aab4c7" fz="sm" mt={8} maw={600}>
+            <Text c="var(--shell-muted)" fz="xs" mt={6} maw={620}>
               {bestSpread
                 ? `Widest live spread is ${bestSpread.productName} at ${fmtRate(bestSpread.spread ?? 0)}/kg — buy from ${bestSpread.bestBuy?.partyName}, sell to ${bestSpread.bestSell?.partyName}.`
                 : 'Record supplier offers and customer demand with rates to see where the trades are.'}
@@ -103,24 +103,17 @@ export function DashboardPage() {
           </Box>
           <Group gap="xs">
             <Button
-              variant="white"
-              color="dark"
-              radius="xl"
-              leftSection={<IconCalendarTime size={15} />}
+              variant="default"
+              leftSection={<IconCalendarTime size={14} />}
               onClick={() => setActivityOpen(true)}
             >
               Schedule activity
             </Button>
             <Button
-              radius="xl"
-              leftSection={<IconPlus size={15} />}
+              variant="white"
+              color="dark"
+              leftSection={<IconPlus size={14} />}
               onClick={() => setInquiryOpen(true)}
-              styles={{
-                root: {
-                  background: 'linear-gradient(145deg,#e2bd6b,#b8862a)',
-                  color: '#1a1206',
-                },
-              }}
             >
               New inquiry
             </Button>
@@ -305,11 +298,18 @@ export function DashboardPage() {
                         )}
                       </Group>
                     </Group>
-                    <Box h={4} style={{ background: 'var(--hairline-soft)', borderRadius: 4 }}>
+                    {/* Green while the day is being cleared, amber once
+                        somebody is behind. Gold said nothing either way. */}
+                    <Box h={3} style={{ background: 'var(--hairline)', borderRadius: 3 }}>
                       <Box
-                        h={4}
+                        h={3}
                         w={`${done}%`}
-                        style={{ background: 'var(--brass)', borderRadius: 4 }}
+                        style={{
+                          background: person.overdue
+                            ? 'var(--mantine-color-amber-5)'
+                            : 'var(--supply)',
+                          borderRadius: 3,
+                        }}
                       />
                     </Box>
                   </Stack>
@@ -432,7 +432,7 @@ function HeroKpi({
     <Link to={to} className="hero-kpi">
       <div className="hero-kpi-label">{label}</div>
       <Group justify="space-between" align="flex-end" wrap="nowrap" gap="xs">
-        <div className="hero-kpi-value" style={alert ? { color: '#f0a49d' } : undefined}>
+        <div className="hero-kpi-value" style={alert ? { color: 'var(--mantine-color-rust-4)' } : undefined}>
           {value ?? '—'}
         </div>
         {spark && spark.some(Boolean) && (

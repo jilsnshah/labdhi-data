@@ -98,7 +98,7 @@ export function LoginPage() {
       <section className="login-form-side">
         <Box w={380} maw="100%">
           <div className="page-eyebrow">Trade desk</div>
-          <h2 className="page-title" style={{ fontSize: '2.75rem' }}>
+          <h2 className="page-title" style={{ fontSize: '1.75rem' }}>
             Sign in
           </h2>
           <Text c="ink.5" fz="sm" mt={6} mb="xl">

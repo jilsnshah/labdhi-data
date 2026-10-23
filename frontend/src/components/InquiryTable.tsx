@@ -93,7 +93,8 @@ export function InquiryTable({
                     {row.party_name ?? '—'}
                   </Text>
                   {row.party_stage === 'PROSPECT' && (
-                    <Text fz={11} fw={600} c="brass.8" tt="uppercase" style={{ letterSpacing: '0.08em' }}>
+                    // Quiet: it qualifies the name, it is not news about it.
+                    <Text fz={11} fw={500} c="ink.5">
                       Prospect
                     </Text>
                   )}
