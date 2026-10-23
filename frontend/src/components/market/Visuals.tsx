@@ -11,22 +11,16 @@ import { fmtRate } from '@/lib/market';
 
 /* ------------------------------------------------------------------ avatar */
 
-/**
- * A party's mark: flat, pale, and the same every time you see them.
- *
- * These were deep gradients in gold and forest, which made a column of
- * initials the loudest thing in a table of rates. A tint and dark text is
- * enough to tell two rows apart, which is all the colour is for.
- */
-const AVATAR_TONES: [string, string][] = [
-  ['#eef2f6', '#3d4553'],
-  ['#fdf8ed', '#9a711c'],
-  ['#ecfdf3', '#0d6c4b'],
-  ['#fef3f2', '#b42318'],
-  ['#f1f3f6', '#596273'],
-  ['#fffaeb', '#b54708'],
-  ['#eef2f6', '#242a35'],
-  ['#f8f9fb', '#3d4553'],
+/** Deep, desaturated tones - a party's colour is stable, never loud. */
+const AVATAR_TONES = [
+  ['#231f1b', '#416e59'],
+  ['#96701a', '#6e5511'],
+  ['#555049', '#416e59'],
+  ['#b4871f', '#8b6c15'],
+  ['#416e59', '#231f1b'],
+  ['#726e67', '#555049'],
+  ['#8b3c35', '#6e2f29'],
+  ['#caa441', '#a98319'],
 ];
 
 function hash(text: string): number {
@@ -50,18 +44,16 @@ export function initialsOf(name?: string | null): string {
 }
 
 export function PartyAvatar({ name, size = 32 }: { name?: string | null; size?: number }) {
-  const [tint, text] = AVATAR_TONES[hash(name ?? '') % AVATAR_TONES.length];
+  const [from, to] = AVATAR_TONES[hash(name ?? '') % AVATAR_TONES.length];
   return (
     <span
       className="party-avatar"
       style={{
         width: size,
         height: size,
-        fontSize: Math.round(size * 0.36),
-        borderRadius: Math.round(size * 0.25),
-        background: tint,
-        color: text,
-        boxShadow: 'inset 0 0 0 1px rgba(17, 21, 29, 0.06)',
+        fontSize: Math.round(size * 0.38),
+        borderRadius: Math.round(size * 0.3),
+        background: `linear-gradient(145deg, ${from}, ${to})`,
       }}
       aria-hidden
     >

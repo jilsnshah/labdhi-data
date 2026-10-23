@@ -1,47 +1,47 @@
 /*
- * House style - a modern trading platform.
+ * House style - a commodity trading desk.
  *
- * Cool neutral page, white instruments, hairline borders, one grotesk. The
- * screen is almost entirely grey so that the only things carrying colour are
- * the numbers and the states. Components inherit type and colour from the
- * theme; this file owns the shell, surfaces, tables and the market visuals.
+ * Navy shell, warm ivory working surface, white instruments with soft depth.
+ * Brass marks the one thing that matters on a screen; teal and indigo are the
+ * two sides of the market. Components inherit type and colour from the theme;
+ * this file owns the shell, surfaces, tables and the market visuals.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
   --page-max: 1520px;
 
-  /* Working surface. Cool and nearly colourless, so data is the only colour. */
-  --canvas: #f7f8fa;
-  --canvas-deep: #f1f3f6;
+  /* Working surface */
+  --canvas: #f6f4ef;
+  --canvas-deep: #efece4;
   --surface: #ffffff;
-  --surface-raised: #fafbfc;
-  --hairline: #e4e7ec;
-  --hairline-soft: #eef0f4;
-  --row-hover: #f8f9fb;
+  --surface-raised: #fdfcf9;
+  --hairline: #e7e3da;
+  --hairline-soft: #f0ede6;
+  --row-hover: #fbf9f4;
 
-  /* Shell: neutral slate, not brown. Dark enough to frame, quiet enough to
-     disappear once you are reading the table. */
-  --shell: #14181f;
-  --shell-2: #1b212a;
-  --shell-line: rgba(255, 255, 255, 0.07);
-  --shell-text: #cdd3dc;
-  --shell-muted: #78828f;
+  /* Shell */
+  --shell: #121010;
+  --shell-2: #1d1a17;
+  --shell-line: rgba(255, 255, 255, 0.08);
+  --shell-text: #d8d4cc;
+  --shell-muted: #8d8679;
 
-  /* The house mark, and the two sides of the market. Each means one thing. */
-  --brass: #bd8d26;
-  --brass-soft: #fdf8ed;
-  --supply: #12885d;
-  --supply-soft: #ecfdf3;
-  --demand: #bd8d26;
-  --demand-soft: #fdf8ed;
+  /* House accent and market sides. Gold is the only colour; the two sides of
+     the market are told apart by weight, not hue. */
+  --brass: #c7952a;
+  --brass-soft: #f4ebd6;
+  --supply: #416e59;
+  --supply-soft: #e9f1ec;
+  --demand: #96701a;
+  --demand-soft: #f7efdc;
 
-  --font-display: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', 'Times New Roman', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-  --mantine-color-dimmed: #596273;
-  --topbar-h: 56px;
+  --mantine-color-dimmed: #6d675f;
+  --topbar-h: 64px;
 }
 
 html,
@@ -55,6 +55,17 @@ body {
   color: var(--mantine-color-ink-9);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Paper grain: barely there, it keeps large ivory areas from feeling flat. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.08 0 0 0 0 0.16 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* ============================================================== shell ===== */
@@ -126,9 +137,7 @@ body {
   place-items: center;
   background: linear-gradient(145deg, #e2bd6b 0%, #b8862a 55%, #8a6114 100%);
   color: #1a1206;
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   font-size: 22px;
   line-height: 1;
   box-shadow:
@@ -138,9 +147,7 @@ body {
 }
 
 .shell-wordmark {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   font-size: 1.375rem;
   line-height: 1;
   color: #f6f1e4;
@@ -170,11 +177,11 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.4rem 0.7rem;
-  border-radius: 6px;
+  gap: 0.7rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
   color: var(--shell-text);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
   line-height: 1.35;
@@ -187,7 +194,7 @@ body {
 }
 
 .nav-link[data-active='true'] {
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(90deg, rgba(199, 149, 42, 0.16), rgba(199, 149, 42, 0.04));
   color: #ffffff;
 }
 
@@ -195,11 +202,12 @@ body {
   content: '';
   position: absolute;
   left: -0.75rem;
-  top: 0.4rem;
-  bottom: 0.4rem;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
   background: var(--brass);
+  box-shadow: 0 0 12px rgba(199, 149, 42, 0.7);
 }
 
 .nav-icon {
@@ -226,7 +234,7 @@ body {
 
 /* Top bar ---------------------------------------------------------------- */
 .shell-top {
-  background: rgba(255, 255, 255, 0.82) !important;
+  background: rgba(246, 244, 239, 0.78) !important;
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
   border-bottom: 1px solid var(--hairline) !important;
@@ -261,34 +269,40 @@ body {
 /* Page header ------------------------------------------------------------- */
 .page-head {
   position: relative;
-  margin-bottom: 1.125rem;
+  margin-bottom: 1.5rem;
 }
 
-/* A quiet breadcrumb, not a rule and a flourish. */
 .page-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--mantine-color-ink-5);
+  color: var(--mantine-color-brass-8);
+}
+
+.page-eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--brass);
 }
 
 .page-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.375rem;
-  line-height: 1.3;
-  letter-spacing: -0.016em;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 2.375rem;
+  line-height: 1.08;
+  letter-spacing: -0.005em;
   color: var(--mantine-color-ink-9);
-  margin: 0.2rem 0 0;
+  margin: 0.35rem 0 0;
 }
 
 .page-subtitle {
   color: var(--mantine-color-ink-5);
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   max-width: 70ch;
   margin-top: 0.35rem;
 }
@@ -308,36 +322,27 @@ body {
 }
 
 .serif {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-weight: 400;
 }
 
 .display-figure {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-weight: 400;
   line-height: 1;
   letter-spacing: -0.01em;
 }
 
 /* ============================================================= tables ===== */
 .data-table {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .data-table thead th {
   background: var(--surface-raised);
   border-bottom: 1px solid var(--hairline) !important;
-  padding-top: 0.5rem !important;
-  padding-bottom: 0.5rem !important;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--mantine-color-ink-5);
+  padding-top: 0.7rem !important;
+  padding-bottom: 0.7rem !important;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -346,8 +351,8 @@ body {
 .data-table tbody td {
   border-bottom: 1px solid var(--hairline-soft) !important;
   vertical-align: middle;
-  padding-top: 0.55rem !important;
-  padding-bottom: 0.55rem !important;
+  padding-top: 0.85rem !important;
+  padding-bottom: 0.85rem !important;
 }
 
 .data-table tbody tr:last-of-type td {
@@ -550,18 +555,30 @@ th.wrap,
 }
 
 /* Hero: the desk at a glance, on navy. */
-/* The board at the top of the day. It was a gradient with a greeting across
-   it in italics, which is a hotel lobby; what a desk wants is the four numbers
-   it opens on, dark enough to read as an instrument panel and flat enough to
-   get out of the way. */
 .hero {
   position: relative;
   overflow: hidden;
-  border-radius: 10px;
-  padding: 1.125rem 1.5rem 1.25rem;
-  color: var(--shell-text);
-  background: var(--shell);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 1.75rem 2rem 1.5rem;
+  color: #eef1f7;
+  background:
+    radial-gradient(80% 140% at 100% 0%, rgba(199, 149, 42, 0.22), transparent 55%),
+    radial-gradient(60% 120% at 0% 100%, rgba(199, 149, 42, 0.18), transparent 60%),
+    linear-gradient(135deg, #121010 0%, #241f19 100%);
+  box-shadow: var(--mantine-shadow-lg);
+}
+
+/* Faint price-grid in the hero, like a chart's gridlines behind the figures. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, transparent, black 30%, black 70%, transparent);
 }
 
 .hero > * {
@@ -570,25 +587,22 @@ th.wrap,
 }
 
 .hero-greeting {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  font-size: 0.9375rem;
-  line-height: 1.4;
-  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 2.375rem;
+  line-height: 1.05;
+  color: #fbf7ec;
 }
 
 .hero-greeting em {
-  font-style: normal;
-  font-weight: 600;
-  color: #ffffff;
+  font-style: italic;
+  color: #e2bd6b;
 }
 
 .hero-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 @media (max-width: 900px) {
@@ -598,7 +612,7 @@ th.wrap,
 }
 
 .hero-kpi {
-  padding: 0.9rem 1.25rem 0.1rem 0;
+  padding: 1.1rem 1.25rem 0.25rem 0;
   text-decoration: none;
   color: inherit;
   display: block;
@@ -606,44 +620,39 @@ th.wrap,
 
 .hero-kpi + .hero-kpi {
   padding-left: 1.25rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hero-kpi-label {
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--shell-muted);
+  color: #9aa6bd;
 }
 
 .hero-kpi-value {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-size: 1.625rem;
-  line-height: 1.2;
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  line-height: 1.05;
   color: #ffffff;
-  margin-top: 0.3rem;
-  font-variant-numeric: tabular-nums;
+  margin-top: 0.35rem;
 }
 
 .hero-kpi-hint {
-  font-size: 0.75rem;
-  color: var(--shell-muted);
-  margin-top: 0.1rem;
+  font-size: 0.8125rem;
+  color: #aab4c7;
 }
 
 .hero-kpi:hover .hero-kpi-value {
-  color: var(--brass);
+  color: #e2bd6b;
 }
 
 /* KPI tiles on list pages. */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 @media (max-width: 1000px) {
@@ -652,42 +661,47 @@ th.wrap,
   }
 }
 
-/* The coloured bar across the top of these was decoration: it said nothing
-   the label did not already say, four times over. A figure, what it is, and
-   one line of context is the whole tile. */
 .kpi {
   position: relative;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
-  padding: 0.875rem 1rem;
-  box-shadow: var(--mantine-shadow-xs);
+  border-radius: 14px;
+  padding: 1rem 1.15rem 0.9rem;
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.kpi::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 3px;
+  background: var(--kpi-accent, var(--hairline));
+  opacity: 0.9;
 }
 
 .kpi-label {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--mantine-color-ink-5);
 }
 
 .kpi-value {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-size: 1.5rem;
-  line-height: 1.2;
+  font-family: var(--font-serif);
+  font-size: 2.125rem;
+  line-height: 1.05;
   color: var(--mantine-color-ink-9);
-  margin-top: 0.3rem;
-  font-variant-numeric: tabular-nums;
+  margin-top: 0.4rem;
 }
 
 .kpi-hint {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--mantine-color-ink-5);
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
 }
 
 /* Legacy strip, kept for any screen still using it. */
@@ -774,9 +788,7 @@ th.wrap,
 }
 
 .panel-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   font-size: 1.5rem;
   line-height: 1.1;
   color: var(--mantine-color-ink-9);
@@ -873,9 +885,10 @@ a.board-row:hover {
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  color: #fff;
 }
 
 /* Small coloured chip for a product's material. */
@@ -1026,28 +1039,24 @@ a.board-row:hover {
 }
 
 .login-headline {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(2rem, 3.2vw, 2.875rem);
-  line-height: 1.12;
-  letter-spacing: -0.028em;
-  color: #ffffff;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 4.2vw, 4rem);
+  line-height: 1.02;
+  color: #fbf7ec;
   margin: 0;
-  max-width: 16ch;
+  max-width: 14ch;
 }
 
-/* The one place the house mark gets to be the whole phrase. Upright: an
-   italic grotesk at this size reads as a slant, not as emphasis. */
 .login-headline em {
-  font-style: normal;
-  color: var(--brass);
+  color: #e2bd6b;
 }
 
 .login-lede {
-  color: var(--shell-muted);
-  font-size: 0.9375rem;
-  max-width: 48ch;
-  margin: 1rem 0 2rem;
+  color: #aab4c7;
+  font-size: 1rem;
+  max-width: 46ch;
+  margin: 1.25rem 0 2rem;
   line-height: 1.6;
 }
 
@@ -1287,7 +1296,7 @@ a.board-row:hover {
 @media (max-width: 760px) {
   /* Headline type that fits the hand. */
   .page-title {
-    font-size: 1.25rem;
+    font-size: clamp(1.9rem, 9vw, 2.6rem);
   }
 
   .page-subtitle {
@@ -1372,9 +1381,7 @@ a.board-row:hover {
 }
 
 .portal-brand {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   font-size: 1.5rem;
   line-height: 1.1;
 }
@@ -1506,10 +1513,8 @@ a.board-row:hover {
 }
 
 .portal-bid-head h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-weight: 400;
   font-size: 2rem;
   line-height: 1.1;
   margin: 0.6rem 0 0;
@@ -1595,10 +1600,8 @@ a.board-row:hover {
 }
 
 .portal-form h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-weight: 400;
   font-size: 1.375rem;
   margin: 0 0 1rem;
 }
@@ -1741,19 +1744,15 @@ a.board-row:hover {
   display: block;
   margin-bottom: 1.5rem;
   padding: 1rem 1.15rem;
-  border-radius: 10px;
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--brass);
-  background: var(--surface);
+  border-radius: 18px;
+  border: 1px solid var(--brass);
+  background: var(--brass-soft);
   text-decoration: none;
-  box-shadow: var(--mantine-shadow-xs);
 }
 
 .portal-cta-main {
   display: block;
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   font-size: 1.25rem;
   color: var(--mantine-color-ink-9);
 }
@@ -2009,9 +2008,7 @@ a.board-row:hover {
 }
 
 .feles-panel-name {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.014em;
+  font-family: var(--font-serif);
   /* One line, as large as the card allows - it is the whole point of the panel. */
   font-size: clamp(1.5rem, 7.5vw, 2.125rem);
   line-height: 1.1;
