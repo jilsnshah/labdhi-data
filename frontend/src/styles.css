@@ -179,14 +179,64 @@ body {
   margin-top: 2px;
 }
 
+/* A group heading that is also its own switch. The whole row is the target,
+   so it is hit without aiming at a 12px chevron. */
+.nav-section {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.25rem 0.625rem;
+  margin: 0.25rem 0 0.1rem;
+  border-radius: 6px;
+  color: #6d7584;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.nav-section:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #9aa3b2;
+}
+
+/* The group you are in: no control, because it cannot be shut. */
+.nav-section[data-here] {
+  cursor: default;
+}
+
+.nav-section[data-here]:hover {
+  background: transparent;
+}
+
 .nav-section-label {
-  padding: 0 0.625rem;
-  margin: 1rem 0 0.3rem;
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-  color: #6d7584;
+  color: inherit;
+}
+
+/* Dashboard, pinned above the groups. */
+.nav-link-solo {
+  margin-bottom: 0.1rem;
+}
+
+.nav-section-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 140ms ease;
+}
+
+.nav-section[data-open] .nav-section-chevron {
+  transform: rotate(90deg);
+}
+
+/* How many pages are folded away in here. */
+.nav-section-count {
+  margin-left: auto;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #5c6472;
 }
 
 .nav-link {
@@ -249,7 +299,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem;
+  padding: 0.375rem 0.5rem;
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--shell-line);
@@ -473,8 +523,20 @@ th.wrap,
   transition: background 110ms var(--ease);
 }
 
-.search-hit:hover {
+.search-hit:hover,
+/* Where the arrow keys are. The same highlight as the mouse, so there is one
+   idea of "selected" however you are driving it. */
+.search-hit[data-cursor] {
   background: var(--row-hover);
+}
+
+.search-hit[data-cursor] {
+  box-shadow: inset 2px 0 0 var(--brass);
+}
+
+.search-hit-icon {
+  display: flex;
+  color: var(--mantine-color-ink-5);
 }
 
 .clickable {
@@ -569,10 +631,21 @@ th.wrap,
   align-items: start;
 }
 
-/* Below this the rail and a table cannot both have room: a 328px rail leaves
-   under 600px for the work, which is narrower than a quotations table. The
-   rail goes above instead, and the table gets the width. */
+/* The rail narrows before it gives up. On a 1280 laptop the work area is
+   about 1012px once the sidebar and padding are taken out, so a 280px rail
+   still leaves ~716px for a table - wider than the 600px a quotations table
+   needs. Stacking at 1360 was measuring against the window rather than
+   against the space actually left, and it cost every detail page its second
+   column on the commonest laptop there is: the tabs ended up 925px down,
+   below the fold, on a page that only scrolls 387px. */
 @media (max-width: 1360px) {
+  .detail-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+/* Below this there genuinely is not room for both. */
+@media (max-width: 1180px) {
   .detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -616,7 +689,16 @@ th.wrap,
   background: var(--surface);
 }
 
+/* A detail page runs about a screen and a half, and the tabs sit above the
+   part you scroll through - so switching from Activities to Notes meant
+   scrolling back to the top first. They stay put now. Only the tab strip: the
+   hero above it is reference, not navigation, and pinning that would cost a
+   third of the screen. */
 .work-tabs [role='tablist'] {
+  position: sticky;
+  top: calc(var(--topbar-h) - 1px);
+  z-index: 3;
+  background: var(--canvas);
   border-bottom: 1px solid var(--border);
   gap: 0.25rem;
 }
@@ -2318,8 +2400,8 @@ a.board-row:hover {
 
 /* In the sidebar it sits under the account, separated by the same hairline. */
 .shell-credit {
-  margin-top: 0.75rem;
-  padding-top: 0.85rem;
+  margin-top: 0.5rem;
+  padding-top: 0.55rem;
   border-top: 1px solid var(--shell-line);
   display: flex;
   justify-content: center;

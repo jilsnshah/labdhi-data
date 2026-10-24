@@ -16,30 +16,12 @@ import {
 } from '@mantine/core';
 import { useDisclosure, useHotkeys } from '@mantine/hooks';
 import {
-  IconBox,
-  IconBuildingFactory2,
-  IconBuildingWarehouse,
-  IconCalendarMonth,
-  IconCalendarTime,
-  IconChartBar,
   IconChevronRight,
-  IconClipboardList,
-  IconFlask,
-  IconGavel,
-  IconHistory,
-  IconInbox,
-  IconLayoutGrid,
   IconLogout,
-  IconMapPin,
-  IconNote,
   IconPlus,
   IconSearch,
   IconSelector,
   IconSettings,
-  IconSparkles,
-  IconTruck,
-  IconUserCheck,
-  IconUsers,
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
@@ -48,6 +30,7 @@ import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
+import { NAV, trailFor } from './nav';
 
 /**
  * Shell dimensions live here and in `--topbar-h` / `--sidebar-w`; AppShell
@@ -56,90 +39,39 @@ import { GlobalSearch } from './GlobalSearch';
 const HEADER_H = 48;
 const SIDEBAR_W = 236;
 
-interface NavItem {
-  label: string;
-  to: string;
-  icon: React.ReactNode;
-}
 
-interface NavSection {
-  label: string;
-  items: NavItem[];
+/**
+ * Groups that start closed.
+ *
+ * Twenty-three destinations is more than a laptop has room for: at 1280x720
+ * the list ran 1031px into 547px of space, so ten of them lived below the
+ * fold and the desk scrolled a menu to find a page. Master data is set up
+ * once and rarely revisited, and the field-work screens are a day's work on
+ * their own rather than something crossed into mid-task, so those two start
+ * closed and everything else is in view.
+ *
+ * None of this hides a destination: the group is one click away, the palette
+ * finds it by name, and whichever group the current page belongs to is open
+ * whatever this says.
+ */
+const CLOSED_BY_DEFAULT = ['Field work', 'Master data'];
+
+/** Remembered per browser, so the desk's own arrangement survives a reload. */
+const NAV_STATE_KEY = 'labdhi.nav.closed';
+
+function loadClosed(): string[] {
+  try {
+    const saved = window.localStorage.getItem(NAV_STATE_KEY);
+    return saved ? (JSON.parse(saved) as string[]) : CLOSED_BY_DEFAULT;
+  } catch {
+    return CLOSED_BY_DEFAULT;
+  }
 }
 
 /**
  * Flat, labelled sections instead of nested accordions: every destination is
  * one click away and the grouping explains the app at a glance.
  */
-const NAV: NavSection[] = [
-  {
-    label: 'Overview',
-    items: [{ label: 'Dashboard', to: '/', icon: <IconChartBar size={16} /> }],
-  },
-  {
-    label: 'Relationships',
-    items: [
-      { label: 'Customers', to: '/parties/customers', icon: <IconUsers size={16} /> },
-      { label: 'Suppliers', to: '/parties/suppliers', icon: <IconBuildingWarehouse size={16} /> },
-      { label: 'Transporters', to: '/parties/transporters', icon: <IconTruck size={16} /> },
-      { label: 'Notes', to: '/notes', icon: <IconNote size={16} /> },
-    ],
-  },
-  {
-    label: 'Inquiries',
-    items: [
-      {
-        label: 'Customer inquiries',
-        to: '/inquiries/customer',
-        icon: <IconClipboardList size={16} />,
-      },
-      {
-        label: 'Supplier inquiries',
-        to: '/inquiries/supplier',
-        icon: <IconBuildingWarehouse size={16} />,
-      },
-      { label: 'Transport', to: '/inquiries/transport', icon: <IconTruck size={16} /> },
-      {
-        label: 'From parties',
-        to: '/inquiries/from-parties',
-        icon: <IconInbox size={16} />,
-      },
-    ],
-  },
-  {
-    label: 'Bids',
-    items: [
-      { label: 'Customer bids', to: '/bids/customer', icon: <IconGavel size={16} /> },
-      { label: 'Supplier bids', to: '/bids/supplier', icon: <IconBuildingWarehouse size={16} /> },
-      { label: 'Transport bids', to: '/bids/transport', icon: <IconTruck size={16} /> },
-    ],
-  },
-  {
-    label: 'Field work',
-    items: [
-      { label: 'Today', to: '/activities/today', icon: <IconCalendarTime size={16} /> },
-      { label: 'Upcoming', to: '/activities/upcoming', icon: <IconCalendarMonth size={16} /> },
-      { label: 'History', to: '/activities/history', icon: <IconHistory size={16} /> },
-      { label: 'Calendar', to: '/activities/calendar', icon: <IconCalendarMonth size={16} /> },
-      { label: 'Salespeople', to: '/activities/salespeople', icon: <IconUserCheck size={16} /> },
-    ],
-  },
-  {
-    label: 'Master data',
-    items: [
-      { label: 'Products', to: '/masters/products', icon: <IconBox size={16} /> },
-      { label: 'Materials', to: '/masters/materials', icon: <IconFlask size={16} /> },
-      { label: 'Grades', to: '/masters/grades', icon: <IconLayoutGrid size={16} /> },
-      {
-        label: 'Manufacturers',
-        to: '/masters/manufacturers',
-        icon: <IconBuildingFactory2 size={16} />,
-      },
-      { label: 'Applications', to: '/masters/applications', icon: <IconSparkles size={16} /> },
-      { label: 'Locations', to: '/masters/locations', icon: <IconMapPin size={16} /> },
-    ],
-  },
-];
 
 function initials(name?: string): string {
   if (!name) return '?';
@@ -155,21 +87,6 @@ function initials(name?: string): string {
  * Where you are, as a trail: the section and the page inside it, read off the
  * same NAV that drew the sidebar. The page heading does not repeat the
  * section, so this is the one place it is named.
- */
-function trailFor(pathname: string): { section: string; page?: string } {
-  for (const section of NAV) {
-    for (const item of section.items) {
-      if (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)) {
-        return { section: section.label, page: item.label };
-      }
-    }
-  }
-  if (pathname.startsWith('/bids/')) return { section: 'Bids', page: 'Bid' };
-  if (pathname.startsWith('/inquiries/')) return { section: 'Inquiries', page: 'Inquiry' };
-  if (pathname.startsWith('/parties/')) return { section: 'Relationships', page: 'Party' };
-  if (pathname.startsWith('/settings')) return { section: 'Settings' };
-  return { section: 'Overview' };
-}
 
 /** IST clock - the desk runs on Indian market hours. */
 function DeskClock() {
@@ -204,11 +121,31 @@ export function AppLayout() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const trail = trailFor(location.pathname);
+  const [closed, setClosed] = useState<string[]>(loadClosed);
 
   useHotkeys([['mod+K', () => setSearchOpened(true)]]);
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname === to;
+
+  // The group holding the current page is always open, whatever was saved -
+  // the one thing worse than a long menu is one that hides where you are.
+  const isOpen = (label: string) => label === trail.section || !closed.includes(label);
+
+  const toggleGroup = (label: string) => {
+    if (label === trail.section) return;
+    setClosed((current) => {
+      const next = current.includes(label)
+        ? current.filter((name) => name !== label)
+        : [...current, label];
+      try {
+        window.localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next));
+      } catch {
+        // A browser refusing storage costs the arrangement, not the nav.
+      }
+      return next;
+    });
+  };
 
   return (
     <AppShell
@@ -289,30 +226,66 @@ export function AppLayout() {
         </AppShell.Section>
 
         <AppShell.Section grow component={ScrollArea} type="scroll" scrollbarSize={6}>
-          <Stack gap={1} pb="md" px={2}>
-            {NAV.map((section) => (
-              <Box key={section.label}>
-                <Text className="nav-section-label">{section.label}</Text>
-                <Stack gap={1}>
-                  {section.items.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className="nav-link"
-                      data-active={isActive(item.to) || undefined}
-                      onClick={closeMobile}
-                    >
-                      <span className="nav-icon">{item.icon}</span>
-                      {item.label}
-                    </Link>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
+          <Stack gap={1} pb={2} px={2}>
+            {NAV.map((section) => {
+              const open = isOpen(section.label);
+              const here = section.label === trail.section;
+              // A group of one is just a link. Dashboard does not need a
+              // heading announcing that it is the Overview section.
+              if (section.items.length === 1) {
+                const [item] = section.items;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="nav-link nav-link-solo"
+                    data-active={isActive(item.to) || undefined}
+                    onClick={closeMobile}
+                  >
+                    <span className="nav-icon">{item.icon}</span>
+                    {item.label}
+                  </Link>
+                );
+              }
+              return (
+                <Box key={section.label}>
+                  <UnstyledButton
+                    className="nav-section"
+                    data-open={open || undefined}
+                    data-here={here || undefined}
+                    onClick={() => toggleGroup(section.label)}
+                    aria-expanded={open}
+                    aria-label={`${section.label}, ${open ? 'collapse' : 'expand'}`}
+                  >
+                    <span className="nav-section-label">{section.label}</span>
+                    {/* The group you are in cannot be shut, so it is not
+                        offered a control that would do nothing. */}
+                    {!here && <IconChevronRight size={12} className="nav-section-chevron" />}
+                    {!open && <span className="nav-section-count">{section.items.length}</span>}
+                  </UnstyledButton>
+                  {open && (
+                    <Stack gap={1}>
+                      {section.items.map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          className="nav-link"
+                          data-active={isActive(item.to) || undefined}
+                          onClick={closeMobile}
+                        >
+                          <span className="nav-icon">{item.icon}</span>
+                          {item.label}
+                        </Link>
+                      ))}
+                    </Stack>
+                  )}
+                </Box>
+              );
+            })}
           </Stack>
         </AppShell.Section>
 
-        <AppShell.Section pt="sm">
+        <AppShell.Section pt={6}>
           <Menu position="top-start" withinPortal width={220}>
             <Menu.Target>
               <UnstyledButton className="shell-user" w="100%">
