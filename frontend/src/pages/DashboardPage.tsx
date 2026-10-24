@@ -13,14 +13,16 @@
  * hint rather than added together.
  */
 
-import { Box, Button, Group, SegmentedControl, Stack, Text } from '@mantine/core';
+import { Badge, Box, Button, Group, SegmentedControl, Stack, Tabs, Text } from '@mantine/core';
 import {
   IconArrowRight,
   IconArrowsExchange,
   IconCalendarTime,
+  IconChartBar,
   IconClipboardList,
   IconPackageExport,
   IconPlus,
+  IconTrendingUp,
 } from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -153,99 +155,148 @@ export function DashboardPage() {
       </div>
 
       <div className="dash-grid">
-        <Stack gap="md">
-          {/* ------------------------------------------------------- rate board */}
-          <section className="panel">
-            <div className="panel-head">
-              <div className="panel-title">Rate board</div>
-              <Text fz="xs" c="ink.5">
-                Cheapest live offer against best live demand, per product · ₹/kg
-              </Text>
-            </div>
-            <RateBoard lines={board} limit={8} />
-          </section>
+        {/*
+          Four things the desk works from, as four tabs rather than four panels
+          down a column. Stacked, they ran 1476px on a 1280 laptop: the rate
+          history and the recent inquiries were a scroll away, so in practice
+          nobody saw them. As tabs every one of them is named on the first
+          screen and is one click from open, which is the thing a dashboard is
+          for - knowing what is there, then going to it.
+        */}
+        <Tabs defaultValue="board" className="work-tabs dash-tabs" keepMounted={false}>
+          <Tabs.List>
+            <Tabs.Tab value="board" leftSection={<IconChartBar size={14} />}>
+              Rate board
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="queue"
+              leftSection={<IconCalendarTime size={14} />}
+              rightSection={
+                overdue > 0 ? (
+                  <Badge size="xs" circle variant="light" color="rust">
+                    {overdue}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              Today's queue
+            </Tabs.Tab>
+            {trendOptions.length > 0 && (
+              <Tabs.Tab value="trend" leftSection={<IconTrendingUp size={14} />}>
+                Rate history
+              </Tabs.Tab>
+            )}
+            <Tabs.Tab
+              value="recent"
+              leftSection={<IconClipboardList size={14} />}
+              rightSection={
+                data?.recent_inquiries?.length ? (
+                  <Badge size="xs" circle variant="light" color="ink">
+                    {data.recent_inquiries.length}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              Recent inquiries
+            </Tabs.Tab>
+          </Tabs.List>
 
-          {/* ------------------------------------------------------ today's work */}
-          <section className="panel">
-            <div className="panel-head">
-              <Group gap="xs" wrap="nowrap">
-                <div className="panel-title">Today's queue</div>
-                {overdue > 0 && (
-                  <Text fz="xs" fw={600} c="rust.8">
-                    {overdue} overdue
-                  </Text>
-                )}
-              </Group>
-              <Button
-                component={Link}
-                to="/activities/today"
-                size="compact-sm"
-                variant="subtle"
-                rightSection={<IconArrowRight size={13} />}
-              >
-                All activities
-              </Button>
-            </div>
-            <ActivityTable
-              rows={data?.todays_activities ?? []}
-              framed={false}
-              emptyMessage="Nothing scheduled for today"
-              emptyHint="Schedule a call or a visit and it appears here with its actions."
-            />
-          </section>
-
-          {/* ------------------------------------------------------------ trend */}
-          {trendOptions.length > 0 && (
+          <Tabs.Panel value="board">
             <section className="panel">
               <div className="panel-head">
-                <div className="panel-title">Rate history</div>
-                <Group gap="md" wrap="nowrap">
-                  <span className="side-tag" data-side="supply">
-                    Supply
-                  </span>
-                  <span className="side-tag" data-side="demand">
-                    Demand
-                  </span>
-                </Group>
+                <div className="panel-title">Rate board</div>
+                <Text fz="xs" c="ink.5">
+                  Cheapest live offer against best live demand, per product · ₹/kg
+                </Text>
               </div>
-              {/* Product names are long; on a narrow screen the switcher
-                  scrolls rather than stretching the card. */}
-              <Box px="md" pt="sm" className="scroll-x">
-                <SegmentedControl
-                  value={activeTrend ?? undefined}
-                  onChange={setTrendProduct}
-                  data={trendOptions}
-                />
-              </Box>
-              <Box px="sm" pb="sm" pt="xs">
-                <TrendChart quotes={trendQuotes} />
-              </Box>
+              <RateBoard lines={board} limit={8} />
             </section>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="queue">
+            <section className="panel">
+              <div className="panel-head">
+                <Group gap="xs" wrap="nowrap">
+                  <div className="panel-title">Today's queue</div>
+                  {overdue > 0 && (
+                    <Text fz="xs" fw={600} c="rust.8">
+                      {overdue} overdue
+                    </Text>
+                  )}
+                </Group>
+                <Button
+                  component={Link}
+                  to="/activities/today"
+                  size="compact-sm"
+                  variant="subtle"
+                  rightSection={<IconArrowRight size={13} />}
+                >
+                  All activities
+                </Button>
+              </div>
+              <ActivityTable
+                rows={data?.todays_activities ?? []}
+                framed={false}
+                emptyMessage="Nothing scheduled for today"
+                emptyHint="Schedule a call or a visit and it appears here with its actions."
+              />
+            </section>
+          </Tabs.Panel>
+
+          {trendOptions.length > 0 && (
+            <Tabs.Panel value="trend">
+              <section className="panel">
+                <div className="panel-head">
+                  <div className="panel-title">Rate history</div>
+                  <Group gap="md" wrap="nowrap">
+                    <span className="side-tag" data-side="supply">
+                      Supply
+                    </span>
+                    <span className="side-tag" data-side="demand">
+                      Demand
+                    </span>
+                  </Group>
+                </div>
+                {/* Product names are long; on a narrow screen the switcher
+                    scrolls rather than stretching the card. */}
+                <Box px="md" pt="sm" className="scroll-x">
+                  <SegmentedControl
+                    value={activeTrend ?? undefined}
+                    onChange={setTrendProduct}
+                    data={trendOptions}
+                  />
+                </Box>
+                <Box px="sm" pb="sm" pt="xs">
+                  <TrendChart quotes={trendQuotes} />
+                </Box>
+              </section>
+            </Tabs.Panel>
           )}
 
-          {/* --------------------------------------------------- recent inquiries */}
-          <section className="panel">
-            <div className="panel-head">
-              <div className="panel-title">Recent inquiries</div>
-              <Button
-                component={Link}
-                to="/inquiries/customer"
-                size="compact-sm"
-                variant="subtle"
-                rightSection={<IconArrowRight size={13} />}
-              >
-                All inquiries
-              </Button>
-            </div>
-            <InquiryTable
-              rows={data?.recent_inquiries ?? []}
-              showType
-              showLocation={false}
-              framed={false}
-              emptyMessage="No inquiries yet"
-            />
-          </section>
-        </Stack>
+          <Tabs.Panel value="recent">
+            <section className="panel">
+              <div className="panel-head">
+                <div className="panel-title">Recent inquiries</div>
+                <Button
+                  component={Link}
+                  to="/inquiries/customer"
+                  size="compact-sm"
+                  variant="subtle"
+                  rightSection={<IconArrowRight size={13} />}
+                >
+                  All inquiries
+                </Button>
+              </div>
+              <InquiryTable
+                rows={data?.recent_inquiries ?? []}
+                showType
+                showLocation={false}
+                framed={false}
+                emptyMessage="No inquiries yet"
+              />
+            </section>
+          </Tabs.Panel>
+        </Tabs>
 
         {/* --------------------------------------------------------------- rail */}
         <aside className="side-rail">

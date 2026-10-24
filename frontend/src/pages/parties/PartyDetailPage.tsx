@@ -169,11 +169,12 @@ export function PartyDetailPage() {
         <Field label="GST" value={party.gst_number || '—'} width={74} />
       </RailSection>
 
-      <RailSection label="Their own link">
+      <RailSection label="Their own link" defaultOpen={false}>
         <EnquiryLinkField partyId={id} />
       </RailSection>
 
       <RailSection
+        defaultOpen={false}
         label={isTransporter ? 'Operating areas' : 'Locations'}
         action={
           <Button
@@ -223,6 +224,7 @@ export function PartyDetailPage() {
 
       {!isTransporter && (
         <RailSection
+          defaultOpen={false}
           label={isSupplier ? 'Supplies' : 'Buys'}
           action={
             <Button

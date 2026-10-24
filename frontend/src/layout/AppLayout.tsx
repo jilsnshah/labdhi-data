@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure, useHotkeys } from '@mantine/hooks';
 import {
+  IconArrowLeft,
   IconChevronRight,
   IconLogout,
   IconPlus,
@@ -30,7 +31,7 @@ import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
-import { NAV, trailFor } from './nav';
+import { NAV, parentOf, trailFor } from './nav';
 
 /**
  * Shell dimensions live here and in `--topbar-h` / `--sidebar-w`; AppShell
@@ -121,6 +122,7 @@ export function AppLayout() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const trail = trailFor(location.pathname);
+  const parent = parentOf(location.pathname);
   const [closed, setClosed] = useState<string[]>(loadClosed);
 
   useHotkeys([['mod+K', () => setSearchOpened(true)]]);
@@ -163,8 +165,30 @@ export function AppLayout() {
         >
           <Group gap="sm" wrap="nowrap">
             <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="md" size="sm" />
+            {/* On a record, the trail carries the way out of it. Going back
+                through the browser fails on a link somebody was sent; this
+                goes to the list the record belongs to either way. */}
+            {parent && (
+              <Tooltip label={`Back to ${parent.label}`}>
+                <ActionIcon
+                  component={Link}
+                  to={parent.to}
+                  variant="subtle"
+                  size="input-sm"
+                  aria-label={`Back to ${parent.label}`}
+                >
+                  <IconArrowLeft size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
             <span className="shell-crumb">
-              {trail.section}
+              {parent ? (
+                <Link to={parent.to} className="shell-crumb-link">
+                  {trail.section}
+                </Link>
+              ) : (
+                trail.section
+              )}
               {trail.page && (
                 <>
                   <IconChevronRight size={13} />

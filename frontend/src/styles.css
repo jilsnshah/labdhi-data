@@ -788,10 +788,54 @@ th.wrap,
   align-items: start;
 }
 
+/* The same mistake the record layout had: measured against the window, not
+   against what is left after the sidebar. At 1280 the work area is about
+   1012px, so a 300px rail still leaves ~696px for the rate board. Stacking
+   here put the whole right-hand rail underneath instead - the day's team,
+   what closed and who is new - and turned a 2016px dashboard out of a
+   1300px one. */
 @media (max-width: 1400px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 1180px) {
   .dash-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The dashboard's work area. Its tabs are the first thing read on the page,
+   so they sit on the canvas rather than inside a card, and the panel beneath
+   carries the border instead. */
+.dash-tabs [role='tablist'] {
+  position: static;
+  background: transparent;
+  border-bottom: none;
+  margin-bottom: 0.625rem;
+}
+
+.dash-tabs .panel {
+  margin: 0;
+}
+
+/* A rail heading that is also its own switch. */
+.rail-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.rail-section-chevron {
+  flex-shrink: 0;
+  color: var(--mantine-color-ink-4);
+  transition: transform 140ms var(--ease);
+}
+
+.rail-section[data-open] .rail-section-chevron {
+  transform: rotate(90deg);
 }
 
 .block-label {
@@ -928,9 +972,11 @@ a .kpi:hover {
   overflow-y: auto;
 }
 
-/* Below wide screens the rail drops under the main column and spreads its
-   sections side by side, so the rate board keeps the full width. */
-@media (max-width: 1400px) {
+/* Only once the rail has actually dropped under the main column does it
+   spread its sections side by side. It used to do this at 1400 on the
+   assumption that it was full width by then; keeping two columns down to
+   1180 meant three sections sharing 300px, with every date and name clipped. */
+@media (max-width: 1180px) {
   .side-rail {
     position: static;
     max-height: none;

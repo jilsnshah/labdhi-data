@@ -110,6 +110,21 @@ export const NAV: NavSection[] = [
   },
 ];
 
+/**
+ * Where "back" goes from a record.
+ *
+ * A record is always opened from a list, and the browser's own back button is
+ * off in the chrome where nobody looks mid-task. Each detail route therefore
+ * names the list it belongs to, so the trail can carry a way out that works
+ * even on a link somebody was sent.
+ */
+export function parentOf(pathname: string): { to: string; label: string } | null {
+  if (/^\/parties\/\d+/.test(pathname)) return { to: '/parties/customers', label: 'Relationships' };
+  if (/^\/inquiries\/\d+/.test(pathname)) return { to: '/inquiries/customer', label: 'Inquiries' };
+  if (/^\/bids\/\d+/.test(pathname)) return { to: '/bids/customer', label: 'Bids' };
+  return null;
+}
+
 /** Which section and page a path belongs to - for the trail and the nav. */
 export function trailFor(pathname: string): { section: string; page?: string } {
   for (const section of NAV) {
