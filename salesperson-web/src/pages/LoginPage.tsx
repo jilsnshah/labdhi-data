@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BRAND } from '../lib/brand';
 
 import { ApiError, onServerWaking } from '@/api/client';
 import { FelesCredit } from '@/components/FelesCredit';
@@ -48,9 +49,9 @@ export function LoginPage() {
       </svg>
 
       <div className="login-top">
-        <span className="brand-mark">L</span>
+        <span className="brand-mark">{BRAND.mark}</span>
         <div>
-          <div className="brand-word">Labdhi</div>
+          <div className="brand-word">{BRAND.name}</div>
           <div className="brand-sub">Field desk</div>
         </div>
       </div>

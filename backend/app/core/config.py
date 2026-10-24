@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Trader CRM"
+
+    # ----------------------------------------------------------------- #
+    # Whose desk this is
+    # ----------------------------------------------------------------- #
+    #: The trading house's name, wherever the software says it out loud: the
+    #: WhatsApp message a bidder gets, and what the agents are told they work
+    #: for. Set it per deployment; nothing in the code should name a customer.
+    brand_name: str = "the desk"
+    #: Where the desk trades, for the agents reading messages. It decides
+    #: whether "rate kya hai" is read as a question or as noise.
+    brand_region: str = "India"
     environment: str = "development"
     log_level: str = "INFO"
     api_prefix: str = "/api/v1"

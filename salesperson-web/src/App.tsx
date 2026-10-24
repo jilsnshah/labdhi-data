@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { BRAND } from './lib/brand';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import { useDashboard, useRefreshAll } from '@/api/hooks';
@@ -31,7 +32,7 @@ export function App() {
       () => !NAV_ROUTES.includes(window.location.hash.replace('#', '') || '/today'),
       () => navigate(-1),
       () => {
-        if (window.confirm('Close Labdhi Field?')) {
+        if (window.confirm(`Close ${BRAND.name} Field?`)) {
           void import('@capacitor/app').then(({ App: CapApp }) => CapApp.exitApp());
         }
       },

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
 import { FelesCredit } from '@/components/FelesCredit';
+import { BRAND } from '@/lib/brand';
 import { useAuth } from '@/lib/auth';
 
 /** Decorative board for the brand panel - illustrative rows, not live data. */
@@ -54,10 +55,10 @@ export function LoginPage() {
     <div className="login">
       <section className="login-brand">
         <div className="login-brand-top">
-          <span className="shell-mark">L</span>
+          <span className="shell-mark">{BRAND.mark}</span>
           <div>
-            <div className="shell-wordmark">Labdhi</div>
-            <div className="shell-sub">Polymer trading</div>
+            <div className="shell-wordmark">{BRAND.name}</div>
+            {BRAND.tagline && <div className="shell-sub">{BRAND.tagline}</div>}
           </div>
         </div>
 

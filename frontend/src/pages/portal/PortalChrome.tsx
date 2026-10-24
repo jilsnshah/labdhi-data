@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import felesLogo from '@/assets/felesai.png';
+import { BRAND } from '@/lib/brand';
 import { FELES_NAME, FELES_URL, FelesPanel } from '@/components/FelesCredit';
 
 /**
@@ -67,7 +68,7 @@ export function PortalHeader({
           </Link>
         )}
         <div className="grow">
-          <div className="portal-brand">Labdhi</div>
+          <div className="portal-brand">{BRAND.name}</div>
           {name && <div className="portal-who">{name}</div>}
         </div>
         <a
@@ -109,7 +110,7 @@ export function PortalError({ message }: { message: string }) {
   return (
     <div className="portal portal-centre">
       <div className="portal-message">
-        <div className="portal-brand">Labdhi</div>
+        <div className="portal-brand">{BRAND.name}</div>
         <p>{message}</p>
         <p className="portal-note">
           If you were sent this link by mistake, or it has expired, please contact us.

@@ -328,7 +328,7 @@ def invite_message(party_name: str, bid: Bid, link: str) -> str:
     """
     lot = describe(bid)
     lines = [
-        f"Hello {party_name}, a new bid is open on the Labdhi trading desk.",
+        f"Hello {party_name}, a new bid is open on {settings.brand_name}.",
         "",
         f"Lot: {lot}",
     ]

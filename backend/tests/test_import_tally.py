@@ -89,12 +89,12 @@ def test_one_gstin_is_one_party_however_the_name_is_spelled():
 
 def test_the_same_name_in_two_books_is_one_party_and_remembers_both():
     first = ledger("AARVI POLYPLAST", address="Vatva, Ahmedabad")
-    first.sources = {"labdhi"}
+    first.sources = {"ledger-a"}
     second = ledger("Aarvi Polyplast ", pan="BEZPG5365N")
-    second.sources = {"om"}
+    second.sources = {"ledger-b"}
     merged = merge([first, second])
     assert len(merged) == 1
-    assert merged[0].sources == {"labdhi", "om"}
+    assert merged[0].sources == {"ledger-a", "ledger-b"}
     assert merged[0].pan == "BEZPG5365N", "detail from either book is kept"
 
 

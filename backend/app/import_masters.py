@@ -1,4 +1,4 @@
-"""Copy product master data in from the older Labdhi desk database.
+"""Copy product master data in from an older desk database.
 
 That system holds the book the traders already keep by hand - materials, their
 grades, the manufacturers and every material/grade/manufacturer combination
@@ -180,7 +180,7 @@ def apply(session: Session, book: Book, *, user_id: int | None) -> Counter:
             entity_type="product",
             entity_id=product.id,
             action=AuditAction.CREATE,
-            new_value={"display_name": product.display_name, "import": "labdhi-desk"},
+            new_value={"display_name": product.display_name, "import": "legacy-desk"},
         )
         stats["products"] += 1
 

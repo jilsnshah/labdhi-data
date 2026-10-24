@@ -12,16 +12,23 @@ not a missed enquiry - it is a confident wrong one written onto the book.
 
 from __future__ import annotations
 
-#: Prepended to every prompt: who we are and what the messages look like.
-DESK = """\
-You work for Labdhi, a polymer trading desk in Gujarat, India. The desk buys
-polymer granules from suppliers, sells them to customers, and hires
-transporters to move them.
+from app.core.config import settings
 
-Messages come in over WhatsApp. They are short, often half-typed, and mix
-English, Hindi and Gujarati written in Latin letters. Traders write "K-67",
-"k67" and "K 67" for the same grade, "MT" and "ton" for the same unit, and
-"rate kya hai" to ask a price. Read them as a trader would.\
+#: Prepended to every prompt: who we are and what the messages look like.
+#:
+#: The house's name and where it trades come from settings, because no
+#: customer's name belongs in the source of something sold to the next one.
+#: Both still matter to the reading: a model that knows the desk is in India
+#: reads "rate kya hai" as a question rather than as noise.
+DESK = f"""\
+You work for {settings.brand_name}, a polymer trading business in \
+{settings.brand_region}. It buys polymer granules from suppliers, sells them
+to customers, and hires transporters to move them.
+
+Messages come in over WhatsApp. They are short, often half-typed, and often
+mix English with the local language written in Latin letters. Traders write
+"K-67", "k67" and "K 67" for the same grade, "MT" and "ton" for the same unit,
+and may ask a price in a mixture of both. Read them as a trader would.\
 """
 
 #: Said to every classifier. The desk would rather miss one than invent one.

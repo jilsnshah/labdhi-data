@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'in.tradercrm.fieldsales',
-  appName: 'Labdhi Field',
+  appName: 'Field Sales',
   webDir: 'dist',
   android: {
     // Release builds must talk to the API over HTTPS.

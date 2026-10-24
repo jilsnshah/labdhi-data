@@ -5,7 +5,7 @@ import { createTheme, type MantineColorsTuple } from '@mantine/core';
  *
  * Three colours carry the identity. Charcoal is the structure - the sidebar,
  * body text, every border. Deep navy is the product's voice: the primary
- * action, a selected row, the figure that matters. Gold is Labdhi, used where
+ * action, a selected row, the figure that matters. Gold is the house mark, used where
  * the brand should be felt rather than shouted - the mark, the active nav
  * marker, a winning quote.
  *
@@ -51,7 +51,7 @@ const navy: MantineColorsTuple = [
   '#1c2d49',
 ];
 
-/** Labdhi gold. The mark, the active marker, a winning quote. */
+/** House gold. The mark, the active marker, a winning quote. */
 const brass: MantineColorsTuple = [
   '#fdf9f0',
   '#f9f1dc',

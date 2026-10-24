@@ -31,6 +31,8 @@ import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
+import { BRAND, storageKey } from '@/lib/brand';
+
 import { NAV, parentOf, trailFor } from './nav';
 
 /**
@@ -58,7 +60,7 @@ const SIDEBAR_W = 236;
 const CLOSED_BY_DEFAULT = ['Field work', 'Master data'];
 
 /** Remembered per browser, so the desk's own arrangement survives a reload. */
-const NAV_STATE_KEY = 'labdhi.nav.closed';
+const NAV_STATE_KEY = storageKey('nav.closed');
 
 function loadClosed(): string[] {
   try {
@@ -241,10 +243,10 @@ export function AppLayout() {
       <AppShell.Navbar px="sm" pb="sm" className="shell-nav">
         <AppShell.Section>
           <Link to="/" className="shell-brand" onClick={closeMobile}>
-            <span className="shell-mark">L</span>
+            <span className="shell-mark">{BRAND.mark}</span>
             <Box>
-              <div className="shell-wordmark">Labdhi</div>
-              <div className="shell-sub">Polymer trading</div>
+              <div className="shell-wordmark">{BRAND.name}</div>
+              {BRAND.tagline && <div className="shell-sub">{BRAND.tagline}</div>}
             </Box>
           </Link>
         </AppShell.Section>
