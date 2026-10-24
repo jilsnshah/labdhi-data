@@ -1,13 +1,27 @@
 /**
- * The desk's morning screen.
+ * The desk's operating screen.
  *
- * A navy hero with the four numbers that set the day, then the market itself:
- * the rate board (where is there a trade?), how rates have moved, the day's
- * calls and visits as a queue you can act on, and the latest inquiries.
+ * Four figures that set the day, then the market itself: the rate board (where
+ * is there a trade?), how rates have moved, the day's calls and visits as a
+ * queue you can act on, and the latest inquiries. The board is the point of
+ * the screen, so it sits directly under the figures and inside the first fold
+ * of a 900px-tall laptop.
+ *
+ * Note on the fourth figure: the API counts today's open activities and
+ * overdue ones separately - an overdue activity was scheduled *before* today
+ * and is not in today's number. They are shown as a figure plus a flagged
+ * hint rather than added together.
  */
 
 import { Box, Button, Group, SegmentedControl, Stack, Text } from '@mantine/core';
-import { IconArrowRight, IconCalendarTime, IconPlus } from '@tabler/icons-react';
+import {
+  IconArrowRight,
+  IconArrowsExchange,
+  IconCalendarTime,
+  IconClipboardList,
+  IconPackageExport,
+  IconPlus,
+} from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -16,11 +30,10 @@ import { ActivityTable } from '@/components/ActivityTable';
 import { InquiryTable } from '@/components/InquiryTable';
 import { RailSection } from '@/components/DetailLayout';
 import { RateBoard } from '@/components/market/RateBoard';
-import { PartyAvatar, Sparkline, TrendChart } from '@/components/market/Visuals';
+import { PartyAvatar, TrendChart } from '@/components/market/Visuals';
 import { ActivityFormModal } from '@/components/modals/ActivityModals';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
-import { EmptyState } from '@/components/ui';
-import { useAuth } from '@/lib/auth';
+import { EmptyState, KpiTile } from '@/components/ui';
 import { dayjs, formatDate, humanize } from '@/lib/format';
 import { buildBoard, dailyCounts, fmtRate, fmtTonnes, toQuote } from '@/lib/market';
 import type { Quote } from '@/lib/market';
@@ -28,15 +41,7 @@ import type { Quote } from '@/lib/market';
 /** The last 200 of each side are plenty for the board and the trend. */
 const BOOK = { page_size: 200, sort_by: 'created_at', sort_dir: 'desc' } as const;
 
-function greeting(): string {
-  const hour = dayjs().hour();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 export function DashboardPage() {
-  const { user } = useAuth();
   const { data } = useDashboard();
   const { data: team } = useSalespeopleWorkload();
   const { data: supplyRows } = useInquiries({ ...BOOK, inquiry_type: 'SUPPLIER' });
@@ -63,6 +68,7 @@ export function DashboardPage() {
     .filter((q) => q.side === 'demand')
     .reduce((t, q) => t + (q.tonnes ?? 0), 0);
   const bestSpread = board.find((line) => line.spread !== null && line.spread > 0) ?? null;
+  const overdue = counts?.overdue_activities ?? 0;
 
   // Products with enough history to draw a line.
   const trendOptions = useMemo(() => {
@@ -81,145 +87,95 @@ export function DashboardPage() {
   const activeTrend = trendProduct ?? trendOptions[0]?.value ?? null;
   const trendQuotes = quotes.filter((q) => String(q.productId) === activeTrend);
 
-  const firstName = user?.name || 'there';
-
   return (
-    <Stack gap="xl" className="reveal">
-      {/* ---------------------------------------------------------------- hero */}
-      <section className="hero">
-        <Group justify="space-between" align="flex-start" wrap="wrap" gap="lg">
-          <Box>
-            <Text fz={11} fw={600} c="#c9b07a" tt="uppercase" style={{ letterSpacing: '0.18em' }}>
-              {dayjs().format('dddd, D MMMM YYYY')}
-            </Text>
-            <div className="hero-greeting" style={{ marginTop: 8 }}>
-              {greeting()}, <em>{firstName}</em>.
-            </div>
-            <Text c="#aab4c7" fz="sm" mt={8} maw={600}>
-              {bestSpread
-                ? `Widest live spread is ${bestSpread.productName} at ${fmtRate(bestSpread.spread ?? 0)}/kg — buy from ${bestSpread.bestBuy?.partyName}, sell to ${bestSpread.bestSell?.partyName}.`
-                : 'Record supplier offers and customer demand with rates to see where the trades are.'}
-            </Text>
-          </Box>
-          <Group gap="xs">
-            <Button
-              variant="white"
-              color="dark"
-              radius="xl"
-              leftSection={<IconCalendarTime size={15} />}
-              onClick={() => setActivityOpen(true)}
-            >
-              Schedule activity
-            </Button>
-            <Button
-              radius="xl"
-              leftSection={<IconPlus size={15} />}
-              onClick={() => setInquiryOpen(true)}
-              styles={{
-                root: {
-                  background: 'linear-gradient(145deg,#e2bd6b,#b8862a)',
-                  color: '#1a1206',
-                },
-              }}
-            >
-              New inquiry
-            </Button>
-          </Group>
-        </Group>
-
-        <div className="hero-kpis">
-          <HeroKpi
-            to="/inquiries/customer"
-            label="Live demand"
-            value={counts?.open_customer_inquiries}
-            hint={`${fmtTonnes(demandTonnes)} wanted`}
-            spark={dailyCounts((demandRows?.items ?? []).map((r) => r.created_at))}
-            color="#dcbc77"
-          />
-          <HeroKpi
-            to="/inquiries/supplier"
-            label="Live supply"
-            value={counts?.open_supplier_inquiries}
-            hint={`${fmtTonnes(supplyTonnes)} on offer`}
-            spark={dailyCounts((supplyRows?.items ?? []).map((r) => r.created_at))}
-            color="#92b2a1"
-          />
-          <HeroKpi
-            to="/inquiries/supplier"
-            label="Best spread"
-            value={bestSpread ? fmtRate(bestSpread.spread ?? 0) : '—'}
-            hint={bestSpread ? `${bestSpread.productName} · per kg` : 'No two-sided market yet'}
-          />
-          <HeroKpi
-            to="/activities/today"
-            label="Today's agenda"
-            value={counts?.todays_activities}
-            hint={
-              counts?.overdue_activities
-                ? `${counts.overdue_activities} overdue · calls & visits`
-                : 'calls, messages and visits'
-            }
-            alert={(counts?.overdue_activities ?? 0) > 0}
-          />
+    <Stack gap="md">
+      {/* -------------------------------------------------------------- header */}
+      <Group className="page-head" justify="space-between" align="flex-start" gap="md">
+        <div>
+          <h1 className="page-title">Trading desk</h1>
+          <div className="page-subtitle">
+            {dayjs().format('dddd, D MMMM YYYY')}
+            {bestSpread
+              ? ` · widest live spread ${fmtRate(bestSpread.spread ?? 0)}/kg on ${bestSpread.productName}`
+              : ' · no two-sided market yet'}
+          </div>
         </div>
-      </section>
+        <Group gap="xs">
+          <Button
+            variant="default"
+            leftSection={<IconCalendarTime size={14} />}
+            onClick={() => setActivityOpen(true)}
+          >
+            Schedule activity
+          </Button>
+          <Button leftSection={<IconPlus size={14} />} onClick={() => setInquiryOpen(true)}>
+            New inquiry
+          </Button>
+        </Group>
+      </Group>
+
+      {/* ---------------------------------------------------------------- KPIs */}
+      <div className="kpi-row">
+        <KpiTile
+          to="/inquiries/customer"
+          label="Live demand"
+          value={counts?.open_customer_inquiries ?? '—'}
+          hint={`${fmtTonnes(demandTonnes)} wanted`}
+          icon={<IconClipboardList size={14} />}
+          accent="var(--demand)"
+          spark={dailyCounts((demandRows?.items ?? []).map((r) => r.created_at))}
+        />
+        <KpiTile
+          to="/inquiries/supplier"
+          label="Live supply"
+          value={counts?.open_supplier_inquiries ?? '—'}
+          hint={`${fmtTonnes(supplyTonnes)} on offer`}
+          icon={<IconPackageExport size={14} />}
+          accent="var(--supply)"
+          spark={dailyCounts((supplyRows?.items ?? []).map((r) => r.created_at))}
+        />
+        <KpiTile
+          label="Best spread"
+          value={bestSpread ? `${fmtRate(bestSpread.spread ?? 0)}` : '—'}
+          hint={bestSpread ? `${bestSpread.productName} · per kg` : 'No two-sided market yet'}
+          icon={<IconArrowsExchange size={14} />}
+          accent="var(--brass)"
+        />
+        <KpiTile
+          to="/activities/today"
+          label="Today's activities"
+          value={counts?.todays_activities ?? '—'}
+          hint={overdue > 0 ? `${overdue} overdue from earlier days` : 'nothing overdue'}
+          icon={<IconCalendarTime size={14} />}
+          tone={overdue > 0 ? 'negative' : undefined}
+          accent={overdue > 0 ? 'var(--negative)' : 'var(--border-strong)'}
+        />
+      </div>
 
       <div className="dash-grid">
-        <Stack gap="xl">
+        <Stack gap="md">
           {/* ------------------------------------------------------- rate board */}
           <section className="panel">
             <div className="panel-head">
-              <Box>
-                <div className="block-label">Market</div>
-                <div className="panel-title">Rate board</div>
-              </Box>
-              <Text fz="xs" c="ink.5" maw={320} ta="right">
-                Cheapest live offer against the best live demand, per product. Rates in ₹/kg.
+              <div className="panel-title">Rate board</div>
+              <Text fz="xs" c="ink.5">
+                Cheapest live offer against best live demand, per product · ₹/kg
               </Text>
             </div>
             <RateBoard lines={board} limit={8} />
           </section>
 
-          {/* ------------------------------------------------------------ trend */}
-          {trendOptions.length > 0 && (
-            <section className="panel">
-              <div className="panel-head">
-                <Box>
-                  <div className="block-label">Rate history</div>
-                  <div className="panel-title">How quotes have moved</div>
-                </Box>
-                <Group gap="md" wrap="nowrap">
-                  <span className="side-tag" data-side="supply">
-                    Supply
-                  </span>
-                  <span className="side-tag" data-side="demand">
-                    Demand
-                  </span>
-                </Group>
-              </div>
-              {/* Product names are long; on a narrow screen the switcher
-                  scrolls rather than stretching the card. */}
-              <Box px="lg" pt="md" className="scroll-x">
-                <SegmentedControl
-                  size="xs"
-                  value={activeTrend ?? undefined}
-                  onChange={setTrendProduct}
-                  data={trendOptions}
-                />
-              </Box>
-              <Box px="md" pb="md" pt="xs">
-                <TrendChart quotes={trendQuotes} />
-              </Box>
-            </section>
-          )}
-
           {/* ------------------------------------------------------ today's work */}
           <section className="panel">
             <div className="panel-head">
-              <Box>
-                <div className="block-label">Field work</div>
+              <Group gap="xs" wrap="nowrap">
                 <div className="panel-title">Today's queue</div>
-              </Box>
+                {overdue > 0 && (
+                  <Text fz="xs" fw={600} c="rust.8">
+                    {overdue} overdue
+                  </Text>
+                )}
+              </Group>
               <Button
                 component={Link}
                 to="/activities/today"
@@ -238,13 +194,39 @@ export function DashboardPage() {
             />
           </section>
 
+          {/* ------------------------------------------------------------ trend */}
+          {trendOptions.length > 0 && (
+            <section className="panel">
+              <div className="panel-head">
+                <div className="panel-title">Rate history</div>
+                <Group gap="md" wrap="nowrap">
+                  <span className="side-tag" data-side="supply">
+                    Supply
+                  </span>
+                  <span className="side-tag" data-side="demand">
+                    Demand
+                  </span>
+                </Group>
+              </div>
+              {/* Product names are long; on a narrow screen the switcher
+                  scrolls rather than stretching the card. */}
+              <Box px="md" pt="sm" className="scroll-x">
+                <SegmentedControl
+                  value={activeTrend ?? undefined}
+                  onChange={setTrendProduct}
+                  data={trendOptions}
+                />
+              </Box>
+              <Box px="sm" pb="sm" pt="xs">
+                <TrendChart quotes={trendQuotes} />
+              </Box>
+            </section>
+          )}
+
           {/* --------------------------------------------------- recent inquiries */}
           <section className="panel">
             <div className="panel-head">
-              <Box>
-                <div className="block-label">Latest</div>
-                <div className="panel-title">Recent inquiries</div>
-              </Box>
+              <div className="panel-title">Recent inquiries</div>
               <Button
                 component={Link}
                 to="/inquiries/customer"
@@ -286,11 +268,11 @@ export function DashboardPage() {
                   ? Math.round((person.today_completed / person.today_total) * 100)
                   : 100;
                 return (
-                  <Stack key={person.id} gap={6}>
+                  <Stack key={person.id} gap={4}>
                     <Group justify="space-between" wrap="nowrap">
-                      <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                        <PartyAvatar name={person.name} size={28} />
-                        <Text fz="sm" fw={600} c="ink.9" truncate>
+                      <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                        <PartyAvatar name={person.name} size={22} />
+                        <Text fz="sm" fw={500} c="ink.9" truncate>
                           {person.name}
                         </Text>
                       </Group>
@@ -305,11 +287,11 @@ export function DashboardPage() {
                         )}
                       </Group>
                     </Group>
-                    <Box h={4} style={{ background: 'var(--hairline-soft)', borderRadius: 4 }}>
+                    <Box h={3} style={{ background: 'var(--border-soft)' }}>
                       <Box
-                        h={4}
+                        h={3}
                         w={`${done}%`}
-                        style={{ background: 'var(--brass)', borderRadius: 4 }}
+                        style={{ background: 'var(--mantine-color-ink-7)' }}
                       />
                     </Box>
                   </Stack>
@@ -334,13 +316,13 @@ export function DashboardPage() {
           >
             {data?.recently_closed_inquiries.length ? (
               data.recently_closed_inquiries.slice(0, 6).map((inquiry) => (
-                <Group key={inquiry.id} gap="sm" wrap="nowrap" align="flex-start">
-                  <PartyAvatar name={inquiry.party_name} size={30} />
-                  <Stack gap={1} style={{ minWidth: 0, flex: 1 }}>
+                <Group key={inquiry.id} gap="xs" wrap="nowrap" align="flex-start">
+                  <PartyAvatar name={inquiry.party_name} size={24} />
+                  <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
                     <Group justify="space-between" wrap="nowrap">
                       <Text
                         fz="sm"
-                        fw={600}
+                        fw={500}
                         component={Link}
                         to={`/inquiries/${inquiry.id}`}
                         c="ink.9"
@@ -370,7 +352,7 @@ export function DashboardPage() {
             label="New customers"
             action={
               counts?.prospects ? (
-                <Text fz="xs" fw={600} c="brass.8">
+                <Text fz="xs" fw={600} c="ink.7">
                   {counts.prospects} prospects
                 </Text>
               ) : undefined
@@ -378,20 +360,20 @@ export function DashboardPage() {
           >
             {data?.recent_customers.length ? (
               data.recent_customers.slice(0, 5).map((party) => (
-                <Group key={party.id} gap="sm" wrap="nowrap">
-                  <PartyAvatar name={party.name} size={30} />
+                <Group key={party.id} gap="xs" wrap="nowrap">
+                  <PartyAvatar name={party.name} size={24} />
                   <Text
                     fz="sm"
                     component={Link}
                     to={`/parties/${party.id}`}
                     c="ink.9"
-                    fw={600}
+                    fw={500}
                     truncate
                     style={{ flex: 1 }}
                   >
                     {party.name}
                   </Text>
-                  <Text fz="xs" c={party.stage === 'PROSPECT' ? 'brass.8' : 'ink.5'}>
+                  <Text fz="xs" c={party.stage === 'PROSPECT' ? 'amber.9' : 'ink.5'}>
                     {party.stage === 'PROSPECT' ? 'Prospect' : humanize(party.party_type)}
                   </Text>
                 </Group>
@@ -408,40 +390,5 @@ export function DashboardPage() {
       )}
       {activityOpen && <ActivityFormModal onClose={() => setActivityOpen(false)} />}
     </Stack>
-  );
-}
-
-function HeroKpi({
-  label,
-  value,
-  hint,
-  to,
-  spark,
-  color,
-  alert = false,
-}: {
-  label: string;
-  value?: number | string;
-  hint: string;
-  to: string;
-  spark?: number[];
-  color?: string;
-  alert?: boolean;
-}) {
-  return (
-    <Link to={to} className="hero-kpi">
-      <div className="hero-kpi-label">{label}</div>
-      <Group justify="space-between" align="flex-end" wrap="nowrap" gap="xs">
-        <div className="hero-kpi-value" style={alert ? { color: '#f0a49d' } : undefined}>
-          {value ?? '—'}
-        </div>
-        {spark && spark.some(Boolean) && (
-          <Box mb={6}>
-            <Sparkline values={spark} width={84} height={30} color={color} />
-          </Box>
-        )}
-      </Group>
-      <div className="hero-kpi-hint">{hint}</div>
-    </Link>
   );
 }

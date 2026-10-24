@@ -98,7 +98,6 @@ export function SalespeoplePage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Field work"
         title="Salespeople"
         subtitle="Field accounts. They only ever see the activities you assign to them."
         actions={

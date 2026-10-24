@@ -22,6 +22,7 @@ import {
   IconCalendarMonth,
   IconCalendarTime,
   IconChartBar,
+  IconChevronRight,
   IconClipboardList,
   IconFlask,
   IconGavel,
@@ -47,6 +48,13 @@ import { FelesCredit } from '@/components/FelesCredit';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
 import { useAuth } from '@/lib/auth';
 import { GlobalSearch } from './GlobalSearch';
+
+/**
+ * Shell dimensions live here and in `--topbar-h` / `--sidebar-w`; AppShell
+ * needs the numbers, the stylesheet needs them for sticky offsets.
+ */
+const HEADER_H = 48;
+const SIDEBAR_W = 236;
 
 interface NavItem {
   label: string;
@@ -143,18 +151,24 @@ function initials(name?: string): string {
     .join('');
 }
 
-/** Section title for the top bar, from the current route. */
-function sectionFor(pathname: string): string {
+/**
+ * Where you are, as a trail: the section and the page inside it, read off the
+ * same NAV that drew the sidebar. The page heading does not repeat the
+ * section, so this is the one place it is named.
+ */
+function trailFor(pathname: string): { section: string; page?: string } {
   for (const section of NAV) {
     for (const item of section.items) {
-      if (item.to !== '/' && pathname.startsWith(item.to)) return section.label;
+      if (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)) {
+        return { section: section.label, page: item.label };
+      }
     }
   }
-  if (pathname.startsWith('/bids')) return 'Bids';
-  if (pathname.startsWith('/inquiries/')) return 'Inquiries';
-  if (pathname.startsWith('/parties/')) return 'Relationships';
-  if (pathname.startsWith('/settings')) return 'Settings';
-  return 'Overview';
+  if (pathname.startsWith('/bids/')) return { section: 'Bids', page: 'Bid' };
+  if (pathname.startsWith('/inquiries/')) return { section: 'Inquiries', page: 'Inquiry' };
+  if (pathname.startsWith('/parties/')) return { section: 'Relationships', page: 'Party' };
+  if (pathname.startsWith('/settings')) return { section: 'Settings' };
+  return { section: 'Overview' };
 }
 
 /** IST clock - the desk runs on Indian market hours. */
@@ -177,20 +191,9 @@ function DeskClock() {
     timeZone: 'Asia/Kolkata',
   });
   return (
-    <Group gap={8} wrap="nowrap" visibleFrom="md">
-      <Box
-        w={7}
-        h={7}
-        style={{
-          borderRadius: 99,
-          background: 'var(--mantine-color-moss-6)',
-          boxShadow: '0 0 0 3px rgba(63,161,116,0.18)',
-        }}
-      />
-      <Text className="ticker-time">
-        {date.toUpperCase()} · {time} IST
-      </Text>
-    </Group>
+    <Text className="ticker-time" visibleFrom="lg" mr="xs">
+      {date} · {time} IST
+    </Text>
   );
 }
 
@@ -200,6 +203,7 @@ export function AppLayout() {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const trail = trailFor(location.pathname);
 
   useHotkeys([['mod+K', () => setSearchOpened(true)]]);
 
@@ -209,62 +213,71 @@ export function AppLayout() {
   return (
     <AppShell
       layout="alt"
-      header={{ height: 64 }}
-      navbar={{ width: 256, breakpoint: 'md', collapsed: { mobile: !mobileOpened } }}
-      padding={{ base: 'sm', sm: 'lg', lg: 'xl' }}
+      header={{ height: HEADER_H }}
+      navbar={{ width: SIDEBAR_W, breakpoint: 'md', collapsed: { mobile: !mobileOpened } }}
+      padding={{ base: 'sm', sm: 'md', lg: 'lg' }}
     >
       <AppShell.Header className="shell-top">
         <Group
           h="100%"
-          px={{ base: 'sm', sm: 'lg', lg: 'xl' }}
+          px={{ base: 'sm', sm: 'md', lg: 'lg' }}
           justify="space-between"
           wrap="nowrap"
         >
-          <Group gap="md" wrap="nowrap">
-            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="md" size="sm" />
-            <Text fz="sm" fw={600} c="ink.8">
-              {sectionFor(location.pathname)}
-            </Text>
-            <DeskClock />
-          </Group>
-
           <Group gap="sm" wrap="nowrap">
+            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="md" size="sm" />
+            <span className="shell-crumb">
+              {trail.section}
+              {trail.page && (
+                <>
+                  <IconChevronRight size={13} />
+                  <b>{trail.page}</b>
+                </>
+              )}
+            </span>
             <UnstyledButton
               onClick={() => setSearchOpened(true)}
-              className="search-pill"
+              className="search-field"
               visibleFrom="sm"
+              aria-label="Search parties, products and inquiries"
             >
-              <Group gap={8} wrap="nowrap">
-                <IconSearch size={15} color="var(--mantine-color-ink-5)" />
+              <Group gap={6} wrap="nowrap">
+                <IconSearch size={14} color="var(--mantine-color-ink-5)" />
                 <Text fz="sm" c="ink.5">
                   Search parties, products…
                 </Text>
               </Group>
               <Kbd size="xs">⌘K</Kbd>
             </UnstyledButton>
+          </Group>
+
+          <Group gap="xs" wrap="nowrap">
+            <DeskClock />
             <Tooltip label="Search">
               <ActionIcon
-                size="lg"
+                size="input-sm"
                 variant="default"
                 hiddenFrom="sm"
                 onClick={() => setSearchOpened(true)}
               >
-                <IconSearch size={17} />
+                <IconSearch size={16} />
               </ActionIcon>
             </Tooltip>
-            <Button
-              leftSection={<IconPlus size={15} />}
-              radius="xl"
-              onClick={() => setInquiryOpen(true)}
-              visibleFrom="md"
-            >
-              New inquiry
-            </Button>
+            <Tooltip label="Record an inquiry from anywhere">
+              <Button
+                variant="default"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => setInquiryOpen(true)}
+                visibleFrom="md"
+              >
+                New inquiry
+              </Button>
+            </Tooltip>
           </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md" className="shell-nav">
+      <AppShell.Navbar px="sm" pb="sm" className="shell-nav">
         <AppShell.Section>
           <Link to="/" className="shell-brand" onClick={closeMobile}>
             <span className="shell-mark">L</span>
@@ -276,11 +289,11 @@ export function AppLayout() {
         </AppShell.Section>
 
         <AppShell.Section grow component={ScrollArea} type="scroll" scrollbarSize={6}>
-          <Stack gap={2} pb="md" px={4}>
+          <Stack gap={1} pb="md" px={2}>
             {NAV.map((section) => (
               <Box key={section.label}>
                 <Text className="nav-section-label">{section.label}</Text>
-                <Stack gap={2}>
+                <Stack gap={1}>
                   {section.items.map((item) => (
                     <Link
                       key={item.to}
@@ -304,19 +317,19 @@ export function AppLayout() {
             <Menu.Target>
               <UnstyledButton className="shell-user" w="100%">
                 <Avatar
-                  radius="md"
-                  size={34}
+                  radius="sm"
+                  size={28}
                   styles={{
-                    root: { background: 'linear-gradient(145deg,#e2bd6b,#b8862a)' },
+                    root: { background: 'var(--brass)' },
                     placeholder: { background: 'transparent', color: '#1a1206' },
                   }}
                 >
-                  <Text fz={12} fw={700}>
+                  <Text fz={11} fw={700}>
                     {initials(user?.name)}
                   </Text>
                 </Avatar>
                 <Box style={{ minWidth: 0, flex: 1 }}>
-                  <Text fz="sm" fw={600} c="#fff" lh={1.25} truncate>
+                  <Text fz="sm" fw={600} c="#fff" lh={1.3} truncate>
                     {user?.name}
                   </Text>
                   <Text fz="xs" c="var(--shell-muted)" tt="capitalize">

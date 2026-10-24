@@ -41,7 +41,13 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
     unassigned_only?: boolean;
     date_from?: string;
     date_to?: string;
-  }>({}, { sortBy: scope === 'history' ? 'completed_at' : 'scheduled_at', sortDir: scope === 'history' ? 'desc' : 'asc' });
+  }>(
+    {},
+    {
+      sortBy: scope === 'history' ? 'completed_at' : 'scheduled_at',
+      sortDir: scope === 'history' ? 'desc' : 'asc',
+    },
+  );
   const { data, isFetching } = useActivities({ ...list.params, scope });
   const [createOpen, setCreateOpen] = useState(false);
   const [range, setRange] = useState<[string | null, string | null]>([null, null]);
@@ -49,7 +55,6 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Field work"
         title={COPY[scope].title}
         subtitle={COPY[scope].subtitle}
         actions={
@@ -68,7 +73,7 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
         }}
       >
         <Select
-          w={160}
+          className="field-md"
           placeholder="Any type"
           clearable
           data={TYPES.map((value) => ({ value, label: humanize(value) }))}
@@ -77,7 +82,7 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
         />
         {scope === 'history' && (
           <MultiSelect
-            w={200}
+            className="field-lg"
             placeholder="Any status"
             data={STATUSES.map((value) => ({ value, label: humanize(value) }))}
             value={(list.filters.status as string[]) ?? []}
@@ -85,29 +90,27 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
             clearable
           />
         )}
-        <div style={{ width: 200 }}>
-          <EntitySelect
-            kind="party"
-            placeholder="Any customer"
-            filters={{ party_type: 'CUSTOMER' }}
-            includeInactive
-            value={list.filters.customer_id ?? null}
-            onChange={(value) => list.setFilter('customer_id', value ?? undefined)}
-          />
-        </div>
-        <div style={{ width: 190 }}>
-          <EntitySelect
-            kind="user"
-            placeholder="Any salesperson"
-            filters={{ role: 'SALESPERSON' }}
-            includeInactive
-            value={list.filters.assigned_salesperson_id ?? null}
-            onChange={(value) => {
-              list.setFilter('assigned_salesperson_id', value ?? undefined);
-              if (value) list.setFilter('unassigned_only', undefined);
-            }}
-          />
-        </div>
+        <EntitySelect
+          className="field-lg"
+          kind="party"
+          placeholder="Any customer"
+          filters={{ party_type: 'CUSTOMER' }}
+          includeInactive
+          value={list.filters.customer_id ?? null}
+          onChange={(value) => list.setFilter('customer_id', value ?? undefined)}
+        />
+        <EntitySelect
+          className="field-lg"
+          kind="user"
+          placeholder="Any salesperson"
+          filters={{ role: 'SALESPERSON' }}
+          includeInactive
+          value={list.filters.assigned_salesperson_id ?? null}
+          onChange={(value) => {
+            list.setFilter('assigned_salesperson_id', value ?? undefined);
+            if (value) list.setFilter('unassigned_only', undefined);
+          }}
+        />
         <Switch
           label="Unassigned"
           checked={Boolean(list.filters.unassigned_only)}
@@ -120,7 +123,7 @@ export function ActivitiesPage({ scope }: { scope: Scope }) {
         />
         <DatePickerInput
           type="range"
-          w={190}
+          className="field-lg"
           placeholder="Date range"
           valueFormat="DD MMM"
           clearable

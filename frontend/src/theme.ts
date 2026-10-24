@@ -1,185 +1,223 @@
 import { createTheme, type MantineColorsTuple } from '@mantine/core';
 
 /**
- * House style: gold on warm black, over ivory. A commodity trading desk, not a
- * SaaS admin panel.
+ * House style: a premium operations workspace for a physical trading desk.
  *
- * Gold is the house accent and carries the brand - the shell, the headings,
- * the thing that matters on a screen. Two muted colours earn their place
- * beside it rather than competing with it: a deep forest green for what is
- * good (a live account, a won bid, the supply side of the market) and a dull
- * red for what is wrong. Both are desaturated enough to sit under gold, which
- * stays the loudest thing in the room.
+ * Three colours carry the identity. Charcoal is the structure - the sidebar,
+ * body text, every border. Deep navy is the product's voice: the primary
+ * action, a selected row, the figure that matters. Gold is Labdhi, used where
+ * the brand should be felt rather than shouted - the mark, the active nav
+ * marker, a winning quote.
  *
- * Making everything gold was tried and does not work: when every state is the
- * accent colour, no state reads at all.
+ * Surfaces are a deliberate ladder, not one flat white: a cool grey workspace,
+ * white content cards with a hairline and the faintest lift, a warmer grey for
+ * grouped regions inside them (table heads, toolbars, panel bars), and tinted
+ * states for hover and selection. Shadows appear only where something is
+ * genuinely above the page.
  *
- * Type: a serif for titles and headline figures, a crisp grotesk for the UI,
- * and a tabular mono for every rate so columns of prices line up like a board.
+ * Type is Inter at operational-but-legible sizes - a 21px page title, 14px
+ * body, 13px table text, 28px figures - with tabular numerals everywhere a
+ * column of numbers can form.
+ *
+ * Colour names predate this palette and are kept: hundreds of call sites say
+ * `ink.5` or `rust.8`, and the names are what the ramps mean.
  */
 
-/** Warm black: text, borders, the shell and the primary button. */
+/** Charcoal to near-white: body text, borders, surfaces, the shell. */
 const ink: MantineColorsTuple = [
-  '#f7f6f4',
-  '#eceae6',
-  '#dbd8d2',
-  '#bdb9b1',
-  '#97938b',
-  '#726e67',
-  '#555049',
-  '#3a3630',
-  '#231f1b',
-  '#121010',
+  '#f8f9fa',
+  '#f0f2f4',
+  '#e4e7eb',
+  '#cfd4db',
+  '#a8b0ba',
+  '#737d8a',
+  '#5a636e',
+  '#404750',
+  '#2a2f37',
+  '#17191e',
 ];
 
-/** Links, focus, the demand side: gold, deepened so it reads on white. */
-const accent: MantineColorsTuple = [
-  '#fbf6ea',
-  '#f4ead1',
-  '#e8d3a1',
-  '#dbbb6e',
-  '#cfa747',
-  '#c6992f',
-  '#b4871f',
-  '#96701a',
-  '#785915',
-  '#5c4310',
+/** Deep navy: the primary action, a selected state, a figure under scrutiny. */
+const navy: MantineColorsTuple = [
+  '#eff3fa',
+  '#dce4f1',
+  '#b5c5e1',
+  '#8ba3cd',
+  '#6886bb',
+  '#4f6da6',
+  '#3e5c91',
+  '#314a76',
+  '#263b5e',
+  '#1c2d49',
 ];
 
-/** Brass: the house accent. Highlights, the active nav marker, key figures. */
+/** Labdhi gold. The mark, the active marker, a winning quote. */
 const brass: MantineColorsTuple = [
-  '#fbf7ee',
-  '#f4ebd6',
-  '#e8d4a8',
-  '#dcbc77',
-  '#d2a84f',
-  '#cb9c37',
-  '#c7952a',
-  '#af821f',
-  '#9b7318',
-  '#86620c',
+  '#fdf9f0',
+  '#f9f1dc',
+  '#f1deb2',
+  '#e5c886',
+  '#d8b35d',
+  '#c79b3b',
+  '#b4882f',
+  '#967026',
+  '#78591f',
+  '#5b4418',
 ];
 
-/** Supply side of the market: a deep, muted forest beside the gold. */
+/** Steel blue: in flight - open, quoted, scheduled. Also links. */
+const info: MantineColorsTuple = [
+  '#eff4fb',
+  '#dde8f7',
+  '#b7cdee',
+  '#8dafe2',
+  '#6b95d8',
+  '#4d81cf',
+  '#3f72c0',
+  '#355fa2',
+  '#2c4e84',
+  '#233e69',
+];
+
+/** Supply side of the market. */
 const teal: MantineColorsTuple = [
-  '#eef3f0',
-  '#dbe6e0',
-  '#b7cdc1',
-  '#92b2a1',
-  '#749c88',
-  '#5f8e77',
-  '#52856d',
-  '#416e59',
-  '#38614e',
-  '#2a4b3c',
+  '#eff5f4',
+  '#dde9e7',
+  '#b9d3cf',
+  '#90b9b3',
+  '#6ba29b',
+  '#55938b',
+  '#478079',
+  '#3a6a64',
+  '#2f5651',
+  '#24433f',
 ];
 
-/** Attention: waiting, follow-up required, overdue. */
+/** Waiting, follow-up required, overdue. */
 const amber: MantineColorsTuple = [
-  '#fdf6ec',
-  '#f8ebd8',
-  '#f0d6ac',
-  '#e7bf7c',
-  '#dfac55',
-  '#d79f3c',
-  '#c98c28',
-  '#a8731f',
-  '#8a5e19',
-  '#6d4a13',
+  '#fff8e8',
+  '#ffeec7',
+  '#fcda93',
+  '#f6c25c',
+  '#ecac34',
+  '#db991e',
+  '#c08316',
+  '#9c6b13',
+  '#7d560f',
+  '#5e410b',
 ];
 
-/** Negative: below cost, lost, cancelled. */
+/** Below cost, lost, cancelled, overdue. */
 const rust: MantineColorsTuple = [
-  '#fdf1f0',
-  '#f8e0de',
-  '#f0bfbb',
-  '#e69b95',
-  '#dd7d75',
-  '#d76961',
-  '#c85a52',
-  '#a84941',
-  '#8b3c35',
-  '#6e2f29',
+  '#fdf2f1',
+  '#fbe0dd',
+  '#f4bdb7',
+  '#e9958d',
+  '#dd7167',
+  '#d0594e',
+  '#be453b',
+  '#a03830',
+  '#812d26',
+  '#62221d',
 ];
 
-/** Positive: margin, completed, active. Muted enough to sit under gold. */
+/** Margin, completed, active. */
 const moss: MantineColorsTuple = [
-  '#eff4f0',
-  '#dde8e1',
-  '#bbd2c3',
-  '#97b9a4',
-  '#7aa48b',
-  '#67977c',
-  '#5b9072',
-  '#49785d',
-  '#3f6a52',
-  '#315544',
+  '#eff6f1',
+  '#dcecdf',
+  '#b7d8be',
+  '#8dc097',
+  '#66aa75',
+  '#4d995f',
+  '#3e8850',
+  '#327141',
+  '#295d36',
+  '#1f482a',
 ];
 
 export const FONT_SANS =
-  '"Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-export const FONT_SERIF = '"Instrument Serif", "Times New Roman", Georgia, serif';
-export const FONT_MONO =
-  '"IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+  'Inter, "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+/** Figures use the UI face with tabular numerals; no second family is loaded. */
+export const FONT_MONO = FONT_SANS;
 
 export const theme = createTheme({
-  primaryColor: 'ink',
-  primaryShade: { light: 9, dark: 8 },
-  colors: { ink, accent, brass, teal, amber, rust, moss, slate: ink, brand: accent },
+  primaryColor: 'navy',
+  primaryShade: { light: 8, dark: 7 },
+  colors: {
+    ink,
+    navy,
+    brass,
+    info,
+    teal,
+    amber,
+    rust,
+    moss,
+    //: Older call sites say `accent` for the gold and `slate`/`brand` for the neutrals.
+    accent: brass,
+    slate: ink,
+    brand: navy,
+  },
   white: '#ffffff',
-  black: '#121010',
+  black: '#17191e',
   defaultRadius: 'md',
 
   fontFamily: FONT_SANS,
-  fontFamilyMonospace: FONT_MONO,
+  fontFamilyMonospace: FONT_SANS,
 
   fontSizes: {
-    xs: '0.8125rem',
-    sm: '0.875rem',
-    md: '0.9375rem',
-    lg: '1.0625rem',
-    xl: '1.25rem',
+    xs: '0.75rem',
+    sm: '0.8125rem',
+    md: '0.875rem',
+    lg: '1rem',
+    xl: '1.125rem',
   },
-  lineHeights: { xs: '1.45', sm: '1.5', md: '1.55', lg: '1.5', xl: '1.4' },
+  lineHeights: { xs: '1.4', sm: '1.45', md: '1.5', lg: '1.5', xl: '1.4' },
+
   headings: {
-    fontFamily: FONT_SERIF,
-    fontWeight: '400',
+    fontFamily: FONT_SANS,
+    fontWeight: '600',
     sizes: {
-      h1: { fontSize: '2.5rem', lineHeight: '1.1' },
-      h2: { fontSize: '2.125rem', lineHeight: '1.15' },
-      h3: { fontSize: '1.5rem', lineHeight: '1.25' },
-      h4: { fontSize: '1.25rem', lineHeight: '1.3' },
-      h5: { fontSize: '1.0625rem', lineHeight: '1.35' },
-      h6: { fontSize: '0.9375rem', lineHeight: '1.4' },
+      h1: { fontSize: '1.3125rem', lineHeight: '1.3' },
+      h2: { fontSize: '1.0625rem', lineHeight: '1.35' },
+      h3: { fontSize: '0.9375rem', lineHeight: '1.4' },
+      h4: { fontSize: '0.875rem', lineHeight: '1.45' },
+      h5: { fontSize: '0.8125rem', lineHeight: '1.45' },
+      h6: { fontSize: '0.75rem', lineHeight: '1.45' },
     },
   },
 
-  radius: { xs: '4px', sm: '7px', md: '10px', lg: '14px', xl: '20px' },
-  spacing: { xs: '0.5rem', sm: '0.75rem', md: '1rem', lg: '1.5rem', xl: '2rem' },
+  radius: { xs: '3px', sm: '5px', md: '6px', lg: '8px', xl: '12px' },
+  spacing: {
+    xs: '0.375rem',
+    sm: '0.5rem',
+    md: '0.75rem',
+    lg: '1rem',
+    xl: '1.5rem',
+  },
 
-  /* Layered, low-contrast shadows: depth you feel rather than see. */
+  /* A shadow means "this is above the page". Cards get the faintest lift; the
+     rest is carried by one hairline. */
   shadows: {
-    xs: '0 1px 2px rgba(12, 21, 40, 0.04)',
-    sm: '0 1px 2px rgba(12, 21, 40, 0.04), 0 4px 16px -8px rgba(12, 21, 40, 0.10)',
-    md: '0 2px 4px rgba(12, 21, 40, 0.04), 0 12px 32px -12px rgba(12, 21, 40, 0.18)',
-    lg: '0 4px 8px rgba(12, 21, 40, 0.05), 0 24px 56px -16px rgba(12, 21, 40, 0.24)',
-    xl: '0 8px 16px rgba(12, 21, 40, 0.06), 0 40px 80px -24px rgba(12, 21, 40, 0.30)',
+    xs: '0 1px 2px rgba(23, 25, 30, 0.04)',
+    sm: '0 1px 2px rgba(23, 25, 30, 0.04), 0 1px 3px -1px rgba(23, 25, 30, 0.05)',
+    md: '0 2px 4px -1px rgba(23, 25, 30, 0.06), 0 6px 16px -4px rgba(23, 25, 30, 0.08)',
+    lg: '0 8px 24px -6px rgba(23, 25, 30, 0.12)',
+    xl: '0 20px 48px -12px rgba(23, 25, 30, 0.20)',
   },
 
   components: {
     Card: {
       defaultProps: { withBorder: true, radius: 'lg', shadow: 'sm', padding: 'lg' },
-      styles: { root: { borderColor: 'var(--hairline)', background: 'var(--surface)' } },
+      styles: { root: { borderColor: 'var(--border)', background: 'var(--surface)' } },
     },
     Paper: { defaultProps: { radius: 'lg' } },
     Button: {
-      defaultProps: { size: 'sm', fw: 600, radius: 'md' },
-      styles: { root: { letterSpacing: '0.005em' } },
+      defaultProps: { size: 'sm', fw: 550, radius: 'md' },
     },
     ActionIcon: { defaultProps: { variant: 'subtle', color: 'ink', radius: 'md' } },
     Badge: {
-      defaultProps: { radius: 'xl', fw: 600, variant: 'light' },
-      styles: { label: { letterSpacing: '0.02em', textTransform: 'none' } },
+      defaultProps: { radius: 'sm', fw: 600, variant: 'light' },
+      styles: { label: { letterSpacing: '0.01em', textTransform: 'none' } },
     },
     TextInput: { defaultProps: { size: 'sm', radius: 'md' } },
     PasswordInput: { defaultProps: { size: 'sm', radius: 'md' } },
@@ -191,25 +229,38 @@ export const theme = createTheme({
     DateInput: { defaultProps: { size: 'sm', radius: 'md' } },
     DatePickerInput: { defaultProps: { size: 'sm', radius: 'md' } },
     DateTimePicker: { defaultProps: { size: 'sm', radius: 'md' } },
-    Switch: { defaultProps: { size: 'sm', color: 'ink' } },
-    Checkbox: { defaultProps: { size: 'sm', color: 'ink', radius: 'xs' } },
-    SegmentedControl: { defaultProps: { size: 'sm', radius: 'md', color: 'ink' } },
+    Switch: { defaultProps: { size: 'sm', color: 'navy.8' } },
+    Checkbox: { defaultProps: { size: 'sm', color: 'navy.8', radius: 'xs' } },
+    SegmentedControl: {
+      defaultProps: { size: 'sm', radius: 'md' },
+      styles: {
+        //: A white selected segment on a grey track; the label stays readable,
+        //: which it does not when Mantine colours the indicator itself.
+        root: { background: 'var(--canvas-deep)', border: '1px solid var(--border)' },
+        indicator: { background: 'var(--surface)', boxShadow: 'var(--shadow-card)' },
+        label: { color: 'var(--mantine-color-ink-6)', fontWeight: 500 },
+      },
+    },
     Modal: {
       defaultProps: {
         radius: 'lg',
         centered: true,
-        padding: 'xl',
+        padding: 'lg',
         shadow: 'xl',
-        overlayProps: { backgroundOpacity: 0.45, blur: 3, color: '#0c1528' },
+        overlayProps: { backgroundOpacity: 0.45, blur: 2, color: '#17191e' },
       },
       styles: {
-        title: { fontFamily: FONT_SERIF, fontWeight: 400, fontSize: '1.5rem', lineHeight: 1.2 },
-        header: { paddingBottom: '0.75rem' },
+        title: { fontWeight: 600, fontSize: '1rem', lineHeight: 1.4 },
+        header: { paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' },
+        body: { paddingTop: '1rem' },
       },
     },
     Drawer: {
-      defaultProps: { padding: 'xl', shadow: 'xl' },
-      styles: { title: { fontFamily: FONT_SERIF, fontWeight: 400, fontSize: '1.5rem' } },
+      defaultProps: { padding: 'lg', shadow: 'xl' },
+      styles: {
+        title: { fontWeight: 600, fontSize: '1rem' },
+        header: { borderBottom: '1px solid var(--border)' },
+      },
     },
     Tooltip: {
       defaultProps: { radius: 'md', fz: 'xs', withArrow: false, color: 'ink.9' },
@@ -217,16 +268,16 @@ export const theme = createTheme({
     Table: { defaultProps: { striped: false, highlightOnHover: false } },
     Alert: {
       defaultProps: { radius: 'md', variant: 'light' },
-      styles: { message: { fontSize: '0.875rem' } },
+      styles: { message: { fontSize: '0.8125rem' }, title: { fontSize: '0.875rem' } },
     },
-    Tabs: { defaultProps: { keepMounted: false, color: 'brass.6' } },
-    Loader: { defaultProps: { size: 'sm', color: 'brass.6' } },
-    Anchor: { defaultProps: { fw: 500, underline: 'never', c: 'accent.8' } },
-    Divider: { styles: { root: { borderColor: 'var(--hairline)' } } },
+    Tabs: { defaultProps: { keepMounted: false, color: 'navy.8' } },
+    Loader: { defaultProps: { size: 'sm', color: 'navy.8' } },
+    Anchor: { defaultProps: { fw: 500, underline: 'never', c: 'navy.7' } },
+    Divider: { styles: { root: { borderColor: 'var(--border)' } } },
     Menu: { defaultProps: { radius: 'md', shadow: 'lg' } },
-    Pagination: { defaultProps: { color: 'ink', radius: 'md', size: 'sm' } },
-    Timeline: { defaultProps: { color: 'brass.6' } },
-    Avatar: { defaultProps: { color: 'ink', radius: 'xl' } },
+    Pagination: { defaultProps: { color: 'navy.8', radius: 'md', size: 'sm' } },
+    Timeline: { defaultProps: { color: 'navy.8' } },
+    Avatar: { defaultProps: { color: 'ink', radius: 'md' } },
     ThemeIcon: { defaultProps: { variant: 'light', color: 'ink', radius: 'md' } },
     Notification: { defaultProps: { radius: 'md' } },
   },
@@ -235,12 +286,14 @@ export const theme = createTheme({
 export type StatusTone = 'neutral' | 'active' | 'attention' | 'positive' | 'negative';
 
 /**
- * Status → tone. Tones are rendered as a small dot plus neutral text, never as a
- * coloured pill, so a table of statuses reads as one calm column.
+ * Status → tone. A tone is rendered as a soft-tinted badge with a dot, so a
+ * column of them reads as one calm list while the amber and red ones that need
+ * a decision still carry.
  */
 export const STATUS_TONES: Record<string, StatusTone> = {
   // master data / parties
-  ACTIVE: 'positive',
+  //: In flight, not finished - green is reserved for what has been won or done.
+  ACTIVE: 'active',
   INACTIVE: 'neutral',
   PROSPECT: 'attention',
   MERGED: 'neutral',
@@ -290,33 +343,3 @@ export const STATUS_TONES: Record<string, StatusTone> = {
   USER: 'neutral',
   SALESPERSON: 'neutral',
 };
-
-export const TONE_DOT: Record<StatusTone, string> = {
-  neutral: 'var(--mantine-color-ink-4)',
-  active: 'var(--mantine-color-accent-6)',
-  attention: 'var(--mantine-color-amber-6)',
-  positive: 'var(--mantine-color-moss-6)',
-  negative: 'var(--mantine-color-rust-6)',
-};
-
-export const TONE_TEXT: Record<StatusTone, string> = {
-  neutral: 'ink.6',
-  active: 'ink.8',
-  attention: 'amber.9',
-  positive: 'moss.9',
-  negative: 'rust.9',
-};
-
-/** The two sides of the market, used consistently by every chart and chip. */
-export const MARKET = {
-  supply: {
-    color: 'var(--mantine-color-teal-7)',
-    soft: 'var(--mantine-color-teal-0)',
-    label: 'Supply',
-  },
-  demand: {
-    color: 'var(--mantine-color-accent-6)',
-    soft: 'var(--mantine-color-accent-0)',
-    label: 'Demand',
-  },
-} as const;

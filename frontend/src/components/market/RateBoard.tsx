@@ -24,10 +24,10 @@ function Side({ quote, side }: { quote: Quote | null; side: 'supply' | 'demand' 
       <Anchor
         component={Link}
         to={`/inquiries/${quote.id}`}
-        fz={17}
+        fz="lg"
         fw={600}
         className="figure"
-        c={side === 'supply' ? 'teal.8' : 'accent.7'}
+        c={side === 'supply' ? 'teal.8' : 'navy.7'}
         style={{ lineHeight: 1.2 }}
       >
         {fmtRate(quote.rate)}

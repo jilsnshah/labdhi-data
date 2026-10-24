@@ -63,7 +63,7 @@ export function EventTimeline({ events }: { events: TimelineEvent[] }) {
             title={
               <Group gap="xs" wrap="nowrap" align="baseline">
                 {to ? (
-                  <Text component={Link} to={to} fz="sm" fw={600} c="accent.9">
+                  <Text component={Link} to={to} fz="sm" fw={600} c="navy.7">
                     {event.title}
                   </Text>
                 ) : (

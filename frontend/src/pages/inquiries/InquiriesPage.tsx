@@ -1,6 +1,13 @@
 import { Badge, Button, SegmentedControl, Select } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconAdjustmentsHorizontal, IconPlus } from '@tabler/icons-react';
+import {
+  IconAdjustmentsHorizontal,
+  IconChartBar,
+  IconClipboardList,
+  IconPlus,
+  IconScale,
+  IconTargetArrow,
+} from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 
 import { useInquiries, useLocationAreas } from '@/api/hooks';
@@ -8,9 +15,9 @@ import type { InquiryListItem, InquiryType } from '@/api/types';
 import { EntitySelect } from '@/components/EntitySelect';
 import { FilterBar } from '@/components/FilterBar';
 import { InquiryTable } from '@/components/InquiryTable';
-import { KpiTile } from '@/components/market/Visuals';
 import { PageHeader } from '@/components/PageHeader';
 import { InquiryFormModal } from '@/components/modals/InquiryFormModal';
+import { KpiTile } from '@/components/ui';
 import { useListState } from '@/hooks/useListState';
 import { formatMoney, toIsoDate } from '@/lib/format';
 import { dailyCounts, fmtRate, fmtTonnes } from '@/lib/market';
@@ -78,7 +85,6 @@ export function InquiriesPage({ inquiryType }: { inquiryType: InquiryType }) {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Inquiries"
         title={copy.title}
         subtitle={copy.subtitle}
         actions={
@@ -92,15 +98,29 @@ export function InquiriesPage({ inquiryType }: { inquiryType: InquiryType }) {
           label={inquiryType === 'TRANSPORT' ? 'Quotes' : 'Inquiries'}
           value={kpis.count}
           hint={kpis.countHint}
+          icon={<IconClipboardList size={14} />}
           accent={copy.accent}
           spark={kpis.spark}
         />
-        <KpiTile label="Volume" value={kpis.volume} hint={kpis.volumeHint} accent={copy.accent} />
-        <KpiTile label={kpis.avgLabel} value={kpis.avg} hint={kpis.avgHint} accent={copy.accent} />
+        <KpiTile
+          label="Volume"
+          value={kpis.volume}
+          hint={kpis.volumeHint}
+          icon={<IconScale size={14} />}
+          accent={copy.accent}
+        />
+        <KpiTile
+          label={kpis.avgLabel}
+          value={kpis.avg}
+          hint={kpis.avgHint}
+          icon={<IconChartBar size={14} />}
+          accent={copy.accent}
+        />
         <KpiTile
           label={kpis.bestLabel}
           value={kpis.best}
           hint={kpis.bestHint}
+          icon={<IconTargetArrow size={14} />}
           accent="var(--brass)"
         />
       </div>
@@ -114,6 +134,62 @@ export function InquiriesPage({ inquiryType }: { inquiryType: InquiryType }) {
           list.resetFilters();
           setRange([null, null]);
         }}
+        extraOpen={inquiryType !== 'TRANSPORT' && productOpen}
+        extra={
+          inquiryType !== 'TRANSPORT' ? (
+            // What the product is: these narrow through the inquiry's product,
+            // so they do not apply to transport quotes.
+            <>
+              <EntitySelect
+                className="field-lg"
+                kind="product"
+                placeholder="Any product"
+                includeInactive
+                value={list.filters.product_id ?? null}
+                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="material"
+                placeholder="Any material"
+                includeInactive
+                value={list.filters.material_id ?? null}
+                onChange={(value) => {
+                  list.setFilter('material_id', value ?? undefined);
+                  // A grade belongs to one material; drop one that no longer fits.
+                  list.setFilter('grade_id', undefined);
+                }}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="grade"
+                placeholder="Any grade"
+                includeInactive
+                filters={
+                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
+                }
+                value={list.filters.grade_id ?? null}
+                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="manufacturer"
+                placeholder="Any brand"
+                includeInactive
+                value={list.filters.manufacturer_id ?? null}
+                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-lg"
+                kind="application"
+                placeholder="Any application"
+                includeInactive
+                value={list.filters.application_id ?? null}
+                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
+              />
+            </>
+          ) : undefined
+        }
       >
         <SegmentedControl
           size="xs"
@@ -125,18 +201,17 @@ export function InquiriesPage({ inquiryType }: { inquiryType: InquiryType }) {
             { label: 'All', value: 'ALL' },
           ]}
         />
-        <div style={{ width: 190 }}>
-          <EntitySelect
-            kind="party"
-            placeholder={`Any ${copy.party.toLowerCase()}`}
-            filters={{ party_type: copy.party }}
-            includeInactive
-            value={list.filters.party_id ?? null}
-            onChange={(value) => list.setFilter('party_id', value ?? undefined)}
-          />
-        </div>
+        <EntitySelect
+          className="field-lg"
+          kind="party"
+          placeholder={`Any ${copy.party.toLowerCase()}`}
+          filters={{ party_type: copy.party }}
+          includeInactive
+          value={list.filters.party_id ?? null}
+          onChange={(value) => list.setFilter('party_id', value ?? undefined)}
+        />
         <Select
-          w={170}
+          className="field-lg"
           placeholder="Any area"
           data={areas ?? []}
           value={list.filters.area ?? null}
@@ -146,82 +221,24 @@ export function InquiriesPage({ inquiryType }: { inquiryType: InquiryType }) {
         />
         {inquiryType !== 'TRANSPORT' && (
           <Button
-            variant={productFilterCount ? 'light' : 'default'}
-            color={productFilterCount ? 'brass' : undefined}
-            leftSection={<IconAdjustmentsHorizontal size={15} />}
+            variant={productFilterCount || productOpen ? 'light' : 'default'}
+            color="ink"
+            leftSection={<IconAdjustmentsHorizontal size={14} />}
             rightSection={
               productFilterCount ? (
-                <Badge size="xs" circle color="brass" variant="filled">
+                <Badge size="xs" circle color="ink" variant="filled">
                   {productFilterCount}
                 </Badge>
               ) : undefined
             }
             onClick={() => setProductOpen((open) => !open)}
           >
-            Product filters
+            Products
           </Button>
-        )}
-        {inquiryType !== 'TRANSPORT' && productOpen && (
-          // What the product is: these narrow through the inquiry's product,
-          // so they do not apply to transport quotes.
-          <>
-            <div style={{ width: 190 }}>
-              <EntitySelect
-                kind="product"
-                placeholder="Any product"
-                includeInactive
-                value={list.filters.product_id ?? null}
-                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 150 }}>
-              <EntitySelect
-                kind="material"
-                placeholder="Any material"
-                includeInactive
-                value={list.filters.material_id ?? null}
-                onChange={(value) => {
-                  list.setFilter('material_id', value ?? undefined);
-                  // A grade belongs to one material; drop one that no longer fits.
-                  list.setFilter('grade_id', undefined);
-                }}
-              />
-            </div>
-            <div style={{ width: 140 }}>
-              <EntitySelect
-                kind="grade"
-                placeholder="Any grade"
-                includeInactive
-                filters={
-                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
-                }
-                value={list.filters.grade_id ?? null}
-                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 150 }}>
-              <EntitySelect
-                kind="manufacturer"
-                placeholder="Any brand"
-                includeInactive
-                value={list.filters.manufacturer_id ?? null}
-                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 170 }}>
-              <EntitySelect
-                kind="application"
-                placeholder="Any application"
-                includeInactive
-                value={list.filters.application_id ?? null}
-                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
-              />
-            </div>
-          </>
         )}
         <DatePickerInput
           type="range"
-          w={190}
+          className="field-md"
           placeholder="Created between"
           valueFormat="DD MMM"
           clearable

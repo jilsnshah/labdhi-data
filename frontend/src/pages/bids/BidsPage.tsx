@@ -1,8 +1,16 @@
 /** Every bid of one type, newest first - the room, the quotes and where it stands. */
 
-import { Badge, Button, Group, Select, Stack, Text } from '@mantine/core';
+import { Badge, Button, Group, Select, Stack, Text, Tooltip } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconAdjustmentsHorizontal, IconPlus } from '@tabler/icons-react';
+import {
+  IconAdjustmentsHorizontal,
+  IconFileText,
+  IconGavel,
+  IconHourglassHigh,
+  IconPlus,
+  IconRadar2,
+  IconTrophy,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,10 +20,10 @@ import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { EntitySelect } from '@/components/EntitySelect';
 import { FilterBar } from '@/components/FilterBar';
-import { KpiTile } from '@/components/market/Visuals';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { BidFormModal } from '@/components/modals/BidFormModal';
+import { KpiTile } from '@/components/ui';
 import { useListState } from '@/hooks/useListState';
 import { formatDateTime, formatQuantity, toIsoDate } from '@/lib/format';
 
@@ -79,25 +87,28 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
       label: 'Bid',
       cardTitle: true,
       render: (row) => (
-        <Stack gap={0}>
-          <Group gap={8} wrap="nowrap">
-            <Text fz="sm" fw={600} c="ink.9" truncate maw={320}>
-              {row.title}
+        <Stack gap={1}>
+          <Text fz="md" fw={600} c="ink.9" truncate maw={420}>
+            {row.title}
+          </Text>
+          <Group gap={6} wrap="nowrap">
+            <Text fz="xs" c="ink.5">
+              #{row.id} · {formatDateTime(row.created_at)}
             </Text>
-            {row.no_winner && (
-              <Badge size="xs" variant="light" color="gray">
-                No winner
-              </Badge>
-            )}
             {row.winner_party_name && (
-              <Badge size="xs" variant="light" color="moss">
-                Won: {row.winner_party_name}
-              </Badge>
+              <Group gap={3} wrap="nowrap" c="brass.7">
+                <IconTrophy size={12} />
+                <Text fz="xs" fw={600} c="brass.7" truncate maw={160}>
+                  {row.winner_party_name}
+                </Text>
+              </Group>
+            )}
+            {row.no_winner && (
+              <Text fz="xs" c="ink.5">
+                · closed without a winner
+              </Text>
             )}
           </Group>
-          <Text fz="xs" c="ink.5">
-            #{row.id} · {formatDateTime(row.created_at)}
-          </Text>
         </Stack>
       ),
     },
@@ -105,6 +116,7 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
       key: 'quantity',
       label: 'Quantity',
       align: 'right',
+      width: 120,
       render: (row) => (
         <Text fz="sm" className="mono-tight">
           {formatQuantity(row.quantity, row.unit)}
@@ -115,28 +127,40 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
       key: 'room',
       label: 'Quotes',
       align: 'right',
+      width: 110,
       render: (row) => (
-        <Stack gap={0} align="flex-end">
-          <Text fz="sm" className="mono-tight">
-            {row.quote_count} / {row.participant_count}
-          </Text>
-          <Text fz="xs" c="ink.5">
-            invited
-          </Text>
-        </Stack>
+        <Tooltip
+          label={`${row.quote_count} of ${row.participant_count} invited have quoted`}
+          withinPortal
+        >
+          <Group gap={3} justify="flex-end" wrap="nowrap" style={{ cursor: 'default' }}>
+            <Text fz="md" fw={600} c={row.quote_count ? 'ink.9' : 'ink.4'} className="mono-tight">
+              {row.quote_count}
+            </Text>
+            <Text fz="sm" c="ink.4" className="mono-tight">
+              / {row.participant_count}
+            </Text>
+          </Group>
+        </Tooltip>
       ),
     },
     {
       key: 'best',
       label: bidType === 'CUSTOMER' ? 'Best (highest)' : 'Best (lowest)',
       align: 'right',
+      width: 150,
       render: (row) =>
         row.best_price ? (
-          <Text fz="sm" fw={600} className="figure">
-            {priceUnit(bidType)} {row.best_price}
-          </Text>
+          <Group gap={4} justify="flex-end" align="baseline" wrap="nowrap">
+            <Text fz="xs" c="ink.5" className="figure">
+              {priceUnit(bidType)}
+            </Text>
+            <Text fz="md" fw={600} c="ink.9" className="figure">
+              {row.best_price}
+            </Text>
+          </Group>
         ) : (
-          <Text fz="xs" c="dimmed">
+          <Text fz="sm" c="ink.4">
             —
           </Text>
         ),
@@ -144,19 +168,24 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
     {
       key: 'closes',
       label: 'Closes',
+      width: 170,
       render: (row) => (
-        <Text fz="xs" c="ink.5">
-          {row.closes_at ? formatDateTime(row.closes_at) : '—'}
+        <Text fz="sm" c={row.closes_at ? 'ink.7' : 'ink.4'} className="mono-tight">
+          {row.closes_at ? formatDateTime(row.closes_at) : 'open-ended'}
         </Text>
       ),
     },
-    { key: 'status', label: 'Status', render: (row) => <StatusBadge value={row.status} /> },
+    {
+      key: 'status',
+      label: 'Status',
+      width: 110,
+      render: (row) => <StatusBadge value={row.status} />,
+    },
   ];
 
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Bids"
         title={copy.title}
         subtitle={copy.subtitle}
         actions={
@@ -167,14 +196,34 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
       />
 
       <div className="kpi-row">
-        <KpiTile label="Bids" value={data?.total ?? '—'} hint="all time" accent="var(--brass)" />
-        <KpiTile label="Live now" value={live} hint="taking quotes" accent="var(--supply)" />
-        <KpiTile label="Quotes in" value={quotes} hint="on this page" accent="var(--demand)" />
+        <KpiTile
+          label="Bids"
+          value={data?.total ?? '—'}
+          hint="all time"
+          icon={<IconGavel size={14} />}
+          accent="var(--navy)"
+        />
+        <KpiTile
+          label="Live now"
+          value={live}
+          hint={live ? 'taking quotes' : 'none taking quotes'}
+          icon={<IconRadar2 size={14} />}
+          accent="var(--mantine-color-info-6)"
+        />
+        <KpiTile
+          label="Quotes in"
+          value={quotes}
+          hint="on this page"
+          icon={<IconFileText size={14} />}
+          accent="var(--supply)"
+        />
         <KpiTile
           label="Yet to quote"
           value={awaiting}
-          hint="invited, no offer"
-          accent="var(--mantine-color-ink-7)"
+          hint={awaiting ? 'invited, no offer yet' : 'everyone has answered'}
+          icon={<IconHourglassHigh size={14} />}
+          accent={awaiting ? 'var(--attention)' : 'var(--mantine-color-ink-5)'}
+          tone={awaiting ? 'attention' : undefined}
         />
       </div>
 
@@ -183,9 +232,65 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
         onQChange={list.setQ}
         placeholder="Bid id, product or participant"
         onReset={list.resetFilters}
+        extraOpen={bidType !== 'TRANSPORT' && productOpen}
+        extra={
+          bidType !== 'TRANSPORT' ? (
+            // What the lot is made of. These narrow through the bid's product, so
+            // they do not apply to a transport bid, which carries none.
+            <>
+              <EntitySelect
+                className="field-lg"
+                kind="product"
+                placeholder="Any product"
+                includeInactive
+                value={list.filters.product_id ?? null}
+                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="material"
+                placeholder="Any material"
+                includeInactive
+                value={list.filters.material_id ?? null}
+                onChange={(value) => {
+                  list.setFilter('material_id', value ?? undefined);
+                  // A grade belongs to one material; drop one that no longer fits.
+                  list.setFilter('grade_id', undefined);
+                }}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="grade"
+                placeholder="Any grade"
+                includeInactive
+                filters={
+                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
+                }
+                value={list.filters.grade_id ?? null}
+                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-md"
+                kind="manufacturer"
+                placeholder="Any brand"
+                includeInactive
+                value={list.filters.manufacturer_id ?? null}
+                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
+              />
+              <EntitySelect
+                className="field-lg"
+                kind="application"
+                placeholder="Any application"
+                includeInactive
+                value={list.filters.application_id ?? null}
+                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
+              />
+            </>
+          ) : undefined
+        }
       >
         <Select
-          w={140}
+          className="field-md"
           placeholder="Any status"
           clearable
           data={[
@@ -198,7 +303,7 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
         />
         {bidType === 'TRANSPORT' ? (
           <Select
-            w={170}
+            className="field-lg"
             placeholder="Any area"
             data={areas ?? []}
             value={list.filters.area ?? null}
@@ -208,82 +313,24 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
           />
         ) : (
           <Button
-            variant={productFilterCount ? 'light' : 'default'}
-            color={productFilterCount ? 'brass' : undefined}
-            leftSection={<IconAdjustmentsHorizontal size={15} />}
+            variant={productFilterCount || productOpen ? 'light' : 'default'}
+            color="ink"
+            leftSection={<IconAdjustmentsHorizontal size={14} />}
             rightSection={
               productFilterCount ? (
-                <Badge size="xs" circle color="brass" variant="filled">
+                <Badge size="xs" circle color="ink" variant="filled">
                   {productFilterCount}
                 </Badge>
               ) : undefined
             }
             onClick={() => setProductOpen((open) => !open)}
           >
-            Product filters
+            Products
           </Button>
-        )}
-        {bidType !== 'TRANSPORT' && productOpen && (
-          // What the lot is made of. These narrow through the bid's product, so
-          // they do not apply to a transport bid, which carries none.
-          <>
-            <div style={{ width: 190 }}>
-              <EntitySelect
-                kind="product"
-                placeholder="Any product"
-                includeInactive
-                value={list.filters.product_id ?? null}
-                onChange={(value) => list.setFilter('product_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 150 }}>
-              <EntitySelect
-                kind="material"
-                placeholder="Any material"
-                includeInactive
-                value={list.filters.material_id ?? null}
-                onChange={(value) => {
-                  list.setFilter('material_id', value ?? undefined);
-                  // A grade belongs to one material; drop one that no longer fits.
-                  list.setFilter('grade_id', undefined);
-                }}
-              />
-            </div>
-            <div style={{ width: 140 }}>
-              <EntitySelect
-                kind="grade"
-                placeholder="Any grade"
-                includeInactive
-                filters={
-                  list.filters.material_id ? { material_id: list.filters.material_id } : undefined
-                }
-                value={list.filters.grade_id ?? null}
-                onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 150 }}>
-              <EntitySelect
-                kind="manufacturer"
-                placeholder="Any brand"
-                includeInactive
-                value={list.filters.manufacturer_id ?? null}
-                onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
-              />
-            </div>
-            <div style={{ width: 170 }}>
-              <EntitySelect
-                kind="application"
-                placeholder="Any application"
-                includeInactive
-                value={list.filters.application_id ?? null}
-                onChange={(value) => list.setFilter('application_id', value ?? undefined)}
-              />
-            </div>
-          </>
         )}
         <DatePickerInput
           type="range"
-          w={190}
+          className="field-lg"
           placeholder="Raised between"
           valueFormat="DD MMM"
           clearable
@@ -308,6 +355,7 @@ export function BidsPage({ bidType }: { bidType: BidType }) {
         sort={list.sort}
         onSortChange={list.setSort}
         loading={isFetching}
+        rowHighlight={(row) => Boolean(row.winner_party_name)}
         onRowClick={(row) => navigate(`/bids/${row.id}`)}
         emptyMessage="No bids yet"
         emptyHint="Raise one and invite the parties who should quote."

@@ -1,13 +1,16 @@
 /**
  * Shared layout primitives.
  *
- * Every screen is assembled from the same four pieces - page header, panel,
- * label/value field, empty state - so spacing, type and borders are decided once
- * rather than per page.
+ * Every screen is assembled from the same pieces - page header, panel, KPI
+ * tile, label/value field, empty state - so spacing, type and borders are
+ * decided once rather than per page.
  */
 
 import { Box, Card, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+
+import { Sparkline } from '@/components/market/Visuals';
 
 export function SectionCard({
   title,
@@ -35,17 +38,21 @@ export function SectionCard({
           align="center"
           wrap="nowrap"
           px={padding}
-          py="md"
-          style={{ borderBottom: '1px solid var(--hairline)' }}
+          py={7}
+          mih={44}
+          style={{
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface-sunken)',
+          }}
         >
-          <Stack gap={1}>
+          <Stack gap={0}>
             {title && (
-              <Text fz="md" fw={600} c="ink.9" lh={1.3}>
+              <Text fz="md" fw={600} c="ink.9" lh={1.4}>
                 {title}
               </Text>
             )}
             {description && (
-              <Text fz="sm" c="ink.5">
+              <Text fz="xs" c="ink.5">
                 {description}
               </Text>
             )}
@@ -64,19 +71,81 @@ export function SectionCard({
   );
 }
 
+/**
+ * The product's one KPI tile: a quiet label with its icon, the figure, and one
+ * line of context. The accent tints the icon and washes the top-right corner,
+ * so four tiles side by side read as one instrument panel instead of four
+ * coloured boxes. `tone` colours the hint when it reports something that needs
+ * attention.
+ */
+export function KpiTile({
+  label,
+  value,
+  hint,
+  icon,
+  accent = 'var(--mantine-color-ink-5)',
+  tone,
+  to,
+  spark,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  /** A small contextual glyph - the thing being counted. */
+  icon?: ReactNode;
+  /** Tints the icon and the corner wash - a side of the market, or a status. */
+  accent?: string;
+  /** Colours the hint: a count that is overdue, or a figure below cost. */
+  tone?: 'negative' | 'attention';
+  /** Makes the whole tile a link to the records behind the figure. */
+  to?: string;
+  /** Daily counts behind the figure, drawn as a small trend line. */
+  spark?: number[];
+}) {
+  const body = (
+    <div className="kpi" style={{ ['--kpi-accent' as string]: accent }}>
+      <div className="kpi-top">
+        <span className="kpi-label">{label}</span>
+        {icon && <span className="kpi-icon">{icon}</span>}
+      </div>
+      <Group justify="space-between" align="flex-end" wrap="nowrap" gap="xs">
+        <div className="kpi-value">{value}</div>
+        {spark && spark.some(Boolean) && (
+          <Box mb={5}>
+            <Sparkline values={spark} width={66} height={22} color={accent} />
+          </Box>
+        )}
+      </Group>
+      {hint && (
+        <div className="kpi-hint" data-tone={tone}>
+          {hint}
+        </div>
+      )}
+    </div>
+  );
+
+  return to ? (
+    <Link to={to} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+      {body}
+    </Link>
+  ) : (
+    body
+  );
+}
+
 /** A label/value row - the one way this product shows record details. */
 export function Field({
   label,
   value,
-  width = 128,
+  width = 112,
 }: {
   label: string;
   value: ReactNode;
   width?: number;
 }) {
   return (
-    <Group gap="md" wrap="nowrap" align="flex-start">
-      <Text fz="sm" c="ink.5" w={width} style={{ flexShrink: 0, lineHeight: 1.6 }}>
+    <Group gap="sm" wrap="nowrap" align="flex-start">
+      <Text fz="xs" c="ink.5" w={width} style={{ flexShrink: 0, lineHeight: 1.6 }}>
         {label}
       </Text>
       {typeof value === 'string' || typeof value === 'number' ? (
@@ -104,9 +173,25 @@ export function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <Stack align="center" gap={6} py={compact ? 'xl' : 48}>
-      {icon && <Box c="ink.4">{icon}</Box>}
-      <Text fz="sm" fw={550} c="ink.8">
+    <Stack align="center" gap={6} py={compact ? 'xl' : 44}>
+      {icon && (
+        <Box
+          c="ink.5"
+          mb={2}
+          style={{
+            display: 'grid',
+            placeItems: 'center',
+            width: 38,
+            height: 38,
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--surface-sunken)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Text fz="md" fw={600} c="ink.8">
         {title}
       </Text>
       {hint && (
@@ -114,36 +199,7 @@ export function EmptyState({
           {hint}
         </Text>
       )}
-      {action && <Box mt="sm">{action}</Box>}
-    </Stack>
-  );
-}
-
-/** Compact number + label for the detail-page summary strips. */
-export function Metric({
-  label,
-  value,
-  color,
-  hint,
-}: {
-  label: string;
-  value: ReactNode;
-  color?: string;
-  hint?: string;
-}) {
-  return (
-    <Stack gap={2}>
-      <Text fz="sm" c="ink.5">
-        {label}
-      </Text>
-      <Text fz={24} fw={600} lh={1.1} c={color ?? 'ink.9'} className="mono-tight">
-        {value}
-      </Text>
-      {hint && (
-        <Text fz="xs" c="ink.5">
-          {hint}
-        </Text>
-      )}
+      {action && <Box mt="xs">{action}</Box>}
     </Stack>
   );
 }

@@ -12,7 +12,15 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { IconAdjustmentsHorizontal, IconArrowsExchange, IconPlus } from '@tabler/icons-react';
+import {
+  IconAdjustmentsHorizontal,
+  IconArrowsExchange,
+  IconBuildingStore,
+  IconMapPin,
+  IconPlus,
+  IconProgressCheck,
+  IconUserPlus,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -30,8 +38,9 @@ import { EntitySelect } from '@/components/EntitySelect';
 import { FilterBar, StatusFilter } from '@/components/FilterBar';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
-import { KpiTile, PartyAvatar } from '@/components/market/Visuals';
+import { PartyAvatar } from '@/components/market/Visuals';
 import { PartyFormModal } from '@/components/modals/PartyModals';
+import { KpiTile } from '@/components/ui';
 import { useListState } from '@/hooks/useListState';
 import { humanize } from '@/lib/format';
 
@@ -99,42 +108,53 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       label: humanize(partyType),
       sortable: true,
       render: (row) => (
-        <Group gap={12} wrap="nowrap">
-          <PartyAvatar name={row.name} size={36} />
-          <Stack gap={0} style={{ minWidth: 0 }}>
-            <Group gap={6} wrap="nowrap">
-              <Text fw={600} c="ink.9" truncate maw={240}>
-                {row.name}
-              </Text>
-              {row.stage !== 'ACTIVE' && <StatusBadge value={row.stage} size="xs" />}
-            </Group>
-            {row.contact_person && (
-              <Text fz="xs" c="dimmed">
-                {row.contact_person}
-              </Text>
-            )}
-          </Stack>
+        <Group gap={8} wrap="nowrap">
+          <PartyAvatar name={row.name} size={24} />
+          <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+            <Text fz="sm" fw={600} c="ink.9" truncate maw={280}>
+              {row.name}
+            </Text>
+            {row.stage !== 'ACTIVE' && <StatusBadge value={row.stage} size="xs" />}
+          </Group>
         </Group>
       ),
     },
     {
-      key: 'contact',
-      label: 'Contact',
+      key: 'contact_person',
+      label: 'Contact person',
       render: (row) => (
-        <Stack gap={0}>
-          <Text fz="sm">{row.phone || '—'}</Text>
-          {(row.email || row.gst_number) && (
-            <Text fz="xs" c="dimmed" truncate maw={200}>
-              {row.email ?? `GST ${row.gst_number}`}
-            </Text>
-          )}
-        </Stack>
+        <Text fz="sm" c={row.contact_person ? 'ink.8' : 'ink.4'} truncate maw={180}>
+          {row.contact_person || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'contact',
+      label: 'Phone',
+      render: (row) => (
+        <Text fz="sm" className="mono-tight" c={row.phone ? 'ink.8' : 'ink.4'}>
+          {row.phone || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'email',
+      label: 'Email / GST',
+      cardHidden: true,
+      render: (row) => (
+        <Text fz="xs" c="ink.5" truncate maw={200}>
+          {row.email ?? (row.gst_number ? `GST ${row.gst_number}` : '—')}
+        </Text>
       ),
     },
     {
       key: 'city',
       label: 'City',
-      render: (row) => <Text fz="sm">{row.primary_city || '-'}</Text>,
+      render: (row) => (
+        <Text fz="sm" c={row.primary_city ? 'ink.8' : 'ink.4'}>
+          {row.primary_city || '—'}
+        </Text>
+      ),
     },
     {
       key: 'products',
@@ -142,27 +162,29 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       align: 'right',
       render: (row) =>
         partyType === 'TRANSPORTER' ? (
-          <Text fz="sm" c="dimmed">
-            -
+          <Text fz="sm" c="ink.4">
+            —
           </Text>
         ) : (
-          <Text fz="sm">{row.product_count}</Text>
+          <Text fz="sm" className="mono-tight">
+            {row.product_count}
+          </Text>
         ),
     },
     {
       key: 'open',
       label: 'Open inquiries',
       align: 'right',
-      render: (row) =>
-        row.open_inquiry_count > 0 ? (
-          <Badge variant="default" size="sm">
-            {row.open_inquiry_count}
-          </Badge>
-        ) : (
-          <Text fz="sm" c="dimmed">
-            0
-          </Text>
-        ),
+      render: (row) => (
+        <Text
+          fz="sm"
+          className="mono-tight"
+          fw={row.open_inquiry_count > 0 ? 600 : 400}
+          c={row.open_inquiry_count > 0 ? 'ink.9' : 'ink.4'}
+        >
+          {row.open_inquiry_count}
+        </Text>
+      ),
     },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge value={row.status} /> },
     ...(moveTarget
@@ -195,7 +217,6 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Relationships"
         title={COPY[partyType].title}
         subtitle={COPY[partyType].subtitle}
         actions={
@@ -209,6 +230,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
           label={`${humanize(partyType)}s`}
           value={book?.total ?? '—'}
           hint={book ? `${book.verified} verified` : '—'}
+          icon={<IconBuildingStore size={14} />}
           accent={accent}
         />
         <KpiTile
@@ -219,18 +241,21 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
               ? `${Math.round((book.with_open_inquiries / book.total) * 100)}% of the book`
               : '—'
           }
+          icon={<IconProgressCheck size={14} />}
           accent={accent}
         />
         <KpiTile
           label="Prospects"
           value={book?.prospects ?? '—'}
           hint="to verify"
+          icon={<IconUserPlus size={14} />}
           accent="var(--brass)"
         />
         <KpiTile
           label="Cities"
           value={book?.cities ?? '—'}
           hint="primary locations"
+          icon={<IconMapPin size={14} />}
           accent={accent}
         />
       </div>
@@ -239,76 +264,25 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         onQChange={list.setQ}
         placeholder="Search name, phone, email, GST"
         onReset={list.resetFilters}
-      >
-        <SegmentedControl
-          size="xs"
-          value={(list.filters.stage as string) ?? 'ALL'}
-          onChange={(value) => list.setFilter('stage', value === 'ALL' ? undefined : value)}
-          data={[
-            { value: 'ALL', label: 'All' },
-            { value: 'ACTIVE', label: 'Known' },
-            { value: 'PROSPECT', label: 'Prospects' },
-          ]}
-        />
-        <Switch
-          label="Stale leads"
-          description="60 days, untouched"
-          checked={list.filters.stale_days === 60}
-          onChange={(event) =>
-            list.setFilter('stale_days', event.currentTarget.checked ? 60 : undefined)
-          }
-        />
-        <TextInput
-          w={132}
-          placeholder="City"
-          value={(list.filters.city as string) ?? ''}
-          onChange={(event) => list.setFilter('city', event.currentTarget.value || undefined)}
-        />
-        <Select
-          w={150}
-          placeholder="Any area"
-          data={areas ?? []}
-          value={list.filters.area ?? null}
-          onChange={(value) => list.setFilter('area', value ?? undefined)}
-          searchable
-          clearable
-        />
-        {partyType !== 'TRANSPORTER' && (
-          <Button
-            variant={productFilterCount ? 'light' : 'default'}
-            color={productFilterCount ? 'brass' : undefined}
-            leftSection={<IconAdjustmentsHorizontal size={15} />}
-            rightSection={
-              productFilterCount ? (
-                <Badge size="xs" circle color="brass" variant="filled">
-                  {productFilterCount}
-                </Badge>
-              ) : undefined
-            }
-            onClick={() => setProductOpen((open) => !open)}
-          >
-            Product filters
-          </Button>
-        )}
-        <StatusFilter
-          value={list.filters.status}
-          onChange={(value) => list.setFilter('status', value)}
-        />
-        {partyType !== 'TRANSPORTER' && productOpen && (
-          // What they deal in, read off the products linked to the party. A
-          // transporter carries no products, so these do not apply there.
-          <>
-            <div style={{ width: 190 }}>
+        extraOpen={partyType !== 'TRANSPORTER' && productOpen}
+        extra={
+          partyType !== 'TRANSPORTER' ? (
+            // What they deal in, read off the products linked to the party. A
+            // transporter carries no products, so these do not apply there.
+            <>
+              <Text fz="xs" c="ink.5" w={74}>
+                Deals in
+              </Text>
               <EntitySelect
+                className="field-lg"
                 kind="product"
                 placeholder="Any product"
                 includeInactive
                 value={list.filters.product_id ?? null}
                 onChange={(value) => list.setFilter('product_id', value ?? undefined)}
               />
-            </div>
-            <div style={{ width: 150 }}>
               <EntitySelect
+                className="field-md"
                 kind="material"
                 placeholder="Any material"
                 includeInactive
@@ -319,9 +293,8 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
                   list.setFilter('grade_id', undefined);
                 }}
               />
-            </div>
-            <div style={{ width: 140 }}>
               <EntitySelect
+                className="field-md"
                 kind="grade"
                 placeholder="Any grade"
                 includeInactive
@@ -331,26 +304,78 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
                 value={list.filters.grade_id ?? null}
                 onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
               />
-            </div>
-            <div style={{ width: 150 }}>
               <EntitySelect
+                className="field-md"
                 kind="manufacturer"
                 placeholder="Any brand"
                 includeInactive
                 value={list.filters.manufacturer_id ?? null}
                 onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
               />
-            </div>
-            <div style={{ width: 170 }}>
               <EntitySelect
+                className="field-lg"
                 kind="application"
                 placeholder="Any application"
                 includeInactive
                 value={list.filters.application_id ?? null}
                 onChange={(value) => list.setFilter('application_id', value ?? undefined)}
               />
-            </div>
-          </>
+            </>
+          ) : undefined
+        }
+      >
+        <SegmentedControl
+          value={(list.filters.stage as string) ?? 'ALL'}
+          onChange={(value) => list.setFilter('stage', value === 'ALL' ? undefined : value)}
+          data={[
+            { value: 'ALL', label: 'All' },
+            { value: 'ACTIVE', label: 'Known' },
+            { value: 'PROSPECT', label: 'Prospects' },
+          ]}
+        />
+        <TextInput
+          className="field-sm"
+          placeholder="City"
+          value={(list.filters.city as string) ?? ''}
+          onChange={(event) => list.setFilter('city', event.currentTarget.value || undefined)}
+        />
+        <Select
+          className="field-md"
+          placeholder="Any area"
+          data={areas ?? []}
+          value={list.filters.area ?? null}
+          onChange={(value) => list.setFilter('area', value ?? undefined)}
+          searchable
+          clearable
+        />
+        <StatusFilter
+          value={list.filters.status}
+          onChange={(value) => list.setFilter('status', value)}
+        />
+        <Switch
+          label="Stale leads"
+          checked={list.filters.stale_days === 60}
+          onChange={(event) =>
+            list.setFilter('stale_days', event.currentTarget.checked ? 60 : undefined)
+          }
+        />
+        {partyType !== 'TRANSPORTER' && (
+          <Button
+            variant={productFilterCount || productOpen ? 'light' : 'default'}
+            color="ink"
+            leftSection={<IconAdjustmentsHorizontal size={14} />}
+            rightSection={
+              productFilterCount ? (
+                <Badge size="xs" circle color="ink" variant="filled">
+                  {productFilterCount}
+                </Badge>
+              ) : undefined
+            }
+            onClick={() => setProductOpen((open) => !open)}
+            aria-expanded={productOpen}
+          >
+            Products
+          </Button>
         )}
       </FilterBar>
       <DataTable

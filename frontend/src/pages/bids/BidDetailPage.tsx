@@ -58,7 +58,7 @@ import { PartyAvatar } from '@/components/market/Visuals';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Field } from '@/components/ui';
-import { formatDateTime, formatQuantity, humanize } from '@/lib/format';
+import { formatDateTime, formatQuantity } from '@/lib/format';
 import { priceUnit } from './BidsPage';
 
 export function BidDetailPage() {
@@ -104,7 +104,6 @@ export function BidDetailPage() {
   return (
     <>
       <PageHeader
-        eyebrow={`${humanize(bid.bid_type)} bid`}
         title={bid.title ?? `Bid #${bid.id}`}
         subtitle={
           <Group gap={8}>
@@ -363,7 +362,7 @@ function QuotesPanel({
                 fw={600}
                 component={Link}
                 to={`/parties/${quote.party.id}`}
-                c="accent.9"
+                c="navy.7"
                 truncate
               >
                 {quote.party.name}
@@ -473,6 +472,7 @@ function QuotesPanel({
         sort={list.sort}
         onSortChange={list.setSort}
         loading={isFetching}
+        rowHighlight={(quote) => quote.is_winner || quote.price === bid.best_price}
         emptyMessage={bid.status === 'DRAFT' ? 'Not open yet' : 'No quotations yet'}
         emptyHint={
           bid.status === 'DRAFT'

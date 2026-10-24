@@ -60,6 +60,7 @@ import {
   PartyLocationModal,
   PartyProductModal,
 } from '@/components/modals/PartyModals';
+import { StatusBadge } from '@/components/StatusBadge';
 import { EmptyState, Field } from '@/components/ui';
 import { formatDate, formatDateTime, humanize } from '@/lib/format';
 
@@ -72,7 +73,12 @@ import { formatDate, formatDateTime, humanize } from '@/lib/format';
  */
 function EnquiryLinkField({ partyId }: { partyId: number }) {
   const { data, isLoading } = useEnquiryLink(partyId);
-  if (isLoading) return <Text size="xs" c="dimmed">Loading…</Text>;
+  if (isLoading)
+    return (
+      <Text size="xs" c="dimmed">
+        Loading…
+      </Text>
+    );
   if (!data) {
     return (
       <Text size="xs" c="dimmed">
@@ -312,140 +318,109 @@ export function PartyDetailPage() {
 
   return (
     <>
-      <section className="hero" style={{ padding: '1.5rem 1.75rem', marginBottom: '1.5rem' }}>
-        <Group justify="space-between" align="flex-start" wrap="wrap" gap="lg">
-          <Group gap="lg" wrap="nowrap" style={{ minWidth: 0 }}>
-            <PartyAvatar name={party.name} size={64} />
-            <Stack gap={4} style={{ minWidth: 0 }}>
-              <Group gap="sm" wrap="nowrap">
-                <Text className="hero-kpi-label">{humanize(party.party_type)}</Text>
-                {party.stage !== 'ACTIVE' && (
-                  <Text
-                    fz={11}
-                    fw={700}
-                    c="#e2bd6b"
-                    tt="uppercase"
-                    style={{ letterSpacing: '0.12em' }}
-                  >
-                    · {humanize(party.stage)}
-                  </Text>
-                )}
-                {party.status === 'INACTIVE' && (
-                  <Text
-                    fz={11}
-                    fw={700}
-                    c="#f0a49d"
-                    tt="uppercase"
-                    style={{ letterSpacing: '0.12em' }}
-                  >
-                    · Inactive
-                  </Text>
-                )}
-              </Group>
-              <Text className="hero-greeting" fz={38} truncate>
+      {/* The record's header: who this is, what to do with them, and the four
+          figures that say how much business is on it. */}
+      <section className="record-head">
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+          <PartyAvatar name={party.name} size={36} />
+          <Stack gap={2} style={{ minWidth: 0 }}>
+            <Group gap="xs" wrap="nowrap">
+              <Text className="record-title" truncate>
                 {party.name}
               </Text>
-              <Text fz="sm" c="#aab4c7" truncate>
-                {[party.contact_person, party.phone, party.email].filter(Boolean).join('  ·  ') ||
-                  'No contact details yet'}
-              </Text>
-            </Stack>
-          </Group>
-          <Group gap="xs" wrap="nowrap">
-            {party.stage === 'PROSPECT' && (
-              <Button
-                variant="white"
-                color="dark"
-                leftSection={<IconUserCheck size={15} />}
-                loading={promote.isPending}
-                onClick={() => promote.mutate(undefined)}
-              >
-                Mark as known
-              </Button>
-            )}
-            <Button
-              variant="white"
-              color="dark"
-              leftSection={<IconCalendarPlus size={15} />}
-              onClick={() => setActivityOpen(true)}
-            >
-              Activity
-            </Button>
-            <Button
-              leftSection={<IconPlus size={15} />}
-              onClick={() => setInquiryOpen(true)}
-              styles={{
-                root: { background: 'linear-gradient(145deg,#e2bd6b,#b8862a)', color: '#1a1206' },
-              }}
-            >
-              New inquiry
-            </Button>
-            <Menu position="bottom-end" withinPortal width={210}>
-              <Menu.Target>
-                <ActionIcon variant="white" color="dark" size={36} aria-label="More actions">
-                  <IconDotsVertical size={16} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<IconPencil size={15} />} onClick={() => setEditOpen(true)}>
-                  Edit details
-                </Menu.Item>
-                <Menu.Item leftSection={<IconNotes size={15} />} onClick={() => setNoteOpen(true)}>
-                  Add a note
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconGitMerge size={15} />}
-                  onClick={() => setMergeOpen(true)}
-                >
-                  Merge a duplicate
-                </Menu.Item>
-                {moveTarget && (
-                  <>
-                    <Menu.Divider />
-                    <Menu.Item
-                      leftSection={<IconArrowsExchange size={15} />}
-                      onClick={() => setMoveOpen(true)}
-                    >
-                      Move to {moveTarget.label}
-                    </Menu.Item>
-                  </>
-                )}
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
+              {party.stage !== 'ACTIVE' && <StatusBadge value={party.stage} />}
+              {party.status === 'INACTIVE' && <StatusBadge value="INACTIVE" />}
+            </Group>
+            <Text fz="xs" c="ink.5" truncate>
+              {humanize(party.party_type)}
+              {' · '}
+              {[party.contact_person, party.phone, party.email].filter(Boolean).join('  ·  ') ||
+                'No contact details yet'}
+            </Text>
+          </Stack>
         </Group>
-        <div className="hero-kpis" style={{ marginTop: '1.25rem' }}>
-          <div className="hero-kpi">
-            <div className="hero-kpi-label">Active inquiries</div>
-            <div className="hero-kpi-value">{stats.open_inquiries}</div>
-            <div className="hero-kpi-hint">{stats.closed_inquiries} closed</div>
-          </div>
-          <div className="hero-kpi">
-            <div className="hero-kpi-label">Activities</div>
-            <div className="hero-kpi-value">{stats.activities}</div>
-            <div className="hero-kpi-hint">{stats.upcoming_activities} upcoming</div>
-          </div>
-          <div className="hero-kpi">
-            <div className="hero-kpi-label">
-              {isSupplier ? 'Supplies' : isCustomer ? 'Buys' : 'Locations'}
-            </div>
-            <div className="hero-kpi-value">
-              {isTransporter ? party.locations.length : party.products.length}
-            </div>
-            <div className="hero-kpi-hint">{isTransporter ? 'on file' : 'products linked'}</div>
-          </div>
-          <div className="hero-kpi">
-            <div className="hero-kpi-label">Notes</div>
-            <div className="hero-kpi-value">{stats.notes}</div>
-            <div className="hero-kpi-hint">since {formatDate(party.created_at)}</div>
-          </div>
+        <Group gap="xs" wrap="nowrap">
+          {party.stage === 'PROSPECT' && (
+            <Button
+              variant="default"
+              leftSection={<IconUserCheck size={14} />}
+              loading={promote.isPending}
+              onClick={() => promote.mutate(undefined)}
+            >
+              Mark as known
+            </Button>
+          )}
+          <Button
+            variant="default"
+            leftSection={<IconCalendarPlus size={14} />}
+            onClick={() => setActivityOpen(true)}
+          >
+            Activity
+          </Button>
+          <Button leftSection={<IconPlus size={14} />} onClick={() => setInquiryOpen(true)}>
+            New inquiry
+          </Button>
+          <Menu position="bottom-end" withinPortal width={210}>
+            <Menu.Target>
+              <ActionIcon variant="default" size="input-sm" aria-label="More actions">
+                <IconDotsVertical size={16} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<IconPencil size={15} />} onClick={() => setEditOpen(true)}>
+                Edit details
+              </Menu.Item>
+              <Menu.Item leftSection={<IconNotes size={15} />} onClick={() => setNoteOpen(true)}>
+                Add a note
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconGitMerge size={15} />}
+                onClick={() => setMergeOpen(true)}
+              >
+                Merge a duplicate
+              </Menu.Item>
+              {moveTarget && (
+                <>
+                  <Menu.Divider />
+                  <Menu.Item
+                    leftSection={<IconArrowsExchange size={15} />}
+                    onClick={() => setMoveOpen(true)}
+                  >
+                    Move to {moveTarget.label}
+                  </Menu.Item>
+                </>
+              )}
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+        <div className="record-stats">
+          <RecordStat
+            label="Active inquiries"
+            value={stats.open_inquiries}
+            hint={`${stats.closed_inquiries} closed`}
+          />
+          <RecordStat
+            label="Activities"
+            value={stats.activities}
+            hint={`${stats.upcoming_activities} upcoming`}
+          />
+          <RecordStat
+            label={isSupplier ? 'Supplies' : isCustomer ? 'Buys' : 'Locations'}
+            value={isTransporter ? party.locations.length : party.products.length}
+            hint={isTransporter ? 'on file' : 'products linked'}
+          />
+          <RecordStat
+            label="Notes"
+            value={stats.notes}
+            hint={`since ${formatDate(party.created_at)}`}
+          />
         </div>
       </section>
 
       {party.stage === 'MERGED' && party.merged_into_id && (
         <Alert color="ink" icon={<IconGitMerge size={16} />} mb="lg">
           Merged into{' '}
-          <Text component={Link} to={`/parties/${party.merged_into_id}`} c="accent.9" fz="sm" span>
+          <Text component={Link} to={`/parties/${party.merged_into_id}`} c="navy.7" fz="sm" span>
             party #{party.merged_into_id}
           </Text>
           . Kept for history; it cannot be used for new business.
@@ -698,5 +673,24 @@ function RowMenu({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => voi
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
+  );
+}
+
+/** One figure in a record header's stat row. */
+function RecordStat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+}) {
+  return (
+    <div className="record-stat">
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value">{value}</div>
+      {hint && <div className="kpi-hint">{hint}</div>}
+    </div>
   );
 }

@@ -34,7 +34,11 @@ export function GradesPage() {
       sortable: true,
       render: (row) => <Text fw={500}>{row.name}</Text>,
     },
-    { key: 'material', label: 'Material', render: (row) => <Text fz="sm">{row.material.name}</Text> },
+    {
+      key: 'material',
+      label: 'Material',
+      render: (row) => <Text fz="sm">{row.material.name}</Text>,
+    },
     {
       key: 'description',
       label: 'Description',
@@ -50,7 +54,6 @@ export function GradesPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Grades"
         subtitle="Grades are scoped to a material, so invalid material/grade pairs cannot be created."
         actions={
@@ -65,14 +68,13 @@ export function GradesPage() {
         placeholder="Search grades"
         onReset={list.resetFilters}
       >
-        <div style={{ width: 200 }}>
-          <EntitySelect
-            kind="material"
-            placeholder="Any material"
-            value={list.filters.material_id ?? null}
-            onChange={(value) => list.setFilter('material_id', value ?? undefined)}
-          />
-        </div>
+        <EntitySelect
+          className="field-lg"
+          kind="material"
+          placeholder="Any material"
+          value={list.filters.material_id ?? null}
+          onChange={(value) => list.setFilter('material_id', value ?? undefined)}
+        />
         <StatusFilter
           value={list.filters.status}
           onChange={(value) => list.setFilter('status', value)}

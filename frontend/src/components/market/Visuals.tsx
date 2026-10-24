@@ -432,35 +432,3 @@ export function SpreadStrip({
     </Box>
   );
 }
-
-/* --------------------------------------------------------------------- kpi */
-
-export function KpiTile({
-  label,
-  value,
-  hint,
-  accent = 'var(--hairline)',
-  spark,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hint?: React.ReactNode;
-  /** Colour of the top rule - ties the tile to a side of the market. */
-  accent?: string;
-  spark?: number[];
-}) {
-  return (
-    <div className="kpi" style={{ ['--kpi-accent' as string]: accent }}>
-      <div className="kpi-label">{label}</div>
-      <Group justify="space-between" align="flex-end" wrap="nowrap" gap="xs">
-        <div className="kpi-value">{value}</div>
-        {spark && spark.some(Boolean) && (
-          <Box mb={6}>
-            <Sparkline values={spark} width={78} height={28} color={accent} />
-          </Box>
-        )}
-      </Group>
-      {hint && <div className="kpi-hint">{hint}</div>}
-    </div>
-  );
-}

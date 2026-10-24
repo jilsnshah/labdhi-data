@@ -31,7 +31,11 @@ export function MaterialsPage() {
       sortable: true,
       render: (row) => <Text fw={500}>{row.name}</Text>,
     },
-    { key: 'grades', label: 'Grades', render: (row) => <Text fz="sm">{row.grade_count ?? 0}</Text> },
+    {
+      key: 'grades',
+      label: 'Grades',
+      render: (row) => <Text fz="sm">{row.grade_count ?? 0}</Text>,
+    },
     {
       key: 'description',
       label: 'Description',
@@ -57,7 +61,6 @@ export function MaterialsPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Materials"
         subtitle="Base polymers traded by the business. Every grade belongs to a material."
         actions={

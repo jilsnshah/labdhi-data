@@ -62,9 +62,7 @@ export function LoginPage() {
         </div>
 
         <div>
-          <h1 className="login-headline">
-            Every offer, every bid, <em>one desk.</em>
-          </h1>
+          <h1 className="login-headline">Every offer, every bid, on one desk.</h1>
           <p className="login-lede">
             Supplier quotes, customer demand and transport rates in one place — with the spread
             between them always in view.
@@ -77,12 +75,8 @@ export function LoginPage() {
               <span>Sell</span>
               <span>Spread</span>
             </div>
-            {BOARD.map((row, index) => (
-              <div
-                className="login-board-row"
-                key={row.product}
-                style={{ animationDelay: `${300 + index * 90}ms` }}
-              >
+            {BOARD.map((row) => (
+              <div className="login-board-row" key={row.product}>
                 <span>{row.product}</span>
                 <span className="buy">₹{row.buy}</span>
                 <span className="sell">₹{row.sell}</span>
@@ -98,10 +92,10 @@ export function LoginPage() {
       <section className="login-form-side">
         <Box w={380} maw="100%">
           <div className="page-eyebrow">Trade desk</div>
-          <h2 className="page-title" style={{ fontSize: '2.75rem' }}>
+          <h2 className="page-title" style={{ fontSize: '1.375rem' }}>
             Sign in
           </h2>
-          <Text c="ink.5" fz="sm" mt={6} mb="xl">
+          <Text c="ink.5" fz="sm" mt={4} mb="lg">
             Use your desk account to open today's book.
           </Text>
           <form onSubmit={submit}>

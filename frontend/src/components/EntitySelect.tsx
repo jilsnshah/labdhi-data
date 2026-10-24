@@ -54,6 +54,8 @@ function labelOf(kind: EntityKind, row: Row): string {
 
 interface BaseProps {
   kind: EntityKind;
+  /** Toolbar width class (`field-sm` / `field-md` / `field-lg`), or a form's own. */
+  className?: string;
   label?: string;
   placeholder?: string;
   description?: string;
@@ -98,6 +100,7 @@ function useEntityOptions(
 
 export function EntitySelect({
   kind,
+  className,
   value,
   onChange,
   label,
@@ -116,13 +119,7 @@ export function EntitySelect({
   initialLabel?: string | null;
 }) {
   const [search, setSearch] = useState('');
-  const { options, loading } = useEntityOptions(
-    kind,
-    filters,
-    includeInactive,
-    search,
-    !disabled,
-  );
+  const { options, loading } = useEntityOptions(kind, filters, includeInactive, search, !disabled);
 
   const data = useMemo(() => {
     if (value && initialLabel && !options.some((option) => option.value === String(value))) {
@@ -133,6 +130,7 @@ export function EntitySelect({
 
   return (
     <Select
+      className={className}
       label={label}
       description={description}
       placeholder={placeholder ?? 'Type to search...'}
@@ -156,6 +154,7 @@ export function EntitySelect({
 
 export function EntityMultiSelect({
   kind,
+  className,
   value,
   onChange,
   label,
@@ -185,6 +184,7 @@ export function EntityMultiSelect({
 
   return (
     <MultiSelect
+      className={className}
       label={label}
       description={description}
       placeholder={placeholder ?? 'Type to search...'}

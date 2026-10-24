@@ -30,7 +30,7 @@ export function NotesPage() {
       label: 'Party',
       render: (row) => (
         <Stack gap={0}>
-          <Text fz="sm" fw={500} component={Link} to={`/parties/${row.party_id}`} c="accent.9">
+          <Text fz="sm" fw={500} component={Link} to={`/parties/${row.party_id}`} c="navy.7">
             {row.party?.name ?? `#${row.party_id}`}
           </Text>
           <StatusBadge value={row.party?.party_type} size="xs" />
@@ -64,7 +64,6 @@ export function NotesPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Relationships"
         title="Notes"
         subtitle="Business context that is not an activity - kept separate from system audit logs."
         actions={
@@ -86,7 +85,7 @@ export function NotesPage() {
         onReset={list.resetFilters}
       >
         <Select
-          w={168}
+          className="field-lg"
           placeholder="Any party type"
           clearable
           data={[
@@ -97,16 +96,15 @@ export function NotesPage() {
           value={list.filters.party_type ?? null}
           onChange={(value) => list.setFilter('party_type', value ?? undefined)}
         />
-        <div style={{ width: 200 }}>
-          <EntitySelect
-            kind="party"
-            placeholder="Any party"
-            includeInactive
-            filters={{ party_type: list.filters.party_type }}
-            value={list.filters.party_id ?? null}
-            onChange={(value) => list.setFilter('party_id', value ?? undefined)}
-          />
-        </div>
+        <EntitySelect
+          className="field-lg"
+          kind="party"
+          placeholder="Any party"
+          includeInactive
+          filters={{ party_type: list.filters.party_type }}
+          value={list.filters.party_id ?? null}
+          onChange={(value) => list.setFilter('party_id', value ?? undefined)}
+        />
       </FilterBar>
       <DataTable
         columns={columns}

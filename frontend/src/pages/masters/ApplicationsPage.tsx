@@ -45,7 +45,6 @@ export function ApplicationsPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Applications"
         subtitle="Where a product is used - pipes, windows, profiles, moulding, packaging."
         actions={

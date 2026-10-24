@@ -55,7 +55,12 @@ export function LocationsPage() {
         </Text>
       ),
     },
-    { key: 'city', label: 'City', sortable: true, render: (row) => <Text fz="sm">{row.city}</Text> },
+    {
+      key: 'city',
+      label: 'City',
+      sortable: true,
+      render: (row) => <Text fz="sm">{row.city}</Text>,
+    },
     { key: 'state', label: 'State', render: (row) => <Text fz="sm">{row.state || '-'}</Text> },
     {
       key: 'address',
@@ -72,7 +77,6 @@ export function LocationsPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Locations"
         subtitle="Independent addresses: head offices, factories, warehouses and delivery points."
         actions={
@@ -88,7 +92,7 @@ export function LocationsPage() {
         onReset={list.resetFilters}
       >
         <Select
-          w={170}
+          className="field-lg"
           placeholder="Any area"
           data={areas ?? []}
           value={(list.filters.area as string) ?? null}
@@ -97,7 +101,7 @@ export function LocationsPage() {
           clearable
         />
         <TextInput
-          w={150}
+          className="field-md"
           placeholder="City"
           value={(list.filters.city as string) ?? ''}
           onChange={(event) => list.setFilter('city', event.currentTarget.value || undefined)}

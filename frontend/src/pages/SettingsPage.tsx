@@ -22,7 +22,6 @@ export function SettingsPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Administration"
         title="Settings"
         subtitle="Your account, the people who use the system, and what they changed."
       />

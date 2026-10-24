@@ -60,7 +60,6 @@ export function ManufacturersPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Manufacturers"
         subtitle="Who produces the material. A manufacturer is not the same as a supplier."
         actions={

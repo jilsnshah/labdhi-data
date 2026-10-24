@@ -54,6 +54,8 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   emptyHint?: string;
   rowKey?: (row: T) => string | number;
+  /** Marks a row as the one that leads - the best quote, the winner. */
+  rowHighlight?: (row: T) => boolean;
   /** Draw the surrounding card. Off when the table already sits in a SectionCard. */
   framed?: boolean;
   /**
@@ -78,6 +80,7 @@ export function DataTable<T extends { id?: number }>({
   emptyMessage = 'Nothing to show yet.',
   emptyHint,
   rowKey,
+  rowHighlight,
   framed = true,
   fill = false,
 }: DataTableProps<T>) {
@@ -108,13 +111,19 @@ export function DataTable<T extends { id?: number }>({
       <LoadingOverlay
         visible={Boolean(loading)}
         zIndex={2}
-        overlayProps={{ blur: 1, backgroundOpacity: 0.5 }}
+        overlayProps={{ blur: 1.5, backgroundOpacity: 0.45, color: '#fff' }}
         loaderProps={{ size: 'sm' }}
       />
 
       <Box style={fill ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
         <Table.ScrollContainer minWidth={680} type="native">
-          <Table className="data-table" verticalSpacing={12} horizontalSpacing="lg" fz="sm">
+          <Table
+            className="data-table"
+            data-sticky={fill ? 'true' : undefined}
+            verticalSpacing={6}
+            horizontalSpacing="lg"
+            fz="sm"
+          >
             <Table.Thead>
               <Table.Tr>
                 {columns.map((column) => {
@@ -124,9 +133,9 @@ export function DataTable<T extends { id?: number }>({
                       fz={11}
                       fw={600}
                       tt="uppercase"
-                      c={active ? 'ink.8' : 'ink.5'}
+                      c={active ? 'ink.8' : 'ink.6'}
                       ta={column.align}
-                      style={{ letterSpacing: '0.07em' }}
+                      style={{ letterSpacing: '0.06em' }}
                     >
                       {column.label}
                     </Text>
@@ -165,6 +174,7 @@ export function DataTable<T extends { id?: number }>({
                 <Table.Tr
                   key={rowKey ? rowKey(row) : (row.id ?? index)}
                   data-clickable={onRowClick ? 'true' : undefined}
+                  data-highlight={rowHighlight?.(row) ? 'true' : undefined}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   style={onRowClick ? { cursor: 'pointer' } : undefined}
                 >
@@ -205,14 +215,14 @@ export function DataTable<T extends { id?: number }>({
       {showFooter && (
         <Group
           justify="space-between"
-          px="lg"
-          py="sm"
+          px="md"
+          py={6}
           gap="sm"
           className="table-footer"
-          style={{ borderTop: '1px solid var(--hairline)' }}
+          style={{ borderTop: '1px solid var(--border)' }}
         >
           <Group gap="sm">
-            <Text fz="xs" c="ink.5" className="mono-tight">
+            <Text fz="xs" c="ink.6" fw={500} className="mono-tight">
               {total === 0
                 ? 'No records'
                 : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total!)} of ${total}`}
@@ -251,7 +261,9 @@ export function DataTable<T extends { id?: number }>({
         overflow: 'hidden',
         ...(fill
           ? {
-              flex: '1 1 auto',
+              //: Grow to the rows, shrink to the viewport - never a card of
+              //: empty white under six records.
+              flex: '0 1 auto',
               display: 'flex',
               flexDirection: 'column',
               minHeight: 0,

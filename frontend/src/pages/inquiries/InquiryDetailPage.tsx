@@ -131,10 +131,9 @@ export function InquiryDetailPage() {
     return list;
   }, [peers, productId, inquiry, quote, partyRef]);
 
-  const setStatus = useApiMutation(
-    (status: InquiryStatus) => inquiryApi.patch(id, { status }),
-    { successMessage: 'Status updated' },
-  );
+  const setStatus = useApiMutation((status: InquiryStatus) => inquiryApi.patch(id, { status }), {
+    successMessage: 'Status updated',
+  });
 
   if (isLoading) {
     return (
@@ -168,52 +167,57 @@ export function InquiryDetailPage() {
           .length;
 
   return (
-    <Stack gap="lg" className="reveal">
+    <Stack gap="md">
       {/* ------------------------------------------------------------- header */}
-      <Group justify="space-between" align="center" wrap="nowrap">
-        <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
-          <ActionIcon variant="default" size={38} radius="md" onClick={() => navigate(-1)} aria-label="Back">
-            <IconArrowLeft size={17} />
+      <section className="record-head">
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+          <ActionIcon
+            variant="default"
+            size="input-sm"
+            onClick={() => navigate(-1)}
+            aria-label="Back"
+          >
+            <IconArrowLeft size={16} />
           </ActionIcon>
-          <PartyAvatar name={partyRef?.name} size={46} />
+          <PartyAvatar name={partyRef?.name} size={32} />
           <Stack gap={2} style={{ minWidth: 0 }}>
-            <Group gap="sm" wrap="nowrap">
-              <span
-                className="side-tag"
-                data-side={transport ? undefined : isSupply ? 'supply' : 'demand'}
-                style={transport ? { color: 'var(--mantine-color-ink-6)' } : undefined}
-              >
-                {TYPE_LABEL[inquiry.inquiry_type]} · #{inquiry.id}
-              </span>
+            <Group gap="xs" wrap="nowrap">
+              <Text className="record-title" truncate>
+                {partyRef?.name}
+              </Text>
               <StatusBadge value={inquiry.status} />
             </Group>
-            <Text className="serif" fz={32} lh={1.05} c="ink.9" truncate>
-              {partyRef?.name}
-            </Text>
+            <span
+              className="side-tag"
+              data-side={transport ? undefined : isSupply ? 'supply' : 'demand'}
+              style={transport ? { color: 'var(--mantine-color-ink-6)' } : undefined}
+            >
+              {TYPE_LABEL[inquiry.inquiry_type]} · #{inquiry.id}
+            </span>
           </Stack>
         </Group>
         <Group gap="xs" wrap="nowrap">
           <Button
             variant="default"
-            leftSection={closed ? <IconLockOpen size={15} /> : <IconLock size={15} />}
+            leftSection={closed ? <IconLockOpen size={14} /> : <IconLock size={14} />}
             loading={setStatus.isPending}
             onClick={() => setStatus.mutate(closed ? 'ACTIVE' : 'CLOSED')}
           >
             {closed ? 'Reopen' : 'Close inquiry'}
           </Button>
-          <Button leftSection={<IconPencil size={15} />} onClick={() => setEditOpen(true)}>
+          <Button leftSection={<IconPencil size={14} />} onClick={() => setEditOpen(true)}>
             Edit
           </Button>
         </Group>
-      </Group>
+      </section>
 
       {/* --------------------------------------------------------------- ticket */}
-      <section className="hero" style={{ padding: '1.75rem 2rem' }}>
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-          <Stack gap="xs">
-            <Text className="hero-kpi-label">{transport ? 'Quoted freight' : 'Quoted rate'}</Text>
-            <Group gap={10} align="baseline">
-              <Text className="display-figure" fz={64} c="#fff">
+      <section className="panel">
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg" p="md">
+          <Stack gap={4}>
+            <Text className="kpi-label">{transport ? 'Quoted freight' : 'Quoted rate'}</Text>
+            <Group gap={8} align="baseline">
+              <Text className="display-figure" fz={34} c="ink.9">
                 {transport
                   ? transport.price
                     ? formatMoney(transport.price)
@@ -223,12 +227,12 @@ export function InquiryDetailPage() {
                     : '—'}
               </Text>
               {!transport && rate !== null && (
-                <Text fz="lg" c="#aab4c7">
+                <Text fz="sm" c="ink.5">
                   per kg
                 </Text>
               )}
             </Group>
-            <Text c="#aab4c7" fz="sm">
+            <Text c="ink.5" fz="sm">
               {transport
                 ? `for ${formatQuantity(quantity, unit)}, ${transport.pickup_location.city} → ${transport.delivery_location.city}`
                 : value !== null
@@ -242,11 +246,11 @@ export function InquiryDetailPage() {
           {/* Market position: only meaningful for priced product quotes. */}
           {!transport && (
             <Box
-              p="md"
+              p="sm"
               style={{
-                background: 'rgba(255,255,255,0.97)',
-                borderRadius: 14,
-                color: 'var(--mantine-color-ink-9)',
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
               }}
             >
               <Group justify="space-between" mb={4}>
@@ -284,7 +288,7 @@ export function InquiryDetailPage() {
                       <Text fz="xs" c="ink.5">
                         Best sell
                       </Text>
-                      <Text fw={600} c="accent.8" className="figure">
+                      <Text fw={600} c="navy.7" className="figure">
                         {bestSell !== null ? fmtRate(bestSell) : '—'}
                       </Text>
                     </Stack>
@@ -320,8 +324,12 @@ export function InquiryDetailPage() {
           )}
           {transport && (
             <Box
-              p="lg"
-              style={{ background: 'rgba(255,255,255,0.97)', borderRadius: 14 }}
+              p="sm"
+              style={{
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+              }}
             >
               <Text className="block-label" mb="sm">
                 Route
@@ -345,10 +353,7 @@ export function InquiryDetailPage() {
                     right={0}
                     top={14}
                     h={2}
-                    style={{
-                      background:
-                        'repeating-linear-gradient(90deg, var(--brass) 0 8px, transparent 8px 14px)',
-                    }}
+                    style={{ background: 'var(--border-strong)' }}
                   />
                   <Box
                     pos="absolute"
@@ -356,9 +361,9 @@ export function InquiryDetailPage() {
                     top={2}
                     style={{
                       transform: 'translateX(-50%)',
-                      background: '#fff',
+                      background: 'var(--surface-raised)',
                       padding: '0 6px',
-                      color: 'var(--mantine-color-brass-8)',
+                      color: 'var(--mantine-color-ink-6)',
                     }}
                   >
                     <IconTruck size={22} />
@@ -385,12 +390,9 @@ export function InquiryDetailPage() {
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
         <section className="panel" style={{ gridColumn: 'span 2' }}>
           <div className="panel-head">
-            <Box>
-              <div className="block-label">Ticket</div>
-              <div className="panel-title">Quotation details</div>
-            </Box>
+            <div className="panel-title">Quotation details</div>
           </div>
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg" p="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" p="md">
             {quote && (
               <Fact icon={<IconBox size={17} />} label="Product">
                 {quote.product.display_name}
@@ -427,21 +429,27 @@ export function InquiryDetailPage() {
 
         <section className="panel">
           <div className="panel-head">
-            <Box>
-              <div className="block-label">{humanize(partyRef?.party_type)}</div>
-              <div className="panel-title">Counterparty</div>
-            </Box>
+            <div className="panel-title">Counterparty</div>
+            <Text fz="xs" c="ink.5">
+              {humanize(partyRef?.party_type)}
+            </Text>
           </div>
-          <Stack gap="md" p="lg">
+          <Stack gap="sm" p="md">
             <Group gap="sm" wrap="nowrap">
-              <PartyAvatar name={partyRef?.name} size={42} />
+              <PartyAvatar name={partyRef?.name} size={32} />
               <Stack gap={0} style={{ minWidth: 0 }}>
                 {partyRef && (
-                  <Anchor component={Link} to={`/parties/${partyRef.id}`} fw={600} c="ink.9" truncate>
+                  <Anchor
+                    component={Link}
+                    to={`/parties/${partyRef.id}`}
+                    fw={600}
+                    c="ink.9"
+                    truncate
+                  >
                     {partyRef.name}
                   </Anchor>
                 )}
-                <Text fz="xs" c={partyRef?.stage === 'PROSPECT' ? 'brass.8' : 'ink.5'} fw={600}>
+                <Text fz="xs" c={partyRef?.stage === 'PROSPECT' ? 'amber.9' : 'ink.5'} fw={600}>
                   {partyRef?.stage === 'PROSPECT' ? 'Prospect' : 'Verified party'}
                 </Text>
               </Stack>
@@ -462,9 +470,7 @@ export function InquiryDetailPage() {
         </section>
       </SimpleGrid>
 
-      {editOpen && (
-        <InquiryFormModal opened inquiry={inquiry} onClose={() => setEditOpen(false)} />
-      )}
+      {editOpen && <InquiryFormModal opened inquiry={inquiry} onClose={() => setEditOpen(false)} />}
     </Stack>
   );
 }

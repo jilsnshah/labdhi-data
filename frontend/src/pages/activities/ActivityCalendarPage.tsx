@@ -55,7 +55,6 @@ export function ActivityCalendarPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Field work"
         title="Schedule"
         subtitle="Spot a double booking before you assign the next visit."
         actions={

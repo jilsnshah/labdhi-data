@@ -82,7 +82,7 @@ export function ActivityTable({
                 fw={550}
                 component={Link}
                 to={`/parties/${row.party_id}`}
-                c="accent.9"
+                c="navy.7"
                 truncate
                 maw={180}
               >
@@ -111,7 +111,7 @@ export function ActivityTable({
                 fz="xs"
                 component={Link}
                 to={`/inquiries/${row.related_inquiry_id}`}
-                c="accent.9"
+                c="navy.7"
                 style={{ whiteSpace: 'nowrap' }}
                 onClick={(event) => event.stopPropagation()}
               >

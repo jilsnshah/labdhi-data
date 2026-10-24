@@ -68,7 +68,7 @@ export function ActivityDetailDrawer({
             <Field
               label="Customer"
               value={
-                <Text fz="sm" component={Link} to={`/parties/${activity.party_id}`} c="accent.9">
+                <Text fz="sm" component={Link} to={`/parties/${activity.party_id}`} c="navy.7">
                   {activity.party?.name}
                 </Text>
               }
@@ -130,7 +130,7 @@ export function ActivityDetailDrawer({
                     fz="sm"
                     component={Link}
                     to={`/inquiries/${activity.related_inquiry_id}`}
-                    c="accent.9"
+                    c="navy.7"
                   >
                     #{activity.related_inquiry_id}
                   </Text>
@@ -246,7 +246,7 @@ function SnapshotPlace({ snapshot }: { snapshot: NonNullable<Activity['location_
           href={`https://www.google.com/maps?q=${snapshot.latitude},${snapshot.longitude}`}
           target="_blank"
           rel="noreferrer"
-          c="accent.9"
+          c="navy.7"
           style={{ whiteSpace: 'nowrap' }}
         >
           Open pin

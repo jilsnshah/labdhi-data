@@ -17,12 +17,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api } from '@/api/client';
-import {
-  useApiMutation,
-  useProductCustomers,
-  useProductSuppliers,
-  useProducts,
-} from '@/api/hooks';
+import { useApiMutation, useProductCustomers, useProductSuppliers, useProducts } from '@/api/hooks';
 import type { Product } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -62,7 +57,11 @@ export function ProductsPage() {
         </Stack>
       ),
     },
-    { key: 'material', label: 'Material', render: (row) => <Text fz="sm">{row.material.name}</Text> },
+    {
+      key: 'material',
+      label: 'Material',
+      render: (row) => <Text fz="sm">{row.material.name}</Text>,
+    },
     { key: 'grade', label: 'Grade', render: (row) => <Text fz="sm">{row.grade.name}</Text> },
     {
       key: 'manufacturer',
@@ -93,7 +92,6 @@ export function ProductsPage() {
   return (
     <div className="page-fill">
       <PageHeader
-        eyebrow="Master data"
         title="Products"
         subtitle="A product is one material + grade + manufacturer, with its own stable id."
         actions={
@@ -114,42 +112,38 @@ export function ProductsPage() {
         placeholder="Search product, material, grade, manufacturer"
         onReset={list.resetFilters}
       >
-        <div style={{ width: 170 }}>
-          <EntitySelect
-            kind="material"
-            placeholder="Any material"
-            value={list.filters.material_id ?? null}
-            onChange={(value) => {
-              list.setFilter('material_id', value ?? undefined);
-              list.setFilter('grade_id', undefined);
-            }}
-          />
-        </div>
-        <div style={{ width: 160 }}>
-          <EntitySelect
-            kind="grade"
-            placeholder="Any grade"
-            filters={{ material_id: list.filters.material_id }}
-            value={list.filters.grade_id ?? null}
-            onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
-          />
-        </div>
-        <div style={{ width: 180 }}>
-          <EntitySelect
-            kind="manufacturer"
-            placeholder="Any manufacturer"
-            value={list.filters.manufacturer_id ?? null}
-            onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
-          />
-        </div>
-        <div style={{ width: 180 }}>
-          <EntitySelect
-            kind="application"
-            placeholder="Any application"
-            value={list.filters.application_id ?? null}
-            onChange={(value) => list.setFilter('application_id', value ?? undefined)}
-          />
-        </div>
+        <EntitySelect
+          className="field-lg"
+          kind="material"
+          placeholder="Any material"
+          value={list.filters.material_id ?? null}
+          onChange={(value) => {
+            list.setFilter('material_id', value ?? undefined);
+            list.setFilter('grade_id', undefined);
+          }}
+        />
+        <EntitySelect
+          className="field-md"
+          kind="grade"
+          placeholder="Any grade"
+          filters={{ material_id: list.filters.material_id }}
+          value={list.filters.grade_id ?? null}
+          onChange={(value) => list.setFilter('grade_id', value ?? undefined)}
+        />
+        <EntitySelect
+          className="field-lg"
+          kind="manufacturer"
+          placeholder="Any manufacturer"
+          value={list.filters.manufacturer_id ?? null}
+          onChange={(value) => list.setFilter('manufacturer_id', value ?? undefined)}
+        />
+        <EntitySelect
+          className="field-lg"
+          kind="application"
+          placeholder="Any application"
+          value={list.filters.application_id ?? null}
+          onChange={(value) => list.setFilter('application_id', value ?? undefined)}
+        />
         <StatusFilter
           value={list.filters.status}
           onChange={(value) => list.setFilter('status', value)}
@@ -371,7 +365,7 @@ function ProductDrawer({
               )}
               {(suppliers ?? []).map((row) => (
                 <Group key={row.party_id} justify="space-between">
-                  <Text fz="sm" component={Link} to={`/parties/${row.party_id}`} c="accent.9">
+                  <Text fz="sm" component={Link} to={`/parties/${row.party_id}`} c="navy.7">
                     {row.party_name}
                   </Text>
                   <Text fz="xs" c="dimmed">
@@ -395,7 +389,7 @@ function ProductDrawer({
               )}
               {(customers ?? []).map((row) => (
                 <Group key={row.party_id} justify="space-between">
-                  <Text fz="sm" component={Link} to={`/parties/${row.party_id}`} c="accent.9">
+                  <Text fz="sm" component={Link} to={`/parties/${row.party_id}`} c="navy.7">
                     {row.party_name}
                   </Text>
                   <Badge size="xs" variant="default">
